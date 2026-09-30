@@ -1,7 +1,7 @@
 import React from 'react';
 import { Driver, Trip, OperationalUnit, Freight } from '../types';
-import { Calendar, Truck } from 'lucide-react';
 import { GERA_LOGO_BASE64 } from '../assets/logoBase64';
+import { MapPin } from 'lucide-react';
 
 export interface LoadingOrderTemplateProps {
   trip?: Partial<Trip>;
@@ -46,12 +46,20 @@ export interface LoadingOrderTemplateProps {
 
 const LoadingOrderTemplate = React.forwardRef<HTMLDivElement, LoadingOrderTemplateProps>((props, ref) => {
   const { trip, driver, defaultCnpj } = props;
+  const text = (value: unknown) => value == null ? '' : String(value);
+  const readStorage = (key: string) => {
+    try {
+      return typeof window !== 'undefined' ? window.localStorage.getItem(key) || '' : '';
+    } catch {
+      return '';
+    }
+  };
 
   // Resolução da empresa emissora
-  const rawCompanyName = (typeof window !== 'undefined' && localStorage.getItem('tp_system_company_name')) || '';
+  const rawCompanyName = readStorage('tp_system_company_name');
   const systemCompanyName = rawCompanyName && rawCompanyName !== 'MY SYSTEM' ? rawCompanyName : 'GERA - COMÉRCIO E TRANSPORTE DE BIOMASSAS';
   const effectiveCompanyName = props.companyName && props.companyName !== 'MY SYSTEM' ? props.companyName : (trip?.operationalUnitCompanyName || systemCompanyName);
-  const effectiveCnpj = props.cnpj || trip?.operationalUnitCnpj || defaultCnpj || (typeof window !== 'undefined' && localStorage.getItem('tp_system_company_cnpj')) || '29.543.880/0001-24';
+  const effectiveCnpj = props.cnpj || trip?.operationalUnitCnpj || defaultCnpj || readStorage('tp_system_company_cnpj') || '29.543.880/0001-24';
   const effectiveIe = props.ie || trip?.operationalUnitIe;
   const effectiveUnitName = props.unitName || trip?.operationalUnitName;
 
@@ -66,18 +74,19 @@ const LoadingOrderTemplate = React.forwardRef<HTMLDivElement, LoadingOrderTempla
 
   // Resolução dos dados da carga / operação
   // Prioriza: prop explícita > trip.location > Base de Fretes cadastrada > extração de trip.notes ("Local: ...")
-  let extractedLocation = (props.loadingLocation || trip?.location || '').trim();
+  let extractedLocation = text(props.loadingLocation || trip?.location).trim();
 
   if (!extractedLocation) {
-    const originCandidate = (props.origin || trip?.origin || '').trim().toLowerCase();
-    const destCandidate = (trip?.destination || '').trim().toLowerCase();
+    const originCandidate = text(props.origin || trip?.origin).trim().toLowerCase();
+    const destCandidate = text(trip?.destination).trim().toLowerCase();
 
     // Carrega fretes da prop ou diretamente do armazenamento local
-    const freightsList: Freight[] = props.freights || (() => {
+    const freightsList: Freight[] = Array.isArray(props.freights) ? props.freights : (() => {
       try {
-        const raw = typeof window !== 'undefined' ? localStorage.getItem('tp_system_freights') : null;
-        return raw ? JSON.parse(raw) : [];
-      } catch (e) {
+        const raw = readStorage('tp_system_freights');
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
         return [];
       }
     })();
@@ -103,15 +112,15 @@ const LoadingOrderTemplate = React.forwardRef<HTMLDivElement, LoadingOrderTempla
   }
 
   if (!extractedLocation && trip?.notes) {
-    const match = trip.notes.match(/Local:\s*([^.]+)/i);
+    const match = text(trip.notes).match(/Local:\s*([^.]+)/i);
     if (match) {
       extractedLocation = match[1].trim();
     }
   }
 
   if (!extractedLocation && (props.origin || trip?.origin)) {
-    const orig = (props.origin || trip?.origin || '').trim();
-    const st = (props.originState || trip?.originState || '').trim();
+    const orig = text(props.origin || trip?.origin).trim();
+    const st = text(props.originState || trip?.originState).trim();
     extractedLocation = `${orig}${st ? ` - ${st}` : ''}`.trim();
   }
   const displayLocation = extractedLocation;
@@ -133,15 +142,15 @@ const LoadingOrderTemplate = React.forwardRef<HTMLDivElement, LoadingOrderTempla
     : '');
 
   // Resolução do Local de Entrega (acompanha sempre os dados do CNPJ de entrega ou cabeçalho)
-  let extractedDeliveryLocation = (props.deliveryLocation || '').trim();
+  let extractedDeliveryLocation = text(props.deliveryLocation).trim();
 
   if (!extractedDeliveryLocation && trip?.dischargeTerminal) {
     extractedDeliveryLocation = `${trip.dischargeTerminal}${trip.destination ? ` - ${trip.destination}` : ''}${trip.destinationState ? `/${trip.destinationState}` : ''}`;
   }
 
   if (!extractedDeliveryLocation && (props.destination || trip?.destination)) {
-    const dest = (props.destination || trip?.destination || '').trim();
-    const destSt = (props.destinationState || trip?.destinationState || '').trim();
+    const dest = text(props.destination || trip?.destination).trim();
+    const destSt = text(props.destinationState || trip?.destinationState).trim();
     extractedDeliveryLocation = `${dest}${destSt ? ` - ${destSt}` : ''}`;
   }
 
@@ -191,7 +200,7 @@ const LoadingOrderTemplate = React.forwardRef<HTMLDivElement, LoadingOrderTempla
   
   const rawAxles = props.axles || (driver?.axisCount ? `${driver.axisCount} Eixos` : '');
   const displayAxles = rawAxles 
-    ? (rawAxles.toLowerCase().includes('eixo') ? rawAxles : `${rawAxles} Eixos`)
+    ? (text(rawAxles).toLowerCase().includes('eixo') ? text(rawAxles) : `${rawAxles} Eixos`)
     : (driver?.axisCount ? `${driver.axisCount} Eixos` : '---');
 
   // Resolução do motorista
@@ -200,8 +209,8 @@ const LoadingOrderTemplate = React.forwardRef<HTMLDivElement, LoadingOrderTempla
   const displayPhone = props.phone || driver?.phone || trip?.driverPhone || '';
 
   const formatPhone = (val?: string) => {
-    if (!val || !val.trim()) return '---';
-    const trimmed = val.trim();
+    const trimmed = text(val).trim();
+    if (!trimmed) return '---';
     const digitsOnly = trimmed.replace(/\D/g, '');
     if (digitsOnly.length === 11 && /^\d+$/.test(trimmed.replace(/[\s()-]/g, ''))) {
       return `(${digitsOnly.slice(0, 2)}) ${digitsOnly.slice(2, 7)}-${digitsOnly.slice(7)}`;
@@ -214,7 +223,7 @@ const LoadingOrderTemplate = React.forwardRef<HTMLDivElement, LoadingOrderTempla
 
   // Número da ordem e data da coleta
   const orderNum = props.orderNumber !== undefined ? props.orderNumber : (trip?.orderNumber !== undefined ? trip.orderNumber : 1);
-  const rawDate = props.collectionDate || props.loadingDate || props.issueDate || trip?.date || '';
+  const rawDate = text(props.collectionDate || props.loadingDate || props.issueDate || trip?.date);
   const displayDate = rawDate
     ? (rawDate.includes('-') ? rawDate.split('T')[0].split('-').reverse().join('/') : rawDate)
     : new Date().toLocaleDateString('pt-BR');
@@ -293,14 +302,13 @@ const LoadingOrderTemplate = React.forwardRef<HTMLDivElement, LoadingOrderTempla
                 <div><dt className="font-bold uppercase text-slate-500">Endereço completo</dt><dd className="font-medium text-slate-700">{effectiveAddress || displayLocation || '---'}</dd></div>
                 <div><dt className="font-bold uppercase text-slate-500">Cidade/UF</dt><dd className="font-medium text-slate-700">{effectiveCityState || `${displayOrigin}${displayState ? ` - ${displayState}` : ''}` || '---'}</dd></div>
 <div className="grid grid-cols-2 gap-2"><div><dt className="font-bold uppercase text-slate-500">Contato</dt><dd className="font-medium text-slate-700">{displayDriverName || '---'}</dd></div><div><dt className="font-bold uppercase text-slate-500">Telefone</dt><dd className="font-medium text-slate-700">{formatPhone(displayPhone)}</dd></div></div>
-  <div><dt className="flex items-center gap-1 font-bold uppercase text-slate-500"><Calendar aria-hidden="true" /> Data</dt><dd className="font-medium text-slate-700">{displayDate}</dd></div>
+  <div><dt className="flex items-center gap-1 font-bold uppercase text-slate-500">Data</dt><dd className="font-medium text-slate-700">{displayDate}</dd></div>
               </dl>
             </div>
 
             <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
               <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
-                <Truck className="text-red-600" aria-hidden="true" />
-                <h6 className="text-[10px] font-black uppercase tracking-widest text-slate-900">Local de Entrega</h6>
+                                <h6 className="text-[10px] font-black uppercase tracking-widest text-slate-900">Local de Entrega</h6>
               </div>
               <dl className="mt-2 grid gap-1.5 text-[9px] leading-tight">
                 <div><dt className="font-bold uppercase text-slate-500">Empresa</dt><dd className="font-black text-slate-900">{effectiveDeliveryCompanyName || displayDeliveryLocation || '---'}</dd></div>
@@ -308,7 +316,7 @@ const LoadingOrderTemplate = React.forwardRef<HTMLDivElement, LoadingOrderTempla
                 <div><dt className="font-bold uppercase text-slate-500">Endereço completo</dt><dd className="font-medium text-slate-700">{effectiveDeliveryAddress || displayDeliveryLocation || '---'}</dd></div>
                 <div><dt className="font-bold uppercase text-slate-500">Cidade/UF</dt><dd className="font-medium text-slate-700">{effectiveDeliveryCityState || '---'}</dd></div>
 <div className="grid grid-cols-2 gap-2"><div><dt className="font-bold uppercase text-slate-500">Contato</dt><dd className="font-medium text-slate-700">{effectiveDeliveryUnitName || '---'}</dd></div><div><dt className="font-bold uppercase text-slate-500">Telefone</dt><dd className="font-medium text-slate-700">Não informado</dd></div></div>
-  <div><dt className="flex items-center gap-1 font-bold uppercase text-slate-500"><Calendar aria-hidden="true" /> Data</dt><dd className="font-medium text-slate-700">{displayDate}</dd></div>
+  <div><dt className="flex items-center gap-1 font-bold uppercase text-slate-500">Data</dt><dd className="font-medium text-slate-700">{displayDate}</dd></div>
               </dl>
             </div>
 
