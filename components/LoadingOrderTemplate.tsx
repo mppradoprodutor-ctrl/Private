@@ -296,7 +296,7 @@ const LoadingOrderTemplate = React.forwardRef<HTMLDivElement, LoadingOrderTempla
               <dl className="mt-2 grid gap-1.5 text-[9px] leading-tight">
                 <div><dt className="font-bold uppercase text-slate-500">Empresa</dt><dd className="font-black text-slate-900">{effectiveCompanyName || '---'}</dd></div>
                 <div><dt className="font-bold uppercase text-slate-500">CNPJ</dt><dd className="font-mono font-black text-slate-900">{effectiveCnpj || '---'}</dd></div>
-                <div><dt className="font-bold uppercase text-slate-500">Endereço completo</dt><dd className="font-medium text-slate-700">{effectiveAddress || displayLocation || '---'}</dd></div>
+                <div><dt className="font-bold uppercase text-slate-500">Endereço completo</dt><dd className="font-medium text-slate-700">{displayLocation || effectiveAddress || '---'}</dd></div>
                 <div><dt className="font-bold uppercase text-slate-500">Cidade/UF</dt><dd className="font-medium text-slate-700">{effectiveCityState || `${displayOrigin}${displayState ? ` - ${displayState}` : ''}` || '---'}</dd></div>
 <div className="grid grid-cols-2 gap-2"><div><dt className="font-bold uppercase text-slate-500">Contato</dt><dd className="font-medium text-slate-700">{displayDriverName || '---'}</dd></div><div><dt className="font-bold uppercase text-slate-500">Telefone</dt><dd className="font-medium text-slate-700">{formatPhone(displayPhone)}</dd></div></div>
   <div><dt className="flex items-center gap-1 font-bold uppercase text-slate-500">Data</dt><dd className="font-medium text-slate-700">{displayDate}</dd></div>
