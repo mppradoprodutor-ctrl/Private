@@ -22,11 +22,23 @@ export interface Driver {
   createdAt: string;
 }
 
+export interface FreightOrigin {
+  companyName?: string;
+  cnpj?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  contact?: string;
+  phone?: string;
+}
+
 export interface Freight {
   id: string;
   location?: string;
-  origin: string;           
-  state: string;            
+  origin: string;
+  originDetails?: FreightOrigin;
+  origem?: FreightOrigin;
+  state: string;
   destination: string;      
   destinationState: string; 
   dischargeTerminal: string; 
