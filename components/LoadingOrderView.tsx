@@ -158,13 +158,22 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
 
   const paymentTypes = ['Pix', 'Carta Frete', 'PagBem', 'Cheque'];
 
-  // Função utilitária para extrair o local de carregamento cadastrado na Base de Fretes
+  // Função utilitária para extrair os locais cadastrados na Base de Fretes
   const getFreightLoadingLocation = useCallback((f: Freight | null | undefined): string => {
     if (!f) return '';
     if (f.location && f.collectionAddress && f.location.trim() !== f.collectionAddress.trim()) {
       return `${f.location.trim()} - ${f.collectionAddress.trim()}`;
     }
     return (f.location || f.collectionAddress || '').trim();
+  }, []);
+
+  const getFreightDeliveryLocation = useCallback((f: Freight | null | undefined): string => {
+    if (!f) return '';
+    if (f.destinationAddress?.trim()) return f.destinationAddress.trim();
+    if (f.dischargeTerminal?.trim()) {
+      return `${f.dischargeTerminal.trim()}${f.destination ? ` - ${f.destination.trim()}` : ''}${f.destinationState ? `/${f.destinationState.trim()}` : ''}`;
+    }
+    return `${f.destination || ''}${f.destinationState ? ` - ${f.destinationState.trim()}` : ''}`.trim();
   }, []);
 
   // Pré-carrega o primeiro frete ou frete com local salvo na Base de Fretes assim que abre o menu
@@ -179,14 +188,12 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
         if (!manualState) setManualState(defaultFreight.state || '');
         if (!manualProduct) setManualProduct(defaultFreight.product || '');
         if (!manualDeliveryLocation) {
-          const delLoc = defaultFreight.dischargeTerminal 
-            ? `${defaultFreight.dischargeTerminal}${defaultFreight.destination ? ` - ${defaultFreight.destination}` : ''}${defaultFreight.destinationState ? `/${defaultFreight.destinationState}` : ''}`
-            : (defaultFreight.destination ? `${defaultFreight.destination}${defaultFreight.destinationState ? ` - ${defaultFreight.destinationState}` : ''}` : '');
+          const delLoc = getFreightDeliveryLocation(defaultFreight);
           if (delLoc) setManualDeliveryLocation(delLoc);
         }
       }
     }
-  }, [freights, selectedFreight, manualLocation, manualDeliveryLocation, manualOrigin, manualState, manualProduct, getFreightLoadingLocation]);
+  }, [freights, selectedFreight, manualLocation, manualDeliveryLocation, manualOrigin, manualState, manualProduct, getFreightLoadingLocation, getFreightDeliveryLocation]);
 
   const sortedFreights = useMemo(() => {
     return [...freights].sort((a, b) => {
@@ -209,10 +216,7 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
       setManualState(freight.state || '');
       setManualProduct(freight.product || '');
       // Pega o Local de Entrega cadastrado na Base de Fretes
-      const delLoc = freight.dischargeTerminal 
-        ? `${freight.dischargeTerminal}${freight.destination ? ` - ${freight.destination}` : ''}${freight.destinationState ? `/${freight.destinationState}` : ''}`
-        : (freight.destination ? `${freight.destination}${freight.destinationState ? ` - ${freight.destinationState}` : ''}` : '');
-      setManualDeliveryLocation(delLoc);
+      setManualDeliveryLocation(getFreightDeliveryLocation(freight));
     } else {
       setManualLocation('');
       setManualDeliveryLocation('');
