@@ -682,6 +682,21 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
                 </select>
               </div>
 
+              {/* Local de Coleta preenchido pela Base de Fretes selecionada */}
+              <div className="space-y-1.5 bg-blue-50/70 p-2.5 rounded-xl border border-blue-200">
+                <label className="block text-[8px] font-black text-slate-700 uppercase tracking-widest flex items-center gap-1">
+                  <MapPin size={11} className="text-blue-600" /> Local de Coleta
+                </label>
+                <input
+                  type="text"
+                  value={displayLocation}
+                  onChange={e => setManualLocation(e.target.value)}
+                  placeholder="Selecione uma rota na Base de Fretes"
+                  className="w-full bg-white border border-blue-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                  title="Local de coleta cadastrado na Base de Fretes"
+                />
+              </div>
+
               {/* Local de Entrega com Lista Suspensa de todos os CNPJs do Sistema */}
               <div className="space-y-2 bg-slate-50/80 p-2.5 rounded-xl border border-slate-200">
                 <div className="flex items-center justify-between">
