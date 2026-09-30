@@ -1,0 +1,441 @@
+import React from 'react';
+import { Driver, Trip, OperationalUnit, Freight } from '../types';
+import { GERA_LOGO_BASE64 } from '../assets/logoBase64';
+
+export interface LoadingOrderTemplateProps {
+  trip?: Partial<Trip>;
+  driver?: Partial<Driver>;
+  defaultCnpj?: string;
+  freights?: Freight[];
+  // Propriedades opcionais para personalização direta ou manual
+  orderNumber?: number;
+  loadingLocation?: string;
+  deliveryLocation?: string;
+  deliveryUnit?: OperationalUnit | null;
+  deliveryCnpj?: string;
+  deliveryCompanyName?: string;
+  deliveryIe?: string;
+  deliveryAddress?: string;
+  deliveryCityState?: string;
+  deliveryUnitName?: string;
+  origin?: string;
+  originState?: string;
+  destination?: string;
+  destinationState?: string;
+  product?: string;
+  netWeight?: number | string;
+  truckPlate?: string;
+  trailer1?: string;
+  trailer2?: string;
+  dolly?: string;
+  axles?: string;
+  driverName?: string;
+  cpf?: string;
+  phone?: string;
+  issueDate?: string;
+  collectionDate?: string;
+  loadingDate?: string;
+  companyName?: string;
+  cnpj?: string;
+  ie?: string;
+  address?: string;
+  cityState?: string;
+  unitName?: string;
+}
+
+const LoadingOrderTemplate = React.forwardRef<HTMLDivElement, LoadingOrderTemplateProps>((props, ref) => {
+  const { trip, driver, defaultCnpj } = props;
+
+  // Resolução da empresa emissora
+  const rawCompanyName = (typeof window !== 'undefined' && localStorage.getItem('tp_system_company_name')) || '';
+  const systemCompanyName = rawCompanyName && rawCompanyName !== 'MY SYSTEM' ? rawCompanyName : 'GERA - COMÉRCIO E TRANSPORTE DE BIOMASSAS';
+  const effectiveCompanyName = props.companyName && props.companyName !== 'MY SYSTEM' ? props.companyName : (trip?.operationalUnitCompanyName || systemCompanyName);
+  const effectiveCnpj = props.cnpj || trip?.operationalUnitCnpj || defaultCnpj || (typeof window !== 'undefined' && localStorage.getItem('tp_system_company_cnpj')) || '29.543.880/0001-24';
+  const effectiveIe = props.ie || trip?.operationalUnitIe;
+  const effectiveUnitName = props.unitName || trip?.operationalUnitName;
+
+  const effectiveAddress = props.address || [
+    trip?.operationalUnitStreet ? `${trip.operationalUnitStreet}${trip.operationalUnitNumber ? `, ${trip.operationalUnitNumber}` : ''}` : '',
+    trip?.operationalUnitNeighborhood || ''
+  ].filter(Boolean).join(' - ');
+
+  const effectiveCityState = props.cityState || (trip?.operationalUnitCity 
+    ? `${trip.operationalUnitCity}${trip.operationalUnitState ? ` - ${trip.operationalUnitState}` : ''}` 
+    : (trip?.operationalUnitState || ''));
+
+  // Resolução dos dados da carga / operação
+  // Prioriza: prop explícita > trip.location > Base de Fretes cadastrada > extração de trip.notes ("Local: ...")
+  let extractedLocation = (props.loadingLocation || trip?.location || '').trim();
+
+  if (!extractedLocation) {
+    const originCandidate = (props.origin || trip?.origin || '').trim().toLowerCase();
+    const destCandidate = (trip?.destination || '').trim().toLowerCase();
+
+    // Carrega fretes da prop ou diretamente do armazenamento local
+    const freightsList: Freight[] = props.freights || (() => {
+      try {
+        const raw = typeof window !== 'undefined' ? localStorage.getItem('tp_system_freights') : null;
+        return raw ? JSON.parse(raw) : [];
+      } catch (e) {
+        return [];
+      }
+    })();
+
+    if (freightsList.length > 0) {
+      const match = freightsList.find(f => 
+        originCandidate && f.origin && f.origin.trim().toLowerCase() === originCandidate &&
+        (!destCandidate || !f.destination || f.destination.trim().toLowerCase() === destCandidate) &&
+        (f.location || f.collectionAddress)
+      ) || freightsList.find(f => 
+        originCandidate && f.origin && f.origin.trim().toLowerCase() === originCandidate &&
+        (f.location || f.collectionAddress)
+      ) || freightsList.find(f => f.location || f.collectionAddress);
+
+      if (match) {
+        if (match.location && match.collectionAddress && match.location.trim() !== match.collectionAddress.trim()) {
+          extractedLocation = `${match.location.trim()} - ${match.collectionAddress.trim()}`;
+        } else {
+          extractedLocation = (match.location || match.collectionAddress || '').trim();
+        }
+      }
+    }
+  }
+
+  if (!extractedLocation && trip?.notes) {
+    const match = trip.notes.match(/Local:\s*([^.]+)/i);
+    if (match) {
+      extractedLocation = match[1].trim();
+    }
+  }
+
+  if (!extractedLocation && (props.origin || trip?.origin)) {
+    const orig = (props.origin || trip?.origin || '').trim();
+    const st = (props.originState || trip?.originState || '').trim();
+    extractedLocation = `${orig}${st ? ` - ${st}` : ''}`.trim();
+  }
+  const displayLocation = extractedLocation;
+
+  // Resolução do CNPJ e Dados da Unidade de Entrega
+  const deliveryUnit = props.deliveryUnit;
+  const effectiveDeliveryCnpj = props.deliveryCnpj || deliveryUnit?.cnpj || effectiveCnpj;
+  const effectiveDeliveryCompanyName = props.deliveryCompanyName || deliveryUnit?.companyName || '';
+  const effectiveDeliveryUnitName = props.deliveryUnitName || deliveryUnit?.name || '';
+  const effectiveDeliveryIe = props.deliveryIe !== undefined ? props.deliveryIe : deliveryUnit?.stateRegistration;
+  
+  const effectiveDeliveryAddress = props.deliveryAddress || (deliveryUnit ? [
+    deliveryUnit.street ? `${deliveryUnit.street}${deliveryUnit.number ? `, ${deliveryUnit.number}` : ''}` : '',
+    deliveryUnit.neighborhood || ''
+  ].filter(Boolean).join(' - ') : '');
+
+  const effectiveDeliveryCityState = props.deliveryCityState || (deliveryUnit 
+    ? (deliveryUnit.city ? `${deliveryUnit.city}${deliveryUnit.state ? ` - ${deliveryUnit.state}` : ''}` : (deliveryUnit.state || ''))
+    : '');
+
+  // Resolução do Local de Entrega (acompanha sempre os dados do CNPJ de entrega ou cabeçalho)
+  let extractedDeliveryLocation = (props.deliveryLocation || '').trim();
+
+  if (!extractedDeliveryLocation && trip?.dischargeTerminal) {
+    extractedDeliveryLocation = `${trip.dischargeTerminal}${trip.destination ? ` - ${trip.destination}` : ''}${trip.destinationState ? `/${trip.destinationState}` : ''}`;
+  }
+
+  if (!extractedDeliveryLocation && (props.destination || trip?.destination)) {
+    const dest = (props.destination || trip?.destination || '').trim();
+    const destSt = (props.destinationState || trip?.destinationState || '').trim();
+    extractedDeliveryLocation = `${dest}${destSt ? ` - ${destSt}` : ''}`;
+  }
+
+  if (!extractedDeliveryLocation && (effectiveDeliveryCityState || effectiveDeliveryUnitName || effectiveCityState || effectiveUnitName)) {
+    const unitName = effectiveDeliveryUnitName || effectiveUnitName;
+    const citySt = effectiveDeliveryCityState || effectiveCityState;
+    const addr = effectiveDeliveryAddress || effectiveAddress;
+    extractedDeliveryLocation = `${unitName && unitName !== 'Matriz' ? `[${unitName}] ` : ''}${citySt || addr || 'Matriz'}`;
+  }
+
+  const displayDeliveryLocation = extractedDeliveryLocation || '---';
+
+  const displayOrigin = props.origin || trip?.origin || '';
+  const displayState = props.originState || trip?.originState || '';
+  const displayProduct = props.product || trip?.product || '';
+
+  // Resolução do peso líquido
+  const rawNetWeight = props.netWeight !== undefined && props.netWeight !== ''
+    ? props.netWeight
+    : (driver?.netWeight !== undefined && driver?.netWeight !== 0 
+        ? driver.netWeight 
+        : (trip?.weight !== undefined && trip?.weight !== 0 ? trip.weight : ''));
+
+  const formatNetWeight = (val?: number | string) => {
+    if (val === undefined || val === null || val === '') return '---';
+    if (typeof val === 'number') {
+      if (val === 0) return '---';
+      return `${new Intl.NumberFormat('pt-BR').format(val)} TN`;
+    }
+    const cleanStr = String(val).trim();
+    if (!cleanStr || cleanStr === '0') return '---';
+    const withoutKg = cleanStr.replace(/\s*kg\b/gi, '').trim();
+    const parsedNum = parseFloat(withoutKg.replace(/\./g, '').replace(',', '.'));
+    if (!isNaN(parsedNum) && parsedNum > 0 && /^\d+([.,]\d+)?$/.test(withoutKg)) {
+      return `${new Intl.NumberFormat('pt-BR').format(parsedNum)} TN`;
+    }
+    return withoutKg.toUpperCase().includes('TN') ? withoutKg : `${withoutKg} TN`;
+  };
+
+  const displayNetWeightFormatted = formatNetWeight(rawNetWeight);
+
+  // Resolução do veículo e placas
+  const displayTruckPlate = props.truckPlate || driver?.truckPlate || trip?.truckPlate || '';
+  const displayTrailer1 = props.trailer1 || driver?.trailer1 || '';
+  const displayTrailer2 = props.trailer2 || driver?.trailer2 || '';
+  const displayDolly = props.dolly || driver?.dolly || '';
+  
+  const rawAxles = props.axles || (driver?.axisCount ? `${driver.axisCount} Eixos` : '');
+  const displayAxles = rawAxles 
+    ? (rawAxles.toLowerCase().includes('eixo') ? rawAxles : `${rawAxles} Eixos`)
+    : (driver?.axisCount ? `${driver.axisCount} Eixos` : '---');
+
+  // Resolução do motorista
+  const displayDriverName = props.driverName || driver?.name || trip?.driverName || '';
+  const displayCpf = props.cpf || driver?.cpf || '';
+  const displayPhone = props.phone || driver?.phone || trip?.driverPhone || '';
+
+  const formatPhone = (val?: string) => {
+    if (!val || !val.trim()) return '---';
+    const trimmed = val.trim();
+    const digitsOnly = trimmed.replace(/\D/g, '');
+    if (digitsOnly.length === 11 && /^\d+$/.test(trimmed.replace(/[\s()-]/g, ''))) {
+      return `(${digitsOnly.slice(0, 2)}) ${digitsOnly.slice(2, 7)}-${digitsOnly.slice(7)}`;
+    }
+    if (digitsOnly.length === 10 && /^\d+$/.test(trimmed.replace(/[\s()-]/g, ''))) {
+      return `(${digitsOnly.slice(0, 2)}) ${digitsOnly.slice(2, 6)}-${digitsOnly.slice(6)}`;
+    }
+    return trimmed;
+  };
+
+  // Número da ordem e data da coleta
+  const orderNum = props.orderNumber !== undefined ? props.orderNumber : (trip?.orderNumber !== undefined ? trip.orderNumber : 1);
+  const rawDate = props.collectionDate || props.loadingDate || props.issueDate || trip?.date || '';
+  const displayDate = rawDate
+    ? (rawDate.includes('-') ? rawDate.split('T')[0].split('-').reverse().join('/') : rawDate)
+    : new Date().toLocaleDateString('pt-BR');
+
+  return (
+    <div 
+      ref={ref} 
+      className="w-[595px] min-h-[842px] bg-white p-12 shadow-2xl rounded-sm border border-slate-300 relative text-left"
+      style={{ fontFamily: 'Inter, sans-serif' }}
+    >
+      {/* Cabeçalho da Empresa Emissora */}
+      <div className="flex justify-between items-start border-b-2 border-slate-900 pb-6 mb-8">
+        <div className="flex items-start gap-4">
+          <div className="w-[76px] h-[76px] rounded-xl bg-white border border-slate-200/90 p-1 shrink-0 flex items-center justify-center shadow-xs overflow-hidden">
+            <img 
+              src={GERA_LOGO_BASE64} 
+              alt="Logo GERA" 
+              className="w-full h-full object-contain"
+            />
+          </div>
+          <div>
+            <h1 className="text-xl font-black tracking-tight text-slate-900 uppercase">
+              {effectiveCompanyName}
+            </h1>
+            <div className="mt-1 space-y-0.5">
+              <div className="flex items-center gap-2 flex-wrap font-mono text-[10px]">
+                <span className="font-black text-slate-800 uppercase tracking-wider bg-slate-100 border border-slate-200 px-2 py-0.5 rounded">
+                  CNPJ: {effectiveCnpj}
+                </span>
+                {effectiveIe && (
+                  <span className="font-bold text-slate-800 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded">
+                    IE: {effectiveIe}
+                  </span>
+                )}
+                {effectiveUnitName && (
+                  <span className="text-slate-500 font-sans font-semibold">
+                    ({effectiveUnitName})
+                  </span>
+                )}
+              </div>
+              {(effectiveAddress || effectiveCityState) && (
+                <p className="text-[10px] text-slate-600 font-medium">
+                  {effectiveAddress ? `${effectiveAddress} • ` : ''}{effectiveCityState}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="text-right shrink-0">
+          <div className="inline-block bg-slate-900 text-white px-3 py-1 rounded-lg text-center mb-1.5 shadow-sm">
+            <p className="text-[8px] font-black uppercase tracking-widest text-slate-300">Ordem de Carregamento</p>
+            <p className="text-sm font-black tracking-tight font-mono">Nº {orderNum || 1}</p>
+          </div>
+          <div>
+            <p className="text-[9px] font-black uppercase text-slate-500">Data da Coleta</p>
+            <p className="text-xs font-black text-black">{displayDate}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-8">
+        {/* 1. DADOS DA CARGA / OPERAÇÃO (Local de Carregamento, Origem e sua UF, Local de Entrega com CNPJ do Cabeçalho, Produto, Peso Líquido) */}
+        <div className="space-y-4">
+          <h5 className="border-b border-slate-200 px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-900">
+            Dados da Operação
+          </h5>
+          <div className="grid grid-cols-6 gap-x-4 gap-y-3.5 px-4">
+            <div className="col-span-2">
+              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Local de Carregamento</p>
+              <p className="text-sm font-black text-black leading-snug">{displayLocation || '---'}</p>
+            </div>
+            <div className="col-span-2">
+              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Origem / UF</p>
+              <p className="text-sm font-black text-black leading-snug">
+                {displayOrigin ? `${displayOrigin}${displayState ? ` - ${displayState}` : ''}` : '---'}
+              </p>
+            </div>
+            <div className="col-span-2">
+              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Local de Entrega</p>
+              <p className="text-sm font-black text-black leading-snug break-words">
+                {displayDeliveryLocation.includes(effectiveDeliveryCompanyName) 
+                  ? displayDeliveryLocation 
+                  : (effectiveDeliveryCompanyName 
+                      ? `${effectiveDeliveryCompanyName}${displayDeliveryLocation && displayDeliveryLocation !== '---' && !effectiveDeliveryCompanyName.includes(displayDeliveryLocation) ? ` - ${displayDeliveryLocation}` : ''}` 
+                      : displayDeliveryLocation)}
+                {effectiveDeliveryUnitName && !displayDeliveryLocation.includes(effectiveDeliveryUnitName) && effectiveDeliveryUnitName !== effectiveDeliveryCompanyName && (
+                  <span className="text-slate-600 font-bold text-[9.5px] block leading-tight">({effectiveDeliveryUnitName})</span>
+                )}
+              </p>
+              <div className="mt-0.5 space-y-0.5">
+                <p className="text-[9.5px] font-mono font-black text-slate-800 tracking-tight flex items-center gap-1 flex-wrap">
+                  <span className="text-slate-500 font-sans font-bold text-[8.5px] uppercase">CNPJ:</span> {effectiveDeliveryCnpj}
+                  {effectiveDeliveryIe && (
+                    <span className="text-slate-700 font-mono font-bold text-[8px] bg-slate-100 border border-slate-200 px-1 rounded">
+                      IE: {effectiveDeliveryIe}
+                    </span>
+                  )}
+                </p>
+                {(effectiveDeliveryAddress || effectiveDeliveryCityState) && (
+                  <p className="text-[8.5px] text-slate-600 font-medium leading-tight break-words">
+                    {effectiveDeliveryAddress ? `${effectiveDeliveryAddress} • ` : ''}
+                    <span className="font-bold text-slate-800">{effectiveDeliveryCityState}</span>
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="col-span-3">
+              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Produto</p>
+              <p className="text-sm font-black text-red-600 leading-snug">{displayProduct || '---'}</p>
+            </div>
+            <div className="col-span-3">
+              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Peso Líquido</p>
+              <p className="text-sm font-black text-black font-mono leading-snug">{displayNetWeightFormatted}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* 2. DADOS DO VEÍCULO (Placas, Quantidade de Eixo) */}
+        <div className="space-y-4">
+          <h5 className="border-b border-slate-200 px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-900">
+            Veículo e Placas
+          </h5>
+          <div className="grid grid-cols-3 gap-6 px-4">
+            <div className="col-span-2">
+              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Placas</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center px-2.5 py-1 rounded bg-slate-900 text-white font-mono font-black text-xs">
+                  Cavalo: {displayTruckPlate || '---'}
+                </span>
+                {(displayTrailer1 || displayTrailer2) ? (
+                  <>
+                    {displayTrailer1 && (
+                      <span className="inline-flex items-center px-2.5 py-1 rounded bg-slate-100 border border-slate-300 text-slate-800 font-mono font-bold text-xs">
+                        Carreta 1: {displayTrailer1}
+                      </span>
+                    )}
+                    {displayTrailer2 && (
+                      <span className="inline-flex items-center px-2.5 py-1 rounded bg-slate-100 border border-slate-300 text-slate-800 font-mono font-bold text-xs">
+                        Carreta 2: {displayTrailer2}
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <span className="inline-flex items-center px-2.5 py-1 rounded bg-slate-100 border border-slate-200 text-slate-600 font-mono text-xs">
+                    Carretas: ---
+                  </span>
+                )}
+                {displayDolly && (
+                  <span className="inline-flex items-center px-2.5 py-1 rounded bg-slate-100 border border-slate-300 text-slate-800 font-mono font-bold text-xs">
+                    Dolly: {displayDolly}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div>
+              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Quantidade de Eixo</p>
+              <p className="text-sm font-black text-black">{displayAxles}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* 3. DADOS DO MOTORISTA (Nome Completo, CPF, Telefone) */}
+        <div className="space-y-4">
+          <h5 className="border-b border-slate-200 px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-900">
+            Dados do Motorista
+          </h5>
+          <div className="grid grid-cols-4 gap-4 px-4">
+            <div className="col-span-2">
+              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Nome Completo</p>
+              <p className="text-sm font-black text-black">{displayDriverName || '---'}</p>
+            </div>
+            <div>
+              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">CPF</p>
+              <p className="text-sm font-bold text-black font-mono">{displayCpf || '---'}</p>
+            </div>
+            <div>
+              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Telefone</p>
+              <p className="text-sm font-bold text-black font-mono">{formatPhone(displayPhone)}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Bloco de Assinaturas */}
+        <div className="pt-16 grid grid-cols-2 gap-20 px-10">
+          <div className="border-t-2 border-slate-800 pt-2 text-center">
+            <p className="text-[10px] font-black uppercase text-slate-500">Assinatura Motorista</p>
+            <p className="text-[9px] font-bold text-slate-700 mt-1">{displayDriverName || 'Motorista'}</p>
+          </div>
+          <div className="border-t-2 border-slate-800 pt-2 text-center">
+            <p className="text-[10px] font-black uppercase text-slate-500">Emissor Autorizado</p>
+            <p className="text-[9px] font-bold text-slate-800 mt-0.5">
+              {effectiveCompanyName} • CNPJ {effectiveCnpj}
+            </p>
+            {effectiveCityState && (
+              <p className="text-[8px] text-slate-500 font-medium">
+                {effectiveAddress ? `${effectiveAddress}, ` : ''}{effectiveCityState}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-10 flex items-center justify-center gap-2 text-slate-400">
+        <img 
+          src={GERA_LOGO_BASE64} 
+          alt="Logo GERA" 
+          className="w-5 h-5 object-contain opacity-80"
+        />
+        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+          {effectiveCompanyName} • Logística e Transporte de Biomassas
+        </span>
+      </div>
+
+      <div className="mt-8 text-center border-t border-slate-100 pt-4">
+        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.25em]">
+          Documento gerado eletronicamente por {effectiveCompanyName} • CNPJ {effectiveCnpj} {effectiveIe ? `• IE ${effectiveIe}` : ''} - Autenticação Digital Requerida
+        </p>
+      </div>
+    </div>
+  );
+});
+
+LoadingOrderTemplate.displayName = 'LoadingOrderTemplate';
+
+export default LoadingOrderTemplate;

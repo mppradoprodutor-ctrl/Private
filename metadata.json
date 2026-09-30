@@ -1,0 +1,10 @@
+{
+  "name": "MY SYTEM - Sistema de Fretes Rodoviários",
+  "description": "Uma plataforma avançada para gestão de frotas e motoristas, permitindo o cadastro detalhado de veículos, implementos e condutores, com importação inteligente via Excel.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
