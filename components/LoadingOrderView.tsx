@@ -332,7 +332,9 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
   const displayState = manualState || selectedFreight?.state || '';
   const displayProduct = manualProduct || selectedFreight?.product || '';
   const selectedOrigin = selectedFreight?.originDetails || selectedFreight?.origem;
-  const loadingOriginCompany = selectedOrigin?.companyName || selectedFreight?.origin || manualOrigin;
+  // Na ordem, o campo Empresa representa o tomador de serviço da rota cadastrada.
+  // Mantém a origem apenas como fallback para rotas antigas sem tomador informado.
+  const loadingOriginCompany = selectedFreight?.serviceTaker || selectedOrigin?.companyName || selectedFreight?.origin || manualOrigin;
   const loadingOriginCnpj = selectedOrigin?.cnpj || '';
   const loadingOriginAddress = selectedOrigin?.address || manualLocation || displayLocation;
   const loadingOriginCityState = selectedOrigin?.city
