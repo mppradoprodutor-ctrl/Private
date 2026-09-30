@@ -1,0 +1,79 @@
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MY SYTEM - Gestão de Fretes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" crossorigin="anonymous">
+    <!-- Leaflet Maps CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <style>
+        /* Aumento de 4% no zoom global conforme solicitado */
+        body { 
+            font-family: 'Inter', sans-serif; 
+            zoom: 1.04; 
+            -moz-transform: scale(1.04); 
+            -moz-transform-origin: 0 0;
+        }
+        
+        @media print {
+            .no-print { display: none; }
+        }
+        /* Ocultar barras de rolagem verticais em todo o sistema */
+        * {
+            -ms-overflow-style: none !important;
+            scrollbar-width: none !important;
+        }
+        ::-webkit-scrollbar {
+            width: 0px !important;
+            display: none !important;
+        }
+        ::-webkit-scrollbar:vertical {
+            width: 0px !important;
+            display: none !important;
+        }
+        .no-scrollbar::-webkit-scrollbar,
+        .no-scrollbar::-webkit-scrollbar:vertical,
+        .custom-scrollbar::-webkit-scrollbar:vertical,
+        .custom-scrollbar-light::-webkit-scrollbar:vertical {
+            display: none !important;
+            width: 0px !important;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none !important;
+            scrollbar-width: none !important;
+        }
+
+        /* Custom scrollbar apenas para rolagens horizontais de tabelas */
+        .custom-scrollbar::-webkit-scrollbar:horizontal { height: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        .custom-scrollbar-light::-webkit-scrollbar:horizontal { height: 5px; }
+        .custom-scrollbar-light::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.05); border-radius: 10px; }
+        .custom-scrollbar-light::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 10px; }
+        .custom-scrollbar-light::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.3); }
+        
+        #map { height: 320px; width: 100%; border-radius: 1.5rem; z-index: 10; }
+        .leaflet-div-icon.custom-city-pin,
+        .leaflet-div-icon.discreet-city-flag,
+        .leaflet-div-icon.discreet-route-flag {
+            background: transparent !important;
+            border: none !important;
+        }
+    </style>
+<!-- Leaflet Maps JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<link rel="stylesheet" href="/index.css">
+  <script type="module" crossorigin src="/assets/index-C8S5rZi6.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-CIGW-MKW.css">
+</head>
+<body class="bg-slate-50 text-slate-900">
+    <div id="root"></div>
+</body>
+</html>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Driver, Trip, OperationalUnit, Freight } from '../types';
-import { Calendar, Clock, MapPin, Phone, Truck } from 'lucide-react';
+import { Calendar, Truck } from 'lucide-react';
 import { GERA_LOGO_BASE64 } from '../assets/logoBase64';
 
 export interface LoadingOrderTemplateProps {
@@ -292,8 +292,8 @@ const LoadingOrderTemplate = React.forwardRef<HTMLDivElement, LoadingOrderTempla
                 <div><dt className="font-bold uppercase text-slate-500">CNPJ</dt><dd className="font-mono font-black text-slate-900">{effectiveCnpj || '---'}</dd></div>
                 <div><dt className="font-bold uppercase text-slate-500">Endereço completo</dt><dd className="font-medium text-slate-700">{effectiveAddress || displayLocation || '---'}</dd></div>
                 <div><dt className="font-bold uppercase text-slate-500">Cidade/UF</dt><dd className="font-medium text-slate-700">{effectiveCityState || `${displayOrigin}${displayState ? ` - ${displayState}` : ''}` || '---'}</dd></div>
-                <div className="grid grid-cols-2 gap-2"><div><dt className="font-bold uppercase text-slate-500">Contato</dt><dd className="font-medium text-slate-700">{displayDriverName || '---'}</dd></div><div><dt className="flex items-center gap-1 font-bold uppercase text-slate-500"><Phone aria-hidden="true" /> Telefone</dt><dd className="font-medium text-slate-700">{formatPhone(displayPhone)}</dd></div></div>
-                <div className="grid grid-cols-2 gap-2"><div><dt className="flex items-center gap-1 font-bold uppercase text-slate-500"><Calendar aria-hidden="true" /> Data</dt><dd className="font-medium text-slate-700">{displayDate}</dd></div><div><dt className="flex items-center gap-1 font-bold uppercase text-slate-500"><Clock aria-hidden="true" /> Horário</dt><dd className="font-medium text-slate-700">Não informado</dd></div></div>
+<div className="grid grid-cols-2 gap-2"><div><dt className="font-bold uppercase text-slate-500">Contato</dt><dd className="font-medium text-slate-700">{displayDriverName || '---'}</dd></div><div><dt className="font-bold uppercase text-slate-500">Telefone</dt><dd className="font-medium text-slate-700">{formatPhone(displayPhone)}</dd></div></div>
+  <div><dt className="flex items-center gap-1 font-bold uppercase text-slate-500"><Calendar aria-hidden="true" /> Data</dt><dd className="font-medium text-slate-700">{displayDate}</dd></div>
               </dl>
             </div>
 
@@ -307,8 +307,8 @@ const LoadingOrderTemplate = React.forwardRef<HTMLDivElement, LoadingOrderTempla
                 <div><dt className="font-bold uppercase text-slate-500">CNPJ</dt><dd className="font-mono font-black text-slate-900">{effectiveDeliveryCnpj || '---'}</dd></div>
                 <div><dt className="font-bold uppercase text-slate-500">Endereço completo</dt><dd className="font-medium text-slate-700">{effectiveDeliveryAddress || displayDeliveryLocation || '---'}</dd></div>
                 <div><dt className="font-bold uppercase text-slate-500">Cidade/UF</dt><dd className="font-medium text-slate-700">{effectiveDeliveryCityState || '---'}</dd></div>
-                <div className="grid grid-cols-2 gap-2"><div><dt className="font-bold uppercase text-slate-500">Contato</dt><dd className="font-medium text-slate-700">{effectiveDeliveryUnitName || '---'}</dd></div><div><dt className="flex items-center gap-1 font-bold uppercase text-slate-500"><Phone aria-hidden="true" /> Telefone</dt><dd className="font-medium text-slate-700">Não informado</dd></div></div>
-                <div className="grid grid-cols-2 gap-2"><div><dt className="flex items-center gap-1 font-bold uppercase text-slate-500"><Calendar aria-hidden="true" /> Data</dt><dd className="font-medium text-slate-700">{displayDate}</dd></div><div><dt className="flex items-center gap-1 font-bold uppercase text-slate-500"><Clock aria-hidden="true" /> Horário</dt><dd className="font-medium text-slate-700">Não informado</dd></div></div>
+<div className="grid grid-cols-2 gap-2"><div><dt className="font-bold uppercase text-slate-500">Contato</dt><dd className="font-medium text-slate-700">{effectiveDeliveryUnitName || '---'}</dd></div><div><dt className="font-bold uppercase text-slate-500">Telefone</dt><dd className="font-medium text-slate-700">Não informado</dd></div></div>
+  <div><dt className="flex items-center gap-1 font-bold uppercase text-slate-500"><Calendar aria-hidden="true" /> Data</dt><dd className="font-medium text-slate-700">{displayDate}</dd></div>
               </dl>
             </div>
 
