@@ -167,15 +167,6 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
     return (f.location || f.collectionAddress || '').trim();
   }, []);
 
-  const getFreightDeliveryLocation = useCallback((f: Freight | null | undefined): string => {
-    if (!f) return '';
-    if (f.destinationAddress?.trim()) return f.destinationAddress.trim();
-    if (f.dischargeTerminal?.trim()) {
-      return `${f.dischargeTerminal.trim()}${f.destination ? ` - ${f.destination.trim()}` : ''}${f.destinationState ? `/${f.destinationState.trim()}` : ''}`;
-    }
-    return `${f.destination || ''}${f.destinationState ? ` - ${f.destinationState.trim()}` : ''}`.trim();
-  }, []);
-
   // Pré-carrega o primeiro frete ou frete com local salvo na Base de Fretes assim que abre o menu
   useEffect(() => {
     if (!selectedFreight && freights.length > 0 && !manualLocation) {
@@ -187,13 +178,9 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
         if (!manualOrigin) setManualOrigin(defaultFreight.origin || '');
         if (!manualState) setManualState(defaultFreight.state || '');
         if (!manualProduct) setManualProduct(defaultFreight.product || '');
-        if (!manualDeliveryLocation) {
-          const delLoc = getFreightDeliveryLocation(defaultFreight);
-          if (delLoc) setManualDeliveryLocation(delLoc);
-        }
       }
     }
-  }, [freights, selectedFreight, manualLocation, manualDeliveryLocation, manualOrigin, manualState, manualProduct, getFreightLoadingLocation, getFreightDeliveryLocation]);
+  }, [freights, selectedFreight, manualLocation, manualDeliveryLocation, manualOrigin, manualState, manualProduct, getFreightLoadingLocation]);
 
   const sortedFreights = useMemo(() => {
     return [...freights].sort((a, b) => {
@@ -215,8 +202,6 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
       setManualOrigin(freight.origin || '');
       setManualState(freight.state || '');
       setManualProduct(freight.product || '');
-      // Pega o Local de Entrega cadastrado na Base de Fretes
-      setManualDeliveryLocation(getFreightDeliveryLocation(freight));
     } else {
       setManualLocation('');
       setManualDeliveryLocation('');
