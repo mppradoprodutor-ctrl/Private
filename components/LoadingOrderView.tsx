@@ -161,9 +161,8 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
   // Função utilitária para extrair os locais cadastrados na Base de Fretes
   const getFreightLoadingLocation = useCallback((f: Freight | null | undefined): string => {
     if (!f) return '';
-    if (f.location && f.collectionAddress && f.location.trim() !== f.collectionAddress.trim()) {
-      return `${f.location.trim()} - ${f.collectionAddress.trim()}`;
-    }
+    // O PDF deve reproduzir exatamente o Local de Coleta da Base de Fretes.
+    // collectionAddress é apenas compatibilidade para cadastros antigos sem location.
     return (f.location || f.collectionAddress || '').trim();
   }, []);
 
