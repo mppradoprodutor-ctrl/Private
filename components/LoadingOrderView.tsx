@@ -790,7 +790,7 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
                   />
                 </div>
 
-                <div>
+                <div className="hidden">
                   <div className="flex items-center justify-between mb-1">
                     <label className="block text-[8px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
                       <Phone size={10} className="text-red-600" /> Telefone do Motorista
@@ -815,8 +815,8 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
                 </div>
               </div>
 
-              {/* Nome do Motorista e CPF */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {/* Nome do Motorista e CPF — preenchidos automaticamente e exibidos no espelho */}
+              <div className="hidden grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div>
                   <label className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">
                     Nome do Motorista
@@ -844,7 +844,7 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <div>
+                <div className="hidden">
                   <label className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1">
                     <Scale size={10} className="text-red-600" /> Peso Líquido (TN)
                   </label>
@@ -861,7 +861,7 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
                   <label className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Data da Coleta</label>
                   <input type="date" value={loadingDate} onChange={e => setLoadingDate(e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5 text-xs font-semibold outline-none focus:ring-1 focus:ring-blue-100" />
                 </div>
-                <div>
+                <div className="hidden">
                   <label className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Tipo de Pagamento</label>
                   <select 
                     value={paymentType} 
@@ -875,7 +875,7 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
                 </div>
               </div>
 
-              <div>
+              <div className="hidden">
                 <div className="flex justify-between items-center mb-1">
                   <label className="block text-[8px] font-black text-slate-400 uppercase tracking-widest">
                     Nº Ordem de Carregamento (Sequência Automática)
@@ -934,7 +934,7 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
                 </div>
               </div>
 
-              <div>
+              <div className="hidden">
                 <label className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Anotações Internas / Observações</label>
                 <input placeholder="" value={notes} onChange={e => setNotes(e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5 text-xs font-semibold outline-none focus:ring-1 focus:ring-blue-100" />
               </div>
