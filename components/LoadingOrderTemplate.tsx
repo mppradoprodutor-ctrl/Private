@@ -78,41 +78,9 @@ const LoadingOrderTemplate = React.forwardRef<HTMLDivElement, LoadingOrderTempla
     ? `${trip.operationalUnitCity}${trip.operationalUnitState ? ` - ${trip.operationalUnitState}` : ''}` 
     : (trip?.operationalUnitState || ''));
 
-  // Resolução dos dados da carga / operação
-  // Prioriza: prop explícita > trip.location > Base de Fretes cadastrada > extração de trip.notes ("Local: ...")
+  // O PDF recebe o local já resolvido pela rota selecionada. Não procura outra
+  // rota por origem/destino, pois isso pode exibir dados de um cadastro diferente.
   let extractedLocation = text(props.loadingLocation || trip?.location).trim();
-
-  if (!extractedLocation) {
-    const originCandidate = text(props.origin || trip?.origin).trim().toLowerCase();
-    const destCandidate = text(trip?.destination).trim().toLowerCase();
-
-    // Carrega fretes da prop ou diretamente do armazenamento local
-    const freightsList: Freight[] = Array.isArray(props.freights) ? props.freights : (() => {
-      try {
-        const raw = readStorage('tp_system_freights');
-        const parsed = raw ? JSON.parse(raw) : [];
-        return Array.isArray(parsed) ? parsed : [];
-      } catch {
-        return [];
-      }
-    })();
-
-    if (freightsList.length > 0) {
-      const match = freightsList.find(f => 
-        originCandidate && f.origin && f.origin.trim().toLowerCase() === originCandidate &&
-        (!destCandidate || !f.destination || f.destination.trim().toLowerCase() === destCandidate) &&
-        (f.location || f.collectionAddress)
-      ) || freightsList.find(f => 
-        originCandidate && f.origin && f.origin.trim().toLowerCase() === originCandidate &&
-        (f.location || f.collectionAddress)
-      ) || freightsList.find(f => f.location || f.collectionAddress);
-
-      if (match) {
-        // Mantém exatamente o local de coleta cadastrado na rota selecionada.
-        extractedLocation = (match.location || match.collectionAddress || '').trim();
-      }
-    }
-  }
 
   if (!extractedLocation && trip?.notes) {
     const match = text(trip.notes).match(/Local:\s*([^.]+)/i);

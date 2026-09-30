@@ -304,29 +304,12 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
 
   // Resolução efetiva dos dados do espelho (prioriza preenchimento manual ou seleção do cadastro na Base de Fretes)
   const displayLocation = useMemo(() => {
-    // Ao selecionar uma rota, o Local de Coleta deve refletir diretamente o cadastro da Base de Fretes.
-    if (selectedFreight) {
-      const registeredLocation = getFreightLoadingLocation(selectedFreight);
-      if (registeredLocation) return registeredLocation;
-    }
+    // O espelho deve usar somente a rota selecionada. manualLocation começa com o
+    // cadastro da rota e continua editável quando o cadastro não possui o dado.
     if (manualLocation.trim()) return manualLocation.trim();
-    const originToMatch = (manualOrigin || selectedFreight?.origin || '').trim().toLowerCase();
-    if (originToMatch) {
-      const match = freights.find(f => f.origin && f.origin.trim().toLowerCase() === originToMatch && (f.location || f.collectionAddress));
-      if (match) return getFreightLoadingLocation(match);
-    }
-    const anyWithLoc = freights.find(f => f.location || f.collectionAddress);
-    if (anyWithLoc) return getFreightLoadingLocation(anyWithLoc);
-
-    // Fallback: se não houver armazém/local cadastrado, usa o município de origem cadastrado para nunca faltar no arquivo PNG
-    if (selectedFreight?.origin) {
-      return `${selectedFreight.origin}${selectedFreight.state ? ` - ${selectedFreight.state}` : ''}`;
-    }
-    if (manualOrigin) {
-      return `${manualOrigin}${manualState ? ` - ${manualState}` : ''}`;
-    }
+    if (selectedFreight) return getFreightLoadingLocation(selectedFreight);
     return '';
-  }, [manualLocation, selectedFreight, manualOrigin, manualState, freights, getFreightLoadingLocation]);
+  }, [manualLocation, selectedFreight, getFreightLoadingLocation]);
 
   const displayOrigin = manualOrigin || selectedFreight?.origin || '';
   const displayState = manualState || selectedFreight?.state || '';
@@ -336,7 +319,7 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
   // Mantém a origem apenas como fallback para rotas antigas sem tomador informado.
   const loadingOriginCompany = selectedFreight?.serviceTaker || selectedOrigin?.companyName || selectedFreight?.origin || manualOrigin;
   const loadingOriginCnpj = selectedOrigin?.cnpj || '';
-  const loadingOriginAddress = selectedOrigin?.address || manualLocation || displayLocation;
+  const loadingOriginAddress = selectedOrigin?.address || manualLocation || '';
   const loadingOriginCityState = selectedOrigin?.city
     ? `${selectedOrigin.city}${selectedOrigin.state ? ` - ${selectedOrigin.state}` : ''}`
     : `${displayOrigin}${displayState ? ` - ${displayState}` : ''}`;
