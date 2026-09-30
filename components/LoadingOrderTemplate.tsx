@@ -1,5 +1,6 @@
 import React from 'react';
 import { Driver, Trip, OperationalUnit, Freight } from '../types';
+import { Calendar, Clock, MapPin, Phone, Truck } from 'lucide-react';
 import { GERA_LOGO_BASE64 } from '../assets/logoBase64';
 
 export interface LoadingOrderTemplateProps {
@@ -280,53 +281,40 @@ const LoadingOrderTemplate = React.forwardRef<HTMLDivElement, LoadingOrderTempla
           <h5 className="border-b border-slate-200 px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-900">
             Dados da Operação
           </h5>
-          <div className="grid grid-cols-6 gap-x-4 gap-y-3.5 px-4">
-            <div className="col-span-2">
-              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Local de Carregamento</p>
-              <p className="text-sm font-black text-black leading-snug">{displayLocation || '---'}</p>
-            </div>
-            <div className="col-span-2">
-              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Origem / UF</p>
-              <p className="text-sm font-black text-black leading-snug">
-                {displayOrigin ? `${displayOrigin}${displayState ? ` - ${displayState}` : ''}` : '---'}
-              </p>
-            </div>
-            <div className="col-span-2">
-              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Local de Entrega</p>
-              <p className="text-sm font-black text-black leading-snug break-words">
-                {displayDeliveryLocation.includes(effectiveDeliveryCompanyName) 
-                  ? displayDeliveryLocation 
-                  : (effectiveDeliveryCompanyName 
-                      ? `${effectiveDeliveryCompanyName}${displayDeliveryLocation && displayDeliveryLocation !== '---' && !effectiveDeliveryCompanyName.includes(displayDeliveryLocation) ? ` - ${displayDeliveryLocation}` : ''}` 
-                      : displayDeliveryLocation)}
-                {effectiveDeliveryUnitName && !displayDeliveryLocation.includes(effectiveDeliveryUnitName) && effectiveDeliveryUnitName !== effectiveDeliveryCompanyName && (
-                  <span className="text-slate-600 font-bold text-[9.5px] block leading-tight">({effectiveDeliveryUnitName})</span>
-                )}
-              </p>
-              <div className="mt-0.5 space-y-0.5">
-                <p className="text-[9.5px] font-mono font-black text-slate-800 tracking-tight flex items-center gap-1 flex-wrap">
-                  <span className="text-slate-500 font-sans font-bold text-[8.5px] uppercase">CNPJ:</span> {effectiveDeliveryCnpj}
-                  {effectiveDeliveryIe && (
-                    <span className="text-slate-700 font-mono font-bold text-[8px] bg-slate-100 border border-slate-200 px-1 rounded">
-                      IE: {effectiveDeliveryIe}
-                    </span>
-                  )}
-                </p>
-                {(effectiveDeliveryAddress || effectiveDeliveryCityState) && (
-                  <p className="text-[8.5px] text-slate-600 font-medium leading-tight break-words">
-                    {effectiveDeliveryAddress ? `${effectiveDeliveryAddress} • ` : ''}
-                    <span className="font-bold text-slate-800">{effectiveDeliveryCityState}</span>
-                  </p>
-                )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 px-4">
+            <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+              <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+                <MapPin className="text-red-600" aria-hidden="true" />
+                <h6 className="text-[10px] font-black uppercase tracking-widest text-slate-900">Local de Coleta</h6>
               </div>
+              <dl className="mt-2 grid gap-1.5 text-[9px] leading-tight">
+                <div><dt className="font-bold uppercase text-slate-500">Empresa</dt><dd className="font-black text-slate-900">{effectiveCompanyName || '---'}</dd></div>
+                <div><dt className="font-bold uppercase text-slate-500">CNPJ</dt><dd className="font-mono font-black text-slate-900">{effectiveCnpj || '---'}</dd></div>
+                <div><dt className="font-bold uppercase text-slate-500">Endereço completo</dt><dd className="font-medium text-slate-700">{effectiveAddress || displayLocation || '---'}</dd></div>
+                <div><dt className="font-bold uppercase text-slate-500">Cidade/UF</dt><dd className="font-medium text-slate-700">{effectiveCityState || `${displayOrigin}${displayState ? ` - ${displayState}` : ''}` || '---'}</dd></div>
+                <div className="grid grid-cols-2 gap-2"><div><dt className="font-bold uppercase text-slate-500">Contato</dt><dd className="font-medium text-slate-700">{displayDriverName || '---'}</dd></div><div><dt className="flex items-center gap-1 font-bold uppercase text-slate-500"><Phone aria-hidden="true" /> Telefone</dt><dd className="font-medium text-slate-700">{formatPhone(displayPhone)}</dd></div></div>
+                <div className="grid grid-cols-2 gap-2"><div><dt className="flex items-center gap-1 font-bold uppercase text-slate-500"><Calendar aria-hidden="true" /> Data</dt><dd className="font-medium text-slate-700">{displayDate}</dd></div><div><dt className="flex items-center gap-1 font-bold uppercase text-slate-500"><Clock aria-hidden="true" /> Horário</dt><dd className="font-medium text-slate-700">Não informado</dd></div></div>
+              </dl>
             </div>
-            <div className="col-span-3">
-              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Produto</p>
-              <p className="text-sm font-black text-red-600 leading-snug">{displayProduct || '---'}</p>
+
+            <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+              <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+                <Truck className="text-red-600" aria-hidden="true" />
+                <h6 className="text-[10px] font-black uppercase tracking-widest text-slate-900">Local de Entrega</h6>
+              </div>
+              <dl className="mt-2 grid gap-1.5 text-[9px] leading-tight">
+                <div><dt className="font-bold uppercase text-slate-500">Empresa</dt><dd className="font-black text-slate-900">{effectiveDeliveryCompanyName || displayDeliveryLocation || '---'}</dd></div>
+                <div><dt className="font-bold uppercase text-slate-500">CNPJ</dt><dd className="font-mono font-black text-slate-900">{effectiveDeliveryCnpj || '---'}</dd></div>
+                <div><dt className="font-bold uppercase text-slate-500">Endereço completo</dt><dd className="font-medium text-slate-700">{effectiveDeliveryAddress || displayDeliveryLocation || '---'}</dd></div>
+                <div><dt className="font-bold uppercase text-slate-500">Cidade/UF</dt><dd className="font-medium text-slate-700">{effectiveDeliveryCityState || '---'}</dd></div>
+                <div className="grid grid-cols-2 gap-2"><div><dt className="font-bold uppercase text-slate-500">Contato</dt><dd className="font-medium text-slate-700">{effectiveDeliveryUnitName || '---'}</dd></div><div><dt className="flex items-center gap-1 font-bold uppercase text-slate-500"><Phone aria-hidden="true" /> Telefone</dt><dd className="font-medium text-slate-700">Não informado</dd></div></div>
+                <div className="grid grid-cols-2 gap-2"><div><dt className="flex items-center gap-1 font-bold uppercase text-slate-500"><Calendar aria-hidden="true" /> Data</dt><dd className="font-medium text-slate-700">{displayDate}</dd></div><div><dt className="flex items-center gap-1 font-bold uppercase text-slate-500"><Clock aria-hidden="true" /> Horário</dt><dd className="font-medium text-slate-700">Não informado</dd></div></div>
+              </dl>
             </div>
-            <div className="col-span-3">
-              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Peso Líquido</p>
-              <p className="text-sm font-black text-black font-mono leading-snug">{displayNetWeightFormatted}</p>
+
+            <div className="md:col-span-2 grid grid-cols-2 gap-3">
+              <div><p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Produto</p><p className="text-sm font-black text-red-600">{displayProduct || '---'}</p></div>
+              <div><p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Peso Líquido</p><p className="text-sm font-black font-mono text-black">{displayNetWeightFormatted}</p></div>
             </div>
           </div>
         </div>
