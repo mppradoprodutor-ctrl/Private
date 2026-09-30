@@ -102,11 +102,8 @@ const LoadingOrderTemplate = React.forwardRef<HTMLDivElement, LoadingOrderTempla
       ) || freightsList.find(f => f.location || f.collectionAddress);
 
       if (match) {
-        if (match.location && match.collectionAddress && match.location.trim() !== match.collectionAddress.trim()) {
-          extractedLocation = `${match.location.trim()} - ${match.collectionAddress.trim()}`;
-        } else {
-          extractedLocation = (match.location || match.collectionAddress || '').trim();
-        }
+        // Mantém exatamente o local de coleta cadastrado na rota selecionada.
+        extractedLocation = (match.location || match.collectionAddress || '').trim();
       }
     }
   }
