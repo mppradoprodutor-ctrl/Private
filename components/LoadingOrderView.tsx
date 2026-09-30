@@ -302,11 +302,12 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
 
   // Resolução efetiva dos dados do espelho (prioriza preenchimento manual ou seleção do cadastro na Base de Fretes)
   const displayLocation = useMemo(() => {
-    if (manualLocation.trim()) return manualLocation.trim();
+    // Ao selecionar uma rota, o Local de Coleta deve refletir diretamente o cadastro da Base de Fretes.
     if (selectedFreight) {
-      const loc = getFreightLoadingLocation(selectedFreight);
-      if (loc) return loc;
+      const registeredLocation = getFreightLoadingLocation(selectedFreight);
+      if (registeredLocation) return registeredLocation;
     }
+    if (manualLocation.trim()) return manualLocation.trim();
     const originToMatch = (manualOrigin || selectedFreight?.origin || '').trim().toLowerCase();
     if (originToMatch) {
       const match = freights.find(f => f.origin && f.origin.trim().toLowerCase() === originToMatch && (f.location || f.collectionAddress));
