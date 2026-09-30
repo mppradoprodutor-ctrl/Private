@@ -192,7 +192,10 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
   }, [freights, getFreightLoadingLocation]);
 
   const handleFreightChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const freight = freights.find(f => f.id === e.target.value) || null;
+    const idSelecionado = e.target.value;
+    const baseDeFretes = freights;
+    const rota = baseDeFretes.find(r => r.id === idSelecionado) || null;
+    const freight = rota;
     setSelectedFreight(freight);
     if (freight) {
       // Pega o Local de Carregamento cadastrado na Base de Fretes
@@ -328,6 +331,15 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
   const displayOrigin = manualOrigin || selectedFreight?.origin || '';
   const displayState = manualState || selectedFreight?.state || '';
   const displayProduct = manualProduct || selectedFreight?.product || '';
+  const selectedOrigin = selectedFreight?.originDetails || selectedFreight?.origem;
+  const loadingOriginCompany = selectedOrigin?.companyName || selectedFreight?.origin || manualOrigin;
+  const loadingOriginCnpj = selectedOrigin?.cnpj || '';
+  const loadingOriginAddress = selectedOrigin?.address || manualLocation || displayLocation;
+  const loadingOriginCityState = selectedOrigin?.city
+    ? `${selectedOrigin.city}${selectedOrigin.state ? ` - ${selectedOrigin.state}` : ''}`
+    : `${displayOrigin}${displayState ? ` - ${displayState}` : ''}`;
+  const loadingOriginContact = selectedOrigin?.contact || '';
+  const loadingOriginPhone = selectedOrigin?.phone || '';
 
   // Resolução efetiva do Local de Entrega (acompanha o CNPJ de entrega selecionado)
   const displayDeliveryLocation = useMemo(() => {
@@ -996,8 +1008,14 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
             orderNumber={orderNumber || 1}
             collectionDate={loadingDate}
             loadingDate={loadingDate}
-            loadingLocation={selectedFreight ? getFreightLoadingLocation(selectedFreight) : displayLocation}
-            deliveryLocation={displayDeliveryLocation}
+  loadingLocation={displayLocation}
+  loadingOriginCompany={loadingOriginCompany}
+  loadingOriginCnpj={loadingOriginCnpj}
+  loadingOriginAddress={loadingOriginAddress}
+  loadingOriginCityState={loadingOriginCityState}
+  loadingOriginContact={loadingOriginContact}
+  loadingOriginPhone={loadingOriginPhone}
+  deliveryLocation={displayDeliveryLocation}
             deliveryUnit={selectedDeliveryUnit}
             deliveryCnpj={selectedDeliveryUnit ? selectedDeliveryUnit.cnpj : selectedUnit?.cnpj}
             deliveryCompanyName={selectedDeliveryUnit?.companyName}
@@ -1036,7 +1054,7 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
               orderNumber={orderNumber || 1}
               collectionDate={loadingDate}
               loadingDate={loadingDate}
-              loadingLocation={selectedFreight ? getFreightLoadingLocation(selectedFreight) : displayLocation}
+              loadingLocation={displayLocation}
               deliveryLocation={displayDeliveryLocation}
               deliveryUnit={selectedDeliveryUnit}
               deliveryCnpj={selectedDeliveryUnit ? selectedDeliveryUnit.cnpj : selectedUnit?.cnpj}

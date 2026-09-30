@@ -11,6 +11,12 @@ export interface LoadingOrderTemplateProps {
   // Propriedades opcionais para personalização direta ou manual
   orderNumber?: number;
   loadingLocation?: string;
+  loadingOriginCompany?: string;
+  loadingOriginCnpj?: string;
+  loadingOriginAddress?: string;
+  loadingOriginCityState?: string;
+  loadingOriginContact?: string;
+  loadingOriginPhone?: string;
   deliveryLocation?: string;
   deliveryUnit?: OperationalUnit | null;
   deliveryCnpj?: string;
@@ -163,6 +169,12 @@ const LoadingOrderTemplate = React.forwardRef<HTMLDivElement, LoadingOrderTempla
   const displayOrigin = props.origin || trip?.origin || '';
   const displayState = props.originState || trip?.originState || '';
   const displayProduct = props.product || trip?.product || '';
+  const loadingOriginCompany = props.loadingOriginCompany || displayOrigin;
+  const loadingOriginCnpj = props.loadingOriginCnpj || '';
+  const loadingOriginAddress = props.loadingOriginAddress || displayLocation;
+  const loadingOriginCityState = props.loadingOriginCityState || `${displayOrigin}${displayState ? ` - ${displayState}` : ''}`;
+  const loadingOriginContact = props.loadingOriginContact || '';
+  const loadingOriginPhone = props.loadingOriginPhone || '';
 
   // Resolução do peso líquido
   const rawNetWeight = props.netWeight !== undefined && props.netWeight !== ''
@@ -294,11 +306,11 @@ const LoadingOrderTemplate = React.forwardRef<HTMLDivElement, LoadingOrderTempla
                 <h6 className="text-[10px] font-black uppercase tracking-widest text-slate-900">Local de Coleta</h6>
               </div>
               <dl className="mt-2 grid gap-1.5 text-[9px] leading-tight">
-                <div><dt className="font-bold uppercase text-slate-500">Empresa</dt><dd className="font-black text-slate-900">{effectiveCompanyName || '---'}</dd></div>
-                <div><dt className="font-bold uppercase text-slate-500">CNPJ</dt><dd className="font-mono font-black text-slate-900">{effectiveCnpj || '---'}</dd></div>
-                <div><dt className="font-bold uppercase text-slate-500">Endereço completo</dt><dd className="font-medium text-slate-700">{displayLocation || effectiveAddress || '---'}</dd></div>
-                <div><dt className="font-bold uppercase text-slate-500">Cidade/UF</dt><dd className="font-medium text-slate-700">{effectiveCityState || `${displayOrigin}${displayState ? ` - ${displayState}` : ''}` || '---'}</dd></div>
-<div className="grid grid-cols-2 gap-2"><div><dt className="font-bold uppercase text-slate-500">Contato</dt><dd className="font-medium text-slate-700">{displayDriverName || '---'}</dd></div><div><dt className="font-bold uppercase text-slate-500">Telefone</dt><dd className="font-medium text-slate-700">{formatPhone(displayPhone)}</dd></div></div>
+<div><dt className="font-bold uppercase text-slate-500">Empresa</dt><dd className="font-black text-slate-900">{loadingOriginCompany || '---'}</dd></div>
+  <div><dt className="font-bold uppercase text-slate-500">CNPJ</dt><dd className="font-mono font-black text-slate-900">{loadingOriginCnpj || '---'}</dd></div>
+  <div><dt className="font-bold uppercase text-slate-500">Endereço completo</dt><dd className="font-medium text-slate-700">{loadingOriginAddress || '---'}</dd></div>
+  <div><dt className="font-bold uppercase text-slate-500">Cidade/UF</dt><dd className="font-medium text-slate-700">{loadingOriginCityState || '---'}</dd></div>
+  <div className="grid grid-cols-2 gap-2"><div><dt className="font-bold uppercase text-slate-500">Contato</dt><dd className="font-medium text-slate-700">{loadingOriginContact || '---'}</dd></div><div><dt className="font-bold uppercase text-slate-500">Telefone</dt><dd className="font-medium text-slate-700">{formatPhone(loadingOriginPhone) || '---'}</dd></div></div>
   <div><dt className="flex items-center gap-1 font-bold uppercase text-slate-500">Data</dt><dd className="font-medium text-slate-700">{displayDate}</dd></div>
               </dl>
             </div>
