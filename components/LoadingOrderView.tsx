@@ -315,14 +315,12 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
   const displayState = manualState || selectedFreight?.state || '';
   const displayProduct = manualProduct || selectedFreight?.product || '';
   const selectedOrigin = selectedFreight?.originDetails || selectedFreight?.origem;
-  // Na ordem, o campo Empresa representa o tomador de serviço da rota cadastrada.
-  // Mantém a origem apenas como fallback para rotas antigas sem tomador informado.
-  const loadingOriginCompany = selectedFreight?.serviceTaker || selectedOrigin?.companyName || selectedFreight?.origin || manualOrigin;
+  // O espelho usa exclusivamente os dados da rota selecionada na Base de Fretes.
+  // LOCAL é a empresa exibida no card; ORIGEM/UF formam a cidade da coleta.
+  const loadingOriginCompany = selectedFreight?.location || selectedOrigin?.companyName || selectedFreight?.origin || manualOrigin;
   const loadingOriginCnpj = selectedOrigin?.cnpj || '';
-  const loadingOriginAddress = selectedOrigin?.address || manualLocation || '';
-  const loadingOriginCityState = selectedOrigin?.city
-    ? `${selectedOrigin.city}${selectedOrigin.state ? ` - ${selectedOrigin.state}` : ''}`
-    : `${displayOrigin}${displayState ? ` - ${displayState}` : ''}`;
+  const loadingOriginAddress = selectedFreight?.collectionAddress?.trim() || selectedOrigin?.address || selectedFreight?.location || manualLocation || '';
+  const loadingOriginCityState = `${selectedFreight?.origin || selectedOrigin?.city || displayOrigin}${selectedFreight?.state || selectedOrigin?.state || displayState ? ` - ${selectedFreight?.state || selectedOrigin?.state || displayState}` : ''}`;
   const loadingOriginContact = selectedOrigin?.contact || '';
   const loadingOriginPhone = selectedOrigin?.phone || '';
 
@@ -1040,6 +1038,12 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
               collectionDate={loadingDate}
               loadingDate={loadingDate}
               loadingLocation={displayLocation}
+              loadingOriginCompany={loadingOriginCompany}
+              loadingOriginCnpj={loadingOriginCnpj}
+              loadingOriginAddress={loadingOriginAddress}
+              loadingOriginCityState={loadingOriginCityState}
+              loadingOriginContact={loadingOriginContact}
+              loadingOriginPhone={loadingOriginPhone}
               deliveryLocation={displayDeliveryLocation}
               deliveryUnit={selectedDeliveryUnit}
               deliveryCnpj={selectedDeliveryUnit ? selectedDeliveryUnit.cnpj : selectedUnit?.cnpj}
