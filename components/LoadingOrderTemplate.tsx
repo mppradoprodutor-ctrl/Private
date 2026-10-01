@@ -115,10 +115,6 @@ const LoadingOrderTemplate = React.forwardRef<HTMLDivElement, LoadingOrderTempla
   // Resolução do Local de Entrega (acompanha sempre os dados do CNPJ de entrega ou cabeçalho)
   let extractedDeliveryLocation = text(props.deliveryLocation).trim();
 
-  if (!extractedDeliveryLocation && trip?.dischargeTerminal) {
-    extractedDeliveryLocation = `${trip.dischargeTerminal}${trip.destination ? ` - ${trip.destination}` : ''}${trip.destinationState ? `/${trip.destinationState}` : ''}`;
-  }
-
   if (!extractedDeliveryLocation && (props.destination || trip?.destination)) {
     const dest = text(props.destination || trip?.destination).trim();
     const destSt = text(props.destinationState || trip?.destinationState).trim();

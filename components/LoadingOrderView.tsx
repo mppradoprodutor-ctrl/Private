@@ -38,7 +38,6 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
 
   // Campos manuais/opcionais para permitir preenchimento flexível
   const [manualLocation, setManualLocation] = useState('');
-  const [manualDeliveryLocation, setManualDeliveryLocation] = useState('');
   const [manualOrigin, setManualOrigin] = useState('');
   const [manualState, setManualState] = useState('');
   const [manualProduct, setManualProduct] = useState('');
@@ -105,8 +104,6 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
     const unit = operationalUnits.find(u => u.id === unitId);
     if (unit) {
       const citySt = unit.city ? `${unit.city}${unit.state ? ` - ${unit.state}` : ''}` : (unit.state || '');
-      const locText = `${unit.name && unit.name !== 'Matriz' ? `[${unit.name}] ` : ''}${unit.companyName || ''}${citySt ? ` • ${citySt}` : ''}`;
-      setManualDeliveryLocation(locText);
     }
   };
 
@@ -179,7 +176,7 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
         if (!manualProduct) setManualProduct(defaultFreight.product || '');
       }
     }
-  }, [freights, selectedFreight, manualLocation, manualDeliveryLocation, manualOrigin, manualState, manualProduct, getFreightLoadingLocation]);
+  }, [freights, selectedFreight, manualLocation, manualOrigin, manualState, manualProduct, getFreightLoadingLocation]);
 
   const sortedFreights = useMemo(() => {
     return [...freights].sort((a, b) => {
@@ -206,7 +203,6 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
       setManualProduct(freight.product || '');
     } else {
       setManualLocation('');
-      setManualDeliveryLocation('');
       setManualOrigin('');
       setManualState('');
       setManualProduct('');
@@ -326,7 +322,6 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
 
   // Resolução efetiva do Local de Entrega (acompanha o CNPJ de entrega selecionado)
   const displayDeliveryLocation = useMemo(() => {
-    if (manualDeliveryLocation.trim()) return manualDeliveryLocation.trim();
     if (selectedDeliveryUnit) {
       const citySt = selectedDeliveryUnit.city ? `${selectedDeliveryUnit.city}${selectedDeliveryUnit.state ? ` - ${selectedDeliveryUnit.state}` : ''}` : (selectedDeliveryUnit.state || '');
       return `${selectedDeliveryUnit.name && selectedDeliveryUnit.name !== 'Matriz' ? `[${selectedDeliveryUnit.name}] ` : ''}${selectedDeliveryUnit.companyName || citySt || 'Matriz'}`;
@@ -345,7 +340,7 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
       return `${selectedUnit?.name && selectedUnit?.name !== 'Matriz' ? `[${selectedUnit.name}] ` : ''}${effectiveCityState || effectiveAddress || selectedUnit?.name || 'Matriz'}`;
     }
     return '---';
-  }, [manualDeliveryLocation, selectedDeliveryUnit, selectedFreight, effectiveCityState, selectedUnit, effectiveAddress]);
+  }, [selectedDeliveryUnit, selectedFreight, effectiveCityState, selectedUnit, effectiveAddress]);
 
   const displayDriverName = manualDriverName || selectedDriver?.name || '';
   const displayCpf = manualCpf || selectedDriver?.cpf || '';
@@ -448,7 +443,7 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
   const handleGenerateAndSave = () => {
     const currentOrderNum = orderNumber || 1;
     const origin = displayOrigin || 'A DEFINIR';
-    const destination = selectedDeliveryUnit?.city || selectedFreight?.destination || manualDeliveryLocation || selectedUnit?.city || 'A DEFINIR';
+    const destination = selectedDeliveryUnit?.city || selectedFreight?.destination || selectedUnit?.city || 'A DEFINIR';
     const truckPlate = displayTruckPlate || 'S/ PLACA';
     const driverName = displayDriverName || 'MOTORISTA';
 
@@ -459,9 +454,7 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
       originState: displayState,
       destination: destination,
       destinationState: selectedDeliveryUnit?.state || selectedFreight?.destinationState || selectedUnit?.state || '',
-      dischargeTerminal: selectedDeliveryUnit 
-        ? `${selectedDeliveryUnit.name ? `[${selectedDeliveryUnit.name}] ` : ''}${selectedDeliveryUnit.companyName || ''} - CNPJ: ${selectedDeliveryUnit.cnpj}${manualDeliveryLocation && !manualDeliveryLocation.includes(selectedDeliveryUnit.cnpj) ? ` (${manualDeliveryLocation})` : ''}`
-        : (manualDeliveryLocation || selectedFreight?.dischargeTerminal || ''),
+  dischargeTerminal: '',
       cteNumber: '',
       invoiceNumber: '',
       companyTariff: selectedFreight?.companyTariff || 0,
@@ -739,17 +732,6 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
                   </div>
                 )}
 
-                {/* Campo de complemento ou local customizado */}
-                <div>
-                  <input 
-                    type="text"
-                    placeholder={selectedDeliveryUnit ? "Complemento do local / Terminal de Descarga (Opcional)" : "Ex: Terminal ou Cidade de Entrega"}
-                    value={manualDeliveryLocation}
-                    onChange={e => setManualDeliveryLocation(e.target.value)}
-                    className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-800 placeholder:text-slate-400 outline-none focus:ring-1 focus:ring-red-200 transition-all"
-                    title="Complemento ou local de entrega que acompanhará o documento"
-                  />
-                </div>
               </div>
 
               {/* Dados do Veículo e Telefone */}
