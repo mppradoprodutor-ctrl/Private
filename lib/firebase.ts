@@ -11,11 +11,18 @@ import {
   collection,
   deleteDoc,
   doc,
+  getAggregateFromServer,
+  getCountFromServer,
   getDocs,
   initializeFirestore,
+  limit,
   onSnapshot,
+  orderBy,
   query,
+  startAfter,
+  where,
   setDoc,
+  sum,
   writeBatch,
 } from 'firebase/firestore';
 
@@ -49,6 +56,77 @@ const clean = <T>(value: T): T => JSON.parse(JSON.stringify(value));
 
 export { app, auth, db, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut };
 export type { FirebaseUser };
+
+export type DriverQueryFilters = {
+  name?: string;
+  cpfCnh?: string;
+  plate?: string;
+  antt?: string;
+};
+
+function driversQuery(uid: string, filters: DriverQueryFilters = {}, cursor?: any) {
+  const constraints: any[] = [];
+  const name = filters.name?.trim();
+  const cpfCnh = filters.cpfCnh?.replace(/\D/g, '');
+  const plate = filters.plate?.trim().toUpperCase();
+  const antt = filters.antt?.trim();
+
+  if (name) {
+    constraints.push(where('name', '>=', name), where('name', '<=', `${name}\uf8ff`));
+  }
+  if (cpfCnh) constraints.push(where('cpf', '==', cpfCnh));
+  if (plate) constraints.push(where('truckPlate', '==', plate));
+  if (antt) constraints.push(where('antt', '==', antt));
+  constraints.push(orderBy('name'), limit(50));
+  if (cursor) constraints.splice(constraints.length - 1, 0, startAfter(cursor));
+  return query(collection(db, 'users', uid, 'motoristas'), ...constraints);
+}
+
+export function subscribeToDriversPage<T extends { id: string }>(uid: string, filters: DriverQueryFilters, callback: (items: T[], lastDoc: any, hasMore: boolean) => void) {
+  return onSnapshot(driversQuery(uid, filters), snapshot => {
+    callback(snapshot.docs.map(item => ({ id: item.id, ...item.data() }) as T), snapshot.docs.at(-1), snapshot.size === 50);
+  }, error => console.error('[Firestore] motoristas', error));
+}
+
+export async function loadDriversPage<T extends { id: string }>(uid: string, filters: DriverQueryFilters, cursor?: any) {
+  const snapshot = await getDocs(driversQuery(uid, filters, cursor));
+  return { items: snapshot.docs.map(item => ({ id: item.id, ...item.data() }) as T), lastDoc: snapshot.docs.at(-1), hasMore: snapshot.size === 50 };
+}
+
+export async function countUserCollection(uid: string, name: string, filters: DriverQueryFilters = {}) {
+  const ref = name === 'drivers' ? driversQuery(uid, filters) : query(collection(db, 'users', uid, firestoreCollection(name)));
+  return (await getCountFromServer(ref)).data().count;
+}
+
+export type TripQueryFilters = { code?: string };
+
+function tripsQuery(uid: string, filters: TripQueryFilters = {}, cursor?: any) {
+  const constraints: any[] = [];
+  const code = filters.code?.trim();
+  if (code) constraints.push(where('codigo', '>=', code));
+  constraints.push(orderBy('data', 'desc'), limit(20));
+  if (cursor) constraints.splice(constraints.length - 1, 0, startAfter(cursor));
+  return query(collection(db, 'users', uid, firestoreCollection('trips')), ...constraints);
+}
+
+export function subscribeToTripsPage<T extends { id: string }>(uid: string, filters: TripQueryFilters, callback: (items: T[], lastDoc: any, hasMore: boolean) => void) {
+  return onSnapshot(tripsQuery(uid, filters), snapshot => {
+    callback(snapshot.docs.map(item => ({ id: item.id, ...item.data() }) as T), snapshot.docs.at(-1), snapshot.size === 20);
+  }, error => console.error('[Firestore] viagens', error));
+}
+
+export async function loadTripsPage<T extends { id: string }>(uid: string, filters: TripQueryFilters, cursor?: any) {
+  const snapshot = await getDocs(tripsQuery(uid, filters, cursor));
+  return { items: snapshot.docs.map(item => ({ id: item.id, ...item.data() }) as T), lastDoc: snapshot.docs.at(-1), hasMore: snapshot.size === 20 };
+}
+
+export async function getTripsAggregate(uid: string) {
+  const result = await getAggregateFromServer(
+    query(collection(db, 'users', uid, firestoreCollection('trips'))),
+    { totalRevenue: sum('companyTariff'), totalProfit: sum('profit') }
+  );
+  return result.data();
+}
 
 export function subscribeToUserCollection<T extends { id: string }>(uid: string, name: string, callback: (items: T[]) => void) {
   const ref = collection(db, 'users', uid, firestoreCollection(name));
