@@ -66,7 +66,7 @@ import {
   deleteAllUserDocuments,
   batchSaveCollection, 
   isUserDatabaseEmpty 
-} from './services/firebase';
+} from './lib/firebase';
 import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
 import { AuthModal } from './components/AuthModal';
 import { resolveTripServiceTaker, isInvalidTakerName } from './services/takerResolver';
