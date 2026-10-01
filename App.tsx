@@ -64,8 +64,11 @@ import {
   saveUserDocument, 
   deleteUserDocument, 
   deleteAllUserDocuments,
-  batchSaveCollection, 
-  isUserDatabaseEmpty 
+  batchSaveCollection,
+  isUserDatabaseEmpty,
+  subscribeToDriversPage,
+  loadDriversPage,
+  countUserCollection 
 } from './lib/firebase';
 import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
 import { AuthModal } from './components/AuthModal';
@@ -441,16 +444,31 @@ const App: React.FC = () => {
   
   const [debouncedDriverSearch, setDebouncedDriverSearch] = useState('');
   const [debouncedDriverPlate, setDebouncedDriverPlate] = useState('');
+  const [debouncedDriverCpf, setDebouncedDriverCpf] = useState('');
+  const [debouncedDriverAntt, setDebouncedDriverAntt] = useState('');
+  const [driverCursor, setDriverCursor] = useState<any>();
+  const [driverHasMore, setDriverHasMore] = useState(false);
+  const [driverTotal, setDriverTotal] = useState(0);
 
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedDriverSearch(driverSearch), 300);
+    const timer = setTimeout(() => setDebouncedDriverSearch(driverSearch), 400);
     return () => clearTimeout(timer);
   }, [driverSearch]);
 
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedDriverPlate(driverPlateFilter), 300);
+    const timer = setTimeout(() => setDebouncedDriverPlate(driverPlateFilter), 400);
     return () => clearTimeout(timer);
   }, [driverPlateFilter]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedDriverCpf(driverCpfFilter), 400);
+    return () => clearTimeout(timer);
+  }, [driverCpfFilter]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedDriverAntt(driverAnttFilter), 400);
+    return () => clearTimeout(timer);
+  }, [driverAnttFilter]);
 
   // FILTROS BASE DE FRETE
   const [freightOriginFilter, setFreightOriginFilter] = useState('');
@@ -1157,13 +1175,20 @@ const App: React.FC = () => {
             showNotification("Banco em nuvem inicializado com sucesso!", "success");
           }
 
-          const unsubDrivers = subscribeToUserCollection<Driver>(uid, 'drivers', (items) => {
-            if (JSON.stringify(driversRef.current) !== JSON.stringify(items)) {
-              setDrivers(items);
-              safeSetItem('tp_system_drivers', JSON.stringify(items));
-            }
+          const driverFilters = {
+            name: debouncedDriverSearch,
+            cpfCnh: debouncedDriverCpf,
+            plate: debouncedDriverPlate,
+            antt: debouncedDriverAntt,
+          };
+          const unsubDrivers = subscribeToDriversPage<Driver>(uid, driverFilters, (items, lastDoc, hasMore) => {
+            setDrivers(items);
+            setDriverCursor(lastDoc);
+            setDriverHasMore(hasMore);
+            safeSetItem('tp_system_drivers', JSON.stringify(items));
           });
           cleanupSubsRef.current.push(unsubDrivers);
+          countUserCollection(uid, 'drivers', driverFilters).then(setDriverTotal).catch(console.error);
 
           const unsubFreights = subscribeToUserCollection<Freight>(uid, 'freights', (items) => {
             if (JSON.stringify(freightsRef.current) !== JSON.stringify(items)) {
@@ -1238,7 +1263,7 @@ const App: React.FC = () => {
       unsubscribeAuth();
       clearSubscriptions();
     };
-  }, [safeSetItem, showNotification, clearSubscriptions]);
+  }, [safeSetItem, showNotification, clearSubscriptions, debouncedDriverSearch, debouncedDriverPlate, debouncedDriverCpf, debouncedDriverAntt]);
 
   const handleThirdPartySubmit = useCallback((data: Omit<ThirdPartyFreight, 'id' | 'createdAt'>) => {
     const isExisting = editingThirdParty && thirdPartyFreights.some(tp => tp.id === editingThirdParty.id);
