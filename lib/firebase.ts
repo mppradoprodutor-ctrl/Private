@@ -11,6 +11,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getAggregateFromServer,
   getCountFromServer,
   getDocs,
   initializeFirestore,
@@ -21,6 +22,7 @@ import {
   startAfter,
   where,
   setDoc,
+  sum,
   writeBatch,
 } from 'firebase/firestore';
 
@@ -94,6 +96,36 @@ export async function loadDriversPage<T extends { id: string }>(uid: string, fil
 export async function countUserCollection(uid: string, name: string, filters: DriverQueryFilters = {}) {
   const ref = name === 'drivers' ? driversQuery(uid, filters) : query(collection(db, 'users', uid, firestoreCollection(name)));
   return (await getCountFromServer(ref)).data().count;
+}
+
+export type TripQueryFilters = { code?: string };
+
+function tripsQuery(uid: string, filters: TripQueryFilters = {}, cursor?: any) {
+  const constraints: any[] = [];
+  const code = filters.code?.trim();
+  if (code) constraints.push(where('codigo', '>=', code));
+  constraints.push(orderBy('data', 'desc'), limit(20));
+  if (cursor) constraints.splice(constraints.length - 1, 0, startAfter(cursor));
+  return query(collection(db, 'users', uid, firestoreCollection('trips')), ...constraints);
+}
+
+export function subscribeToTripsPage<T extends { id: string }>(uid: string, filters: TripQueryFilters, callback: (items: T[], lastDoc: any, hasMore: boolean) => void) {
+  return onSnapshot(tripsQuery(uid, filters), snapshot => {
+    callback(snapshot.docs.map(item => ({ id: item.id, ...item.data() }) as T), snapshot.docs.at(-1), snapshot.size === 20);
+  }, error => console.error('[Firestore] viagens', error));
+}
+
+export async function loadTripsPage<T extends { id: string }>(uid: string, filters: TripQueryFilters, cursor?: any) {
+  const snapshot = await getDocs(tripsQuery(uid, filters, cursor));
+  return { items: snapshot.docs.map(item => ({ id: item.id, ...item.data() }) as T), lastDoc: snapshot.docs.at(-1), hasMore: snapshot.size === 20 };
+}
+
+export async function getTripsAggregate(uid: string) {
+  const result = await getAggregateFromServer(
+    query(collection(db, 'users', uid, firestoreCollection('trips'))),
+    { totalRevenue: sum('companyTariff'), totalProfit: sum('profit') }
+  );
+  return result.data();
 }
 
 export function subscribeToUserCollection<T extends { id: string }>(uid: string, name: string, callback: (items: T[]) => void) {

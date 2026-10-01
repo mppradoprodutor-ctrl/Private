@@ -68,7 +68,10 @@ import {
   isUserDatabaseEmpty,
   subscribeToDriversPage,
   loadDriversPage,
-  countUserCollection 
+  subscribeToTripsPage,
+  loadTripsPage,
+  getTripsAggregate,
+  countUserCollection
 } from './lib/firebase';
 import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
 import { AuthModal } from './components/AuthModal';
@@ -446,6 +449,11 @@ const App: React.FC = () => {
   const [debouncedDriverPlate, setDebouncedDriverPlate] = useState('');
   const [debouncedDriverCpf, setDebouncedDriverCpf] = useState('');
   const [debouncedDriverAntt, setDebouncedDriverAntt] = useState('');
+  const [debouncedTripCode, setDebouncedTripCode] = useState('');
+  const [tripCursor, setTripCursor] = useState<any>();
+  const [tripHasMore, setTripHasMore] = useState(false);
+  const [isTripsLoading, setIsTripsLoading] = useState(false);
+  const tripsLoadMoreRef = useRef<HTMLDivElement>(null);
   const [driverCursor, setDriverCursor] = useState<any>();
   const [driverHasMore, setDriverHasMore] = useState(false);
   const [driverTotal, setDriverTotal] = useState(0);
@@ -469,6 +477,11 @@ const App: React.FC = () => {
     const timer = setTimeout(() => setDebouncedDriverAntt(driverAnttFilter), 400);
     return () => clearTimeout(timer);
   }, [driverAnttFilter]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedTripCode(tripCteFilter), 400);
+    return () => clearTimeout(timer);
+  }, [tripCteFilter]);
 
   // FILTROS BASE DE FRETE
   const [freightOriginFilter, setFreightOriginFilter] = useState('');
@@ -1206,13 +1219,16 @@ const App: React.FC = () => {
           });
           cleanupSubsRef.current.push(unsubThirdParty);
 
-          const unsubTrips = subscribeToUserCollection<Trip>(uid, 'trips', (items) => {
-            if (JSON.stringify(tripsRef.current) !== JSON.stringify(items)) {
-              setTrips(items);
-              safeSetItem('tp_system_trips', JSON.stringify(items));
-            }
+          setIsTripsLoading(true);
+          const unsubTrips = subscribeToTripsPage<Trip>(uid, { code: debouncedTripCode }, (items, lastDoc, hasMore) => {
+            setTrips(items);
+            setTripCursor(lastDoc);
+            setTripHasMore(hasMore);
+            setIsTripsLoading(false);
+            safeSetItem('tp_system_trips', JSON.stringify(items));
           });
           cleanupSubsRef.current.push(unsubTrips);
+          getTripsAggregate(uid).catch(error => console.error('[Firestore] agregado de viagens', error));
 
           const unsubReminders = subscribeToUserCollection<Reminder>(uid, 'reminders', (items) => {
             if (JSON.stringify(remindersRef.current) !== JSON.stringify(items)) {
@@ -1263,7 +1279,33 @@ const App: React.FC = () => {
       unsubscribeAuth();
       clearSubscriptions();
     };
-  }, [safeSetItem, showNotification, clearSubscriptions, debouncedDriverSearch, debouncedDriverPlate, debouncedDriverCpf, debouncedDriverAntt]);
+  }, [safeSetItem, showNotification, clearSubscriptions, debouncedDriverSearch, debouncedDriverPlate, debouncedDriverCpf, debouncedDriverAntt, debouncedTripCode]);
+
+  const loadMoreTrips = useCallback(async () => {
+    const currentUser = userRef.current;
+    if (!currentUser || !tripCursor || !tripHasMore || isTripsLoading) return;
+    setIsTripsLoading(true);
+    try {
+      const page = await loadTripsPage<Trip>(currentUser.uid, { code: debouncedTripCode }, tripCursor);
+      setTrips(previous => [...previous, ...page.items.filter(item => !previous.some(existing => existing.id === item.id))]);
+      setTripCursor(page.lastDoc);
+      setTripHasMore(page.hasMore);
+    } catch (error) {
+      console.error('[Firestore] carregar mais viagens', error);
+    } finally {
+      setIsTripsLoading(false);
+    }
+  }, [tripCursor, tripHasMore, isTripsLoading, debouncedTripCode]);
+
+  useEffect(() => {
+    const sentinel = tripsLoadMoreRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0]?.isIntersecting) loadMoreTrips();
+    }, { rootMargin: '240px' });
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [loadMoreTrips]);
 
   const handleThirdPartySubmit = useCallback((data: Omit<ThirdPartyFreight, 'id' | 'createdAt'>) => {
     const isExisting = editingThirdParty && thirdPartyFreights.some(tp => tp.id === editingThirdParty.id);
@@ -3462,6 +3504,9 @@ const App: React.FC = () => {
                     showNotification(`${ids.length} viagem(ns) revertida(s) para saldo pendente!`, 'info');
                   }}
                 />
+                <div ref={tripsLoadMoreRef} className="min-h-8 flex items-center justify-center" aria-live="polite">
+                  {isTripsLoading && <div className="h-8 w-full rounded-xl bg-slate-100 animate-pulse" />}
+                </div>
               </div>
             )}
 
