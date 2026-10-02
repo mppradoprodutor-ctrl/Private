@@ -3434,8 +3434,9 @@ const App: React.FC = () => {
                   freights={freights}
                   filterSummary={tripFilterSummary}
                   tripStats={tripStats}
-                  systemCompanyName={companyName}
-                  onRegisterPrintPdf={(fn) => setPrintTripsPdfTrigger(() => fn)}
+  systemCompanyName={companyName}
+  isLoading={isTripsLoading}
+  onRegisterPrintPdf={(fn) => setPrintTripsPdfTrigger(() => fn)}
                   onRemove={(id) => saveTrips(trips.filter(t => t.id !== id))} 
                   onEdit={(t) => { setEditingTrip(t); setIsTripFormOpen(true); }} 
                   onToggleMdfeStatus={(id) => saveTrips(trips.map(t => t.id === id ? { ...t, mdfeStatus: t.mdfeStatus === 'Baixado' ? 'Pendente' : 'Baixado' } : t))}

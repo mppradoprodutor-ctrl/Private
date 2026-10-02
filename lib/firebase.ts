@@ -103,8 +103,12 @@ export type TripQueryFilters = { code?: string };
 function tripsQuery(uid: string, filters: TripQueryFilters = {}, cursor?: any) {
   const constraints: any[] = [];
   const code = filters.code?.trim();
-  if (code) constraints.push(where('codigo', '>=', code));
-  constraints.push(orderBy('data', 'desc'), limit(20));
+  if (code) {
+    constraints.push(where('codigo', '>=', code), orderBy('codigo'), orderBy('data', 'desc'));
+  } else {
+    constraints.push(orderBy('data', 'desc'));
+  }
+  constraints.push(limit(20));
   if (cursor) constraints.splice(constraints.length - 1, 0, startAfter(cursor));
   return query(collection(db, 'users', uid, firestoreCollection('trips')), ...constraints);
 }
