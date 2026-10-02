@@ -30,6 +30,7 @@ interface TripListProps {
   onUpdateNote?: (tripId: string, field: 'adNote' | 'sdNote', value: string, sdFlag?: boolean) => void;
   onBatchLiquidateSd?: (tripIds: string[], note?: string) => void;
   onBatchRevertSd?: (tripIds: string[]) => void;
+  isLoading?: boolean;
 }
 
 const TripList: React.FC<TripListProps> = ({ 
@@ -47,7 +48,8 @@ const TripList: React.FC<TripListProps> = ({
   onToggleSdFlag, 
   onUpdateNote,
   onBatchLiquidateSd,
-  onBatchRevertSd
+  onBatchRevertSd,
+  isLoading = false
 }) => {
   const [downloadingTripId, setDownloadingTripId] = useState<string | null>(null);
   const templateRef = useRef<HTMLDivElement>(null);
@@ -324,6 +326,22 @@ const TripList: React.FC<TripListProps> = ({
     
     return { profit, margin, icmsDeduction };
   };
+
+  if (isLoading && trips.length === 0) {
+    return (
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-xl shadow-slate-200/40 overflow-hidden animate-in fade-in duration-300" aria-label="Carregando viagens">
+        <div className="divide-y divide-slate-100">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div key={index} className="grid grid-cols-6 gap-4 px-3 py-4 animate-pulse">
+              {Array.from({ length: 6 }).map((__, cell) => (
+                <div key={cell} className="h-3 rounded bg-slate-100" />
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   if (trips.length === 0) {
     return (
