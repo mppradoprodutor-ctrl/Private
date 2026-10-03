@@ -37,7 +37,11 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
+
+// Auth is initialized only when the public Firebase configuration is usable.
+// This keeps Firestore available in previews where auth variables may not be injected yet.
+const hasValidAuthConfig = typeof firebaseConfig.apiKey === 'string' && /^AIza[\w-]{20,}$/.test(firebaseConfig.apiKey.trim());
+const auth = hasValidAuthConfig ? getAuth(app) : null;
 const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
   useFetchStreams: false,
@@ -98,11 +102,18 @@ export async function countUserCollection(uid: string, name: string, filters: Dr
   return (await getCountFromServer(ref)).data().count;
 }
 
-export type TripQueryFilters = { code?: string };
+export type TripQueryFilters = { code?: string; companyCnpj?: string; operationalUnit?: string };
 
-function tripsQuery(uid: string, filters: TripQueryFilters = {}, cursor?: any) {
+function tripsQuery(_uid: string, filters: TripQueryFilters = {}, cursor?: any) {
   const constraints: any[] = [];
   const code = filters.code?.trim();
+  const companyCnpj = filters.companyCnpj?.trim();
+  const operationalUnit = filters.operationalUnit?.trim();
+  if (companyCnpj) {
+    constraints.push(where('cnpj_emissor', '==', companyCnpj));
+  } else if (operationalUnit) {
+    constraints.push(where('unidade_operacional', '==', operationalUnit));
+  }
   if (code) {
     constraints.push(where('codigo', '>=', code), orderBy('codigo'), orderBy('data', 'desc'));
   } else {
@@ -110,7 +121,7 @@ function tripsQuery(uid: string, filters: TripQueryFilters = {}, cursor?: any) {
   }
   constraints.push(limit(20));
   if (cursor) constraints.splice(constraints.length - 1, 0, startAfter(cursor));
-  return query(collection(db, 'users', uid, firestoreCollection('trips')), ...constraints);
+  return query(collection(db, firestoreCollection('trips')), ...constraints);
 }
 
 export function subscribeToTripsPage<T extends { id: string }>(uid: string, filters: TripQueryFilters, callback: (items: T[], lastDoc: any, hasMore: boolean) => void) {
@@ -124,9 +135,17 @@ export async function loadTripsPage<T extends { id: string }>(uid: string, filte
   return { items: snapshot.docs.map(item => ({ id: item.id, ...item.data() }) as T), lastDoc: snapshot.docs.at(-1), hasMore: snapshot.size === 20 };
 }
 
-export async function getTripsAggregate(uid: string) {
+export async function saveTripDocument<T extends { id: string }>(item: T) {
+  await setDoc(doc(db, firestoreCollection('trips'), item.id), clean(item));
+}
+
+export async function deleteTripDocument(id: string) {
+  await deleteDoc(doc(db, firestoreCollection('trips'), id));
+}
+
+export async function getTripsAggregate(_uid: string) {
   const result = await getAggregateFromServer(
-    query(collection(db, 'users', uid, firestoreCollection('trips'))),
+    query(collection(db, firestoreCollection('trips'))),
     { totalRevenue: sum('companyTariff'), totalProfit: sum('profit') }
   );
   return result.data();
