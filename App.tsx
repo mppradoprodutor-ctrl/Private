@@ -70,6 +70,8 @@ import {
   loadDriversPage,
   subscribeToTripsPage,
   loadTripsPage,
+  saveTripDocument,
+  deleteTripDocument,
   getTripsAggregate,
   countUserCollection
 } from './lib/firebase';
@@ -952,7 +954,13 @@ const App: React.FC = () => {
         const oldMap = new Map<string, Trip>(tripsRef.current.map(t => [t.id, t]));
         const newMap = new Map<string, Trip>(data.map(t => [t.id, t]));
         for (const id of oldMap.keys()) {
-          if (!newMap.has(id)) await deleteUserDocument(uid, 'trips', id);
+          if (!newMap.has(id)) await deleteTripDocument(id);
+        }
+        for (const [id, item] of newMap.entries()) {
+          const oldItem = oldMap.get(id);
+          if (!oldItem || JSON.stringify(oldItem) !== JSON.stringify(item)) {
+            await saveTripDocument(item);
+          }
         }
         for (const [id, item] of newMap.entries()) {
           const oldItem = oldMap.get(id);

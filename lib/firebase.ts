@@ -104,7 +104,7 @@ export async function countUserCollection(uid: string, name: string, filters: Dr
 
 export type TripQueryFilters = { code?: string };
 
-function tripsQuery(uid: string, filters: TripQueryFilters = {}, cursor?: any) {
+function tripsQuery(_uid: string, filters: TripQueryFilters = {}, cursor?: any) {
   const constraints: any[] = [];
   const code = filters.code?.trim();
   if (code) {
@@ -114,7 +114,7 @@ function tripsQuery(uid: string, filters: TripQueryFilters = {}, cursor?: any) {
   }
   constraints.push(limit(20));
   if (cursor) constraints.splice(constraints.length - 1, 0, startAfter(cursor));
-  return query(collection(db, 'users', uid, firestoreCollection('trips')), ...constraints);
+  return query(collection(db, firestoreCollection('trips')), ...constraints);
 }
 
 export function subscribeToTripsPage<T extends { id: string }>(uid: string, filters: TripQueryFilters, callback: (items: T[], lastDoc: any, hasMore: boolean) => void) {
@@ -128,9 +128,17 @@ export async function loadTripsPage<T extends { id: string }>(uid: string, filte
   return { items: snapshot.docs.map(item => ({ id: item.id, ...item.data() }) as T), lastDoc: snapshot.docs.at(-1), hasMore: snapshot.size === 20 };
 }
 
-export async function getTripsAggregate(uid: string) {
+export async function saveTripDocument<T extends { id: string }>(item: T) {
+  await setDoc(doc(db, firestoreCollection('trips'), item.id), clean(item));
+}
+
+export async function deleteTripDocument(id: string) {
+  await deleteDoc(doc(db, firestoreCollection('trips'), id));
+}
+
+export async function getTripsAggregate(_uid: string) {
   const result = await getAggregateFromServer(
-    query(collection(db, 'users', uid, firestoreCollection('trips'))),
+    query(collection(db, firestoreCollection('trips'))),
     { totalRevenue: sum('companyTariff'), totalProfit: sum('profit') }
   );
   return result.data();
