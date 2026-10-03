@@ -1160,6 +1160,7 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (!auth) return;
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       // Clear any existing subscriptions first
       clearSubscriptions();
@@ -2153,9 +2154,9 @@ const App: React.FC = () => {
                   </div>
                 </div>
                 <button 
-                  onClick={() => {
-                    signOut(auth);
-                    showNotification("Desconectado do banco em nuvem.", "info");
+  onClick={() => {
+  if (auth) void signOut(auth);
+  showNotification("Desconectado do banco em nuvem.", "info");
                   }}
                   className="bg-emerald-800/40 hover:bg-red-700/40 text-emerald-200 hover:text-white p-1 rounded-lg border border-emerald-500/10 hover:border-red-500/10 transition-all text-[8px] font-black uppercase tracking-widest ml-1"
                   title="Sair da Conta em Nuvem"

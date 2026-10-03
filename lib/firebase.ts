@@ -37,7 +37,11 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
+
+// Auth is initialized only when the public Firebase configuration is usable.
+// This keeps Firestore available in previews where auth variables may not be injected yet.
+const hasValidAuthConfig = typeof firebaseConfig.apiKey === 'string' && /^AIza[\w-]{20,}$/.test(firebaseConfig.apiKey.trim());
+const auth = hasValidAuthConfig ? getAuth(app) : null;
 const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
   useFetchStreams: false,
