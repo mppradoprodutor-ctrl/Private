@@ -275,9 +275,14 @@ const App: React.FC = () => {
   });
   const [companyName, setCompanyName] = useState<string>(() => {
     try {
-      return localStorage.getItem('tp_system_company_name') || 'MY SYSTEM';
+      const selected = localStorage.getItem('empresaSelecionada');
+      if (selected) {
+        const parsed = JSON.parse(selected);
+        return parsed.companyName || parsed.nome || parsed.razaoSocial || parsed.name || 'GERA TRANSPORTES';
+      }
+      return localStorage.getItem('tp_system_company_name') || 'GERA TRANSPORTES';
     } catch (e) {
-      return 'MY SYSTEM';
+      return 'GERA TRANSPORTES';
     }
   });
   const [isEditingName, setIsEditingName] = useState(false);
@@ -290,8 +295,15 @@ const App: React.FC = () => {
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch (e) {}
-    const legacyCnpj = (typeof window !== 'undefined' && localStorage.getItem('tp_system_company_cnpj')) || '29.543.880/0001-24';
-    const legacyName = (typeof window !== 'undefined' && localStorage.getItem('tp_system_company_name')) || 'MY SYSTEM';
+    let selectedCompany: any = null;
+    try {
+      const rawSelected = typeof window !== 'undefined' ? localStorage.getItem('empresaSelecionada') : null;
+      selectedCompany = rawSelected ? JSON.parse(rawSelected) : null;
+    } catch (e) {
+      selectedCompany = null;
+    }
+    const legacyCnpj = selectedCompany?.cnpj || (typeof window !== 'undefined' && localStorage.getItem('tp_system_company_cnpj')) || '33.777.479/0001-26';
+    const legacyName = selectedCompany?.companyName || selectedCompany?.nome || selectedCompany?.razaoSocial || selectedCompany?.name || (typeof window !== 'undefined' && localStorage.getItem('tp_system_company_name')) || 'GERA TRANSPORTES (CASTILHO/SP)';
     return [
       { 
         id: 'unit-matriz', 
@@ -317,13 +329,20 @@ const App: React.FC = () => {
   const activeOperationalUnit = useMemo(() => {
     return operationalUnits.find(u => u.id === activeOperationalUnitId) || operationalUnits[0] || {
       id: 'unit-matriz',
-      cnpj: '29.543.880/0001-24',
-      companyName: 'MY SYSTEM',
+      cnpj: '33.777.479/0001-26',
+      companyName: 'GERA TRANSPORTES (CASTILHO/SP)',
       name: 'Matriz'
     };
   }, [operationalUnits, activeOperationalUnitId]);
 
-  const companyCnpj = activeOperationalUnit.cnpj;
+  const companyCnpj = activeOperationalUnit.cnpj || (() => {
+    try {
+      const selected = JSON.parse(localStorage.getItem('empresaSelecionada') || '{}');
+      return selected.cnpj || '33.777.479/0001-26';
+    } catch {
+      return '33.777.479/0001-26';
+    }
+  })();
   const [isFullscreen, setIsFullscreen] = useState(false);
   
   // Helper for normalization
@@ -605,7 +624,7 @@ const App: React.FC = () => {
   const [isPrintingTripsPdfTop, setIsPrintingTripsPdfTop] = useState(false);
 
   const handleSaveName = useCallback(() => {
-    const val = tempName.trim() || 'MY SYSTEM';
+    const val = tempName.trim() || activeOperationalUnit.companyName || 'GERA TRANSPORTES (CASTILHO/SP)';
     setCompanyName(val);
     safeSetItem('tp_system_company_name', val);
     setIsEditingName(false);
@@ -1229,7 +1248,7 @@ const App: React.FC = () => {
           cleanupSubsRef.current.push(unsubThirdParty);
 
           setIsTripsLoading(true);
-          const unsubTrips = subscribeToTripsPage<Trip>(uid, { code: debouncedTripCode }, (items, lastDoc, hasMore) => {
+          const unsubTrips = subscribeToTripsPage<Trip>(uid, { code: debouncedTripCode, companyCnpj, operationalUnit: activeOperationalUnit.name }, (items, lastDoc, hasMore) => {
             setTrips(items);
             setTripCursor(lastDoc);
             setTripHasMore(hasMore);
@@ -1288,14 +1307,14 @@ const App: React.FC = () => {
       unsubscribeAuth();
       clearSubscriptions();
     };
-  }, [safeSetItem, showNotification, clearSubscriptions, debouncedDriverSearch, debouncedDriverPlate, debouncedDriverCpf, debouncedDriverAntt, debouncedTripCode]);
+  }, [safeSetItem, showNotification, clearSubscriptions, debouncedDriverSearch, debouncedDriverPlate, debouncedDriverCpf, debouncedDriverAntt, debouncedTripCode, companyCnpj, activeOperationalUnit.name]);
 
   const loadMoreTrips = useCallback(async () => {
     const currentUser = userRef.current;
     if (!currentUser || !tripCursor || !tripHasMore || isTripsLoading) return;
     setIsTripsLoading(true);
     try {
-      const page = await loadTripsPage<Trip>(currentUser.uid, { code: debouncedTripCode }, tripCursor);
+      const page = await loadTripsPage<Trip>(currentUser.uid, { code: debouncedTripCode, companyCnpj, operationalUnit: activeOperationalUnit.name }, tripCursor);
       setTrips(previous => [...previous, ...page.items.filter(item => !previous.some(existing => existing.id === item.id))]);
       setTripCursor(page.lastDoc);
       setTripHasMore(page.hasMore);
@@ -1304,7 +1323,7 @@ const App: React.FC = () => {
     } finally {
       setIsTripsLoading(false);
     }
-  }, [tripCursor, tripHasMore, isTripsLoading, debouncedTripCode]);
+  }, [tripCursor, tripHasMore, isTripsLoading, debouncedTripCode, companyCnpj, activeOperationalUnit.name]);
 
   useEffect(() => {
     const sentinel = tripsLoadMoreRef.current;
@@ -2029,7 +2048,7 @@ const App: React.FC = () => {
                   if (e.key === 'Escape') setIsEditingName(false);
                 }}
                 className="bg-red-900/90 border border-red-500/80 rounded px-2 py-0.5 text-white font-black text-xs uppercase tracking-tight outline-none focus:ring-2 focus:ring-red-400 w-full shadow-inner"
-                placeholder="MY SYSTEM"
+                placeholder="GERA TRANSPORTES"
               />
               <button
                 type="button"

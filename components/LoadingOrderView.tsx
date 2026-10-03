@@ -69,7 +69,7 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
   const selectedUnit = useMemo(() => {
     return operationalUnits.find(u => u.id === selectedUnitId) || operationalUnits[0] || {
       id: 'default',
-      cnpj: '29.543.880/0001-24',
+      cnpj: '33.777.479/0001-26',
       name: 'Matriz'
     };
   }, [operationalUnits, selectedUnitId]);
@@ -107,7 +107,7 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
     }
   };
 
-  const companyName = (typeof window !== 'undefined' && localStorage.getItem('tp_system_company_name')) || 'MY SYSTEM';
+  const companyName = (typeof window !== 'undefined' && localStorage.getItem('tp_system_company_name')) || 'GERA TRANSPORTES (CASTILHO/SP)';
   const effectiveCompanyName = selectedUnit?.companyName || companyName;
   const effectiveAddress = [
     selectedUnit?.street ? `${selectedUnit.street}${selectedUnit.number ? `, ${selectedUnit.number}` : ''}` : '',

@@ -102,11 +102,18 @@ export async function countUserCollection(uid: string, name: string, filters: Dr
   return (await getCountFromServer(ref)).data().count;
 }
 
-export type TripQueryFilters = { code?: string };
+export type TripQueryFilters = { code?: string; companyCnpj?: string; operationalUnit?: string };
 
 function tripsQuery(_uid: string, filters: TripQueryFilters = {}, cursor?: any) {
   const constraints: any[] = [];
   const code = filters.code?.trim();
+  const companyCnpj = filters.companyCnpj?.trim();
+  const operationalUnit = filters.operationalUnit?.trim();
+  if (companyCnpj) {
+    constraints.push(where('cnpj_emissor', '==', companyCnpj));
+  } else if (operationalUnit) {
+    constraints.push(where('unidade_operacional', '==', operationalUnit));
+  }
   if (code) {
     constraints.push(where('codigo', '>=', code), orderBy('codigo'), orderBy('data', 'desc'));
   } else {
