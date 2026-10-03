@@ -478,11 +478,6 @@ const App: React.FC = () => {
     return () => clearTimeout(timer);
   }, [driverAnttFilter]);
 
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedTripCode(tripCteFilter), 400);
-    return () => clearTimeout(timer);
-  }, [tripCteFilter]);
-
   // FILTROS BASE DE FRETE
   const [freightOriginFilter, setFreightOriginFilter] = useState('');
   const [freightDestFilter, setFreightDestFilter] = useState('');
@@ -510,6 +505,11 @@ const App: React.FC = () => {
   const [tripStartDate, setTripStartDate] = useState('');
   const [tripEndDate, setTripEndDate] = useState('');
   const [tripPaymentTypeFilter, setTripPaymentTypeFilter] = useState<string>('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedTripCode(tripCteFilter), 400);
+    return () => clearTimeout(timer);
+  }, [tripCteFilter]);
 
   // VALORES ÚNICOS PARA FILTROS DE VIAGENS (SELECTS)
   const uniqueTripOrigins = useMemo(() => {
