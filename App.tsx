@@ -335,14 +335,15 @@ const App: React.FC = () => {
     };
   }, [operationalUnits, activeOperationalUnitId]);
 
-  const companyCnpj = activeOperationalUnit.cnpj || (() => {
+  const selectedCompany = useMemo(() => {
     try {
-      const selected = JSON.parse(localStorage.getItem('empresaSelecionada') || '{}');
-      return selected.cnpj || '33.777.479/0001-26';
+      const raw = localStorage.getItem('empresaSelecionada');
+      return raw ? JSON.parse(raw) : null;
     } catch {
-      return '33.777.479/0001-26';
+      return null;
     }
-  })();
+  }, []);
+  const companyCnpj = selectedCompany?.cnpj || activeOperationalUnit.cnpj || '33.777.479/0001-26';
   const [isFullscreen, setIsFullscreen] = useState(false);
   
   // Helper for normalization
@@ -1248,7 +1249,10 @@ const App: React.FC = () => {
           cleanupSubsRef.current.push(unsubThirdParty);
 
           setIsTripsLoading(true);
+          console.log(`Empresa selecionada: ${companyCnpj}`);
           const unsubTrips = subscribeToTripsPage<Trip>(uid, { code: debouncedTripCode, companyCnpj, operationalUnit: activeOperationalUnit.name }, (items, lastDoc, hasMore) => {
+            console.log(`Viagens encontradas: ${items.length}`);
+            if (items.length > 0) console.log('[Firestore] primeiro documento de viagens:', items[0]);
             setTrips(items);
             setTripCursor(lastDoc);
             setTripHasMore(hasMore);
@@ -2140,14 +2144,14 @@ const App: React.FC = () => {
                   className="group flex items-center gap-1.5 cursor-pointer select-none bg-red-900/70 hover:bg-red-900 border border-red-700/60 rounded-lg px-2.5 py-1 transition-all"
                   title="Clique para gerenciar os CNPJs e dados da Unidade Operacional"
                 >
-                  <span className="text-white font-mono font-black text-xs tracking-tight leading-none group-hover:text-red-200 transition-colors">
-                    CNPJ {activeOperationalUnit.cnpj}
+                <span className="text-white font-mono font-black text-xs tracking-tight leading-none group-hover:text-red-200 transition-colors">
+                  CNPJ {companyCnpj}
+                </span>
+                {(selectedCompany?.nome || selectedCompany?.companyName || selectedCompany?.razaoSocial || activeOperationalUnit.companyName || activeOperationalUnit.name) && (
+                  <span className="text-[10px] text-red-300 font-bold truncate max-w-[140px]">
+                    ({selectedCompany?.nome || selectedCompany?.companyName || selectedCompany?.razaoSocial || activeOperationalUnit.companyName || activeOperationalUnit.name})
                   </span>
-                  {(activeOperationalUnit.companyName || activeOperationalUnit.name) && (
-                    <span className="text-[10px] text-red-300 font-bold truncate max-w-[140px]">
-                      ({activeOperationalUnit.companyName || activeOperationalUnit.name})
-                    </span>
-                  )}
+                )}
                   <Pencil size={10} className="text-red-400 group-hover:text-white transition-colors ml-1" />
                 </button>
               )}
