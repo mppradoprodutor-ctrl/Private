@@ -1,6 +1,5 @@
 
 import React, { useRef, useState, useMemo, useEffect, useCallback } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
 import { Trash2, Edit2, ArrowRight, Scale, TrendingUp, Download, ClipboardCheck, ClipboardList, X, Save, FileText, CheckSquare, Square, CheckCheck, Printer, Loader2 } from 'lucide-react';
 import { toBlob, toPng } from 'html-to-image';
 import { saveAs } from 'file-saver';
@@ -31,7 +30,6 @@ interface TripListProps {
   onUpdateNote?: (tripId: string, field: 'adNote' | 'sdNote', value: string, sdFlag?: boolean) => void;
   onBatchLiquidateSd?: (tripIds: string[], note?: string) => void;
   onBatchRevertSd?: (tripIds: string[]) => void;
-  isLoading?: boolean;
 }
 
 const TripList: React.FC<TripListProps> = ({ 
@@ -49,20 +47,12 @@ const TripList: React.FC<TripListProps> = ({
   onToggleSdFlag, 
   onUpdateNote,
   onBatchLiquidateSd,
-  onBatchRevertSd,
-  isLoading = false
+  onBatchRevertSd
 }) => {
   const [downloadingTripId, setDownloadingTripId] = useState<string | null>(null);
   const templateRef = useRef<HTMLDivElement>(null);
   const listPdfTemplateRef = useRef<HTMLDivElement>(null);
   const [isPrintingListPdf, setIsPrintingListPdf] = useState(false);
-  const tableScrollRef = useRef<HTMLDivElement>(null);
-  const rowVirtualizer = useVirtualizer({
-    count: trips.length,
-    getScrollElement: () => tableScrollRef.current,
-    estimateSize: () => 108,
-    overscan: 5,
-  });
 
   const [selectedSdIds, setSelectedSdIds] = useState<string[]>([]);
   const [batchNote, setBatchNote] = useState<string>('');
@@ -335,22 +325,6 @@ const TripList: React.FC<TripListProps> = ({
     return { profit, margin, icmsDeduction };
   };
 
-  if (isLoading && trips.length === 0) {
-    return (
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-xl shadow-slate-200/40 overflow-hidden animate-in fade-in duration-300" aria-label="Carregando viagens">
-        <div className="divide-y divide-slate-100">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <div key={index} className="grid grid-cols-6 gap-4 px-3 py-4 animate-pulse">
-              {Array.from({ length: 6 }).map((__, cell) => (
-                <div key={cell} className="h-3 rounded bg-slate-100" />
-              ))}
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
   if (trips.length === 0) {
     return (
       <div className="bg-white border-2 border-dashed border-slate-200 rounded-3xl p-16 text-center animate-in fade-in duration-500">
@@ -451,11 +425,8 @@ const TripList: React.FC<TripListProps> = ({
         </div>
       )}
 
-      <div ref={tableScrollRef} className="overflow-auto max-h-[min(70vh,760px)]">
+      <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
-          <colgroup>
-            <col className="w-[22%]" /><col className="w-[16%]" /><col className="w-[14%]" /><col className="w-[16%]" /><col className="w-[14%]" /><col className="w-[18%]" />
-          </colgroup>
           <thead>
             <tr className="bg-slate-50/80 border-b border-slate-100">
               <th className="px-3 py-2 text-[7.5px] font-black text-slate-400 uppercase tracking-widest">Data / Rota</th>
@@ -497,20 +468,13 @@ const TripList: React.FC<TripListProps> = ({
               </th>
             </tr>
           </thead>
-          <tbody className="relative block divide-y divide-slate-50" style={{ height: `${rowVirtualizer.getTotalSize()}px` }}>
-            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-              const trip = trips[virtualRow.index];
+          <tbody className="divide-y divide-slate-50">
+            {trips.map((trip) => {
               const { profit, margin } = calculateFinancials(trip);
               const driver = drivers.find(d => d.truckPlate?.toUpperCase().trim() === trip.truckPlate?.toUpperCase().trim());
               
               return (
-                <tr
-                  key={trip.id}
-                  ref={rowVirtualizer.measureElement}
-                  data-index={virtualRow.index}
-                  className="absolute left-0 top-0 w-full hover:bg-slate-50/50 transition-all group duration-200"
-                  style={{ transform: `translateY(${virtualRow.start}px)` }}
-                >
+                <tr key={trip.id} className="hover:bg-slate-50/50 transition-all group duration-200">
                   <td className="px-3 py-2">
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-1">
