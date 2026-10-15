@@ -27,31 +27,17 @@ import {
 } from 'firebase/firestore';
 
 const firebaseConfig = {
-  // Vite exposes NEXT_PUBLIC_* variables through import.meta.env because they are
-  // included in envPrefix. Reading them here keeps Preview and Vercel identical.
-  apiKey: import.meta.env.NEXT_PUBLIC_FIREBASE_API_KEY || import.meta.env.VITE_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: import.meta.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || import.meta.env.VITE_FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.NEXT_PUBLIC_FIREBASE_APP_ID || import.meta.env.VITE_FIREBASE_APP_ID || process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  measurementId: import.meta.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || import.meta.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || import.meta.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || import.meta.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || import.meta.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || import.meta.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || import.meta.env.NEXT_PUBLIC_FIREBASE_APP_ID || process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || import.meta.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
-const missingFirebaseConfig = Object.entries(firebaseConfig)
-  .filter(([key, value]) => key !== 'measurementId' && !value)
-  .map(([key]) => key);
-
-if (missingFirebaseConfig.length > 0) {
-  console.error('[Firebase] Configuração pública ausente:', missingFirebaseConfig.join(', '));
-}
-
 const app = initializeApp(firebaseConfig);
-
-// Auth is initialized only when the public Firebase configuration is usable.
-// This keeps Firestore available in previews where auth variables may not be injected yet.
-const hasValidAuthConfig = typeof firebaseConfig.apiKey === 'string' && /^AIza[\w-]{20,}$/.test(firebaseConfig.apiKey.trim());
-const auth = hasValidAuthConfig ? getAuth(app) : null;
+const auth = getAuth(app);
 const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
   useFetchStreams: false,
@@ -86,17 +72,12 @@ function driversQuery(uid: string, filters: DriverQueryFilters = {}, cursor?: an
   const antt = filters.antt?.trim();
 
   if (name) {
-    constraints.push(where('name', '>=', name), where('name', '<=', `${name}\uf8ff`), orderBy('name'));
-  } else if (cpfCnh) {
-    constraints.push(where('cpf', '==', cpfCnh));
-  } else if (plate) {
-    constraints.push(where('truckPlate', '==', plate));
-  } else if (antt) {
-    constraints.push(where('antt', '==', antt));
-  } else {
-    constraints.push(orderBy('name'));
+    constraints.push(where('name', '>=', name), where('name', '<=', `${name}\uf8ff`));
   }
-  constraints.push(limit(50));
+  if (cpfCnh) constraints.push(where('cpf', '==', cpfCnh));
+  if (plate) constraints.push(where('truckPlate', '==', plate));
+  if (antt) constraints.push(where('antt', '==', antt));
+  constraints.push(orderBy('name'), limit(50));
   if (cursor) constraints.splice(constraints.length - 1, 0, startAfter(cursor));
   return query(collection(db, 'users', uid, 'motoristas'), ...constraints);
 }
@@ -112,40 +93,16 @@ export async function loadDriversPage<T extends { id: string }>(uid: string, fil
   return { items: snapshot.docs.map(item => ({ id: item.id, ...item.data() }) as T), lastDoc: snapshot.docs.at(-1), hasMore: snapshot.size === 50 };
 }
 
-export async function findDriverByPlate<T extends { id: string }>(uid: string, rawPlate: string) {
-  const plate = rawPlate.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-  if (!plate) return null;
-
-  const fields = ['truckPlate', 'plate', 'vehiclePlate', 'placa'];
-  for (const field of fields) {
-    const snapshot = await getDocs(query(
-      collection(db, 'users', uid, 'motoristas'),
-      where(field, '==', plate),
-      limit(1),
-    ));
-    const match = snapshot.docs[0];
-    if (match) return { id: match.id, ...match.data() } as T;
-  }
-  return null;
-}
-
 export async function countUserCollection(uid: string, name: string, filters: DriverQueryFilters = {}) {
   const ref = name === 'drivers' ? driversQuery(uid, filters) : query(collection(db, 'users', uid, firestoreCollection(name)));
   return (await getCountFromServer(ref)).data().count;
 }
 
-export type TripQueryFilters = { code?: string; companyCnpj?: string; operationalUnit?: string };
+export type TripQueryFilters = { code?: string };
 
-function tripsQuery(_uid: string, filters: TripQueryFilters = {}, cursor?: any) {
+function tripsQuery(uid: string, filters: TripQueryFilters = {}, cursor?: any) {
   const constraints: any[] = [];
   const code = filters.code?.trim();
-  const companyCnpj = filters.companyCnpj?.trim();
-  const operationalUnit = filters.operationalUnit?.trim();
-  if (companyCnpj) {
-    constraints.push(where('cnpj_emissor', '==', companyCnpj));
-  } else if (operationalUnit) {
-    constraints.push(where('unidade_operacional', '==', operationalUnit));
-  }
   if (code) {
     constraints.push(where('codigo', '>=', code), orderBy('codigo'), orderBy('data', 'desc'));
   } else {
@@ -153,7 +110,7 @@ function tripsQuery(_uid: string, filters: TripQueryFilters = {}, cursor?: any) 
   }
   constraints.push(limit(20));
   if (cursor) constraints.splice(constraints.length - 1, 0, startAfter(cursor));
-  return query(collection(db, firestoreCollection('trips')), ...constraints);
+  return query(collection(db, 'users', uid, firestoreCollection('trips')), ...constraints);
 }
 
 export function subscribeToTripsPage<T extends { id: string }>(uid: string, filters: TripQueryFilters, callback: (items: T[], lastDoc: any, hasMore: boolean) => void) {
@@ -167,17 +124,9 @@ export async function loadTripsPage<T extends { id: string }>(uid: string, filte
   return { items: snapshot.docs.map(item => ({ id: item.id, ...item.data() }) as T), lastDoc: snapshot.docs.at(-1), hasMore: snapshot.size === 20 };
 }
 
-export async function saveTripDocument<T extends { id: string }>(item: T) {
-  await setDoc(doc(db, firestoreCollection('trips'), item.id), clean(item));
-}
-
-export async function deleteTripDocument(id: string) {
-  await deleteDoc(doc(db, firestoreCollection('trips'), id));
-}
-
-export async function getTripsAggregate(_uid: string) {
+export async function getTripsAggregate(uid: string) {
   const result = await getAggregateFromServer(
-    query(collection(db, firestoreCollection('trips'))),
+    query(collection(db, 'users', uid, firestoreCollection('trips'))),
     { totalRevenue: sum('companyTariff'), totalProfit: sum('profit') }
   );
   return result.data();

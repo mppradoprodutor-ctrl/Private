@@ -70,8 +70,6 @@ import {
   loadDriversPage,
   subscribeToTripsPage,
   loadTripsPage,
-  saveTripDocument,
-  deleteTripDocument,
   getTripsAggregate,
   countUserCollection
 } from './lib/firebase';
@@ -275,14 +273,9 @@ const App: React.FC = () => {
   });
   const [companyName, setCompanyName] = useState<string>(() => {
     try {
-      const selected = localStorage.getItem('empresaSelecionada');
-      if (selected) {
-        const parsed = JSON.parse(selected);
-        return parsed.companyName || parsed.nome || parsed.razaoSocial || parsed.name || 'GERA TRANSPORTES';
-      }
-      return localStorage.getItem('tp_system_company_name') || 'GERA TRANSPORTES';
+      return localStorage.getItem('tp_system_company_name') || 'MY SYSTEM';
     } catch (e) {
-      return 'GERA TRANSPORTES';
+      return 'MY SYSTEM';
     }
   });
   const [isEditingName, setIsEditingName] = useState(false);
@@ -295,15 +288,8 @@ const App: React.FC = () => {
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch (e) {}
-    let selectedCompany: any = null;
-    try {
-      const rawSelected = typeof window !== 'undefined' ? localStorage.getItem('empresaSelecionada') : null;
-      selectedCompany = rawSelected ? JSON.parse(rawSelected) : null;
-    } catch (e) {
-      selectedCompany = null;
-    }
-    const legacyCnpj = selectedCompany?.cnpj || (typeof window !== 'undefined' && localStorage.getItem('tp_system_company_cnpj')) || '33.777.479/0001-26';
-    const legacyName = selectedCompany?.companyName || selectedCompany?.nome || selectedCompany?.razaoSocial || selectedCompany?.name || (typeof window !== 'undefined' && localStorage.getItem('tp_system_company_name')) || 'GERA TRANSPORTES (CASTILHO/SP)';
+    const legacyCnpj = (typeof window !== 'undefined' && localStorage.getItem('tp_system_company_cnpj')) || '29.543.880/0001-24';
+    const legacyName = (typeof window !== 'undefined' && localStorage.getItem('tp_system_company_name')) || 'MY SYSTEM';
     return [
       { 
         id: 'unit-matriz', 
@@ -329,21 +315,13 @@ const App: React.FC = () => {
   const activeOperationalUnit = useMemo(() => {
     return operationalUnits.find(u => u.id === activeOperationalUnitId) || operationalUnits[0] || {
       id: 'unit-matriz',
-      cnpj: '33.777.479/0001-26',
-      companyName: 'GERA TRANSPORTES (CASTILHO/SP)',
+      cnpj: '29.543.880/0001-24',
+      companyName: 'MY SYSTEM',
       name: 'Matriz'
     };
   }, [operationalUnits, activeOperationalUnitId]);
 
-  const selectedCompany = useMemo(() => {
-    try {
-      const raw = localStorage.getItem('empresaSelecionada');
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
-    }
-  }, []);
-  const companyCnpj = selectedCompany?.cnpj || activeOperationalUnit.cnpj || '33.777.479/0001-26';
+  const companyCnpj = activeOperationalUnit.cnpj;
   const [isFullscreen, setIsFullscreen] = useState(false);
   
   // Helper for normalization
@@ -500,6 +478,11 @@ const App: React.FC = () => {
     return () => clearTimeout(timer);
   }, [driverAnttFilter]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedTripCode(tripCteFilter), 400);
+    return () => clearTimeout(timer);
+  }, [tripCteFilter]);
+
   // FILTROS BASE DE FRETE
   const [freightOriginFilter, setFreightOriginFilter] = useState('');
   const [freightDestFilter, setFreightDestFilter] = useState('');
@@ -527,11 +510,6 @@ const App: React.FC = () => {
   const [tripStartDate, setTripStartDate] = useState('');
   const [tripEndDate, setTripEndDate] = useState('');
   const [tripPaymentTypeFilter, setTripPaymentTypeFilter] = useState<string>('');
-
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedTripCode(tripCteFilter), 400);
-    return () => clearTimeout(timer);
-  }, [tripCteFilter]);
 
   // VALORES ÚNICOS PARA FILTROS DE VIAGENS (SELECTS)
   const uniqueTripOrigins = useMemo(() => {
@@ -625,7 +603,7 @@ const App: React.FC = () => {
   const [isPrintingTripsPdfTop, setIsPrintingTripsPdfTop] = useState(false);
 
   const handleSaveName = useCallback(() => {
-    const val = tempName.trim() || activeOperationalUnit.companyName || 'GERA TRANSPORTES (CASTILHO/SP)';
+    const val = tempName.trim() || 'MY SYSTEM';
     setCompanyName(val);
     safeSetItem('tp_system_company_name', val);
     setIsEditingName(false);
@@ -974,13 +952,7 @@ const App: React.FC = () => {
         const oldMap = new Map<string, Trip>(tripsRef.current.map(t => [t.id, t]));
         const newMap = new Map<string, Trip>(data.map(t => [t.id, t]));
         for (const id of oldMap.keys()) {
-          if (!newMap.has(id)) await deleteTripDocument(id);
-        }
-        for (const [id, item] of newMap.entries()) {
-          const oldItem = oldMap.get(id);
-          if (!oldItem || JSON.stringify(oldItem) !== JSON.stringify(item)) {
-            await saveTripDocument(item);
-          }
+          if (!newMap.has(id)) await deleteUserDocument(uid, 'trips', id);
         }
         for (const [id, item] of newMap.entries()) {
           const oldItem = oldMap.get(id);
@@ -1188,7 +1160,6 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!auth) return;
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       // Clear any existing subscriptions first
       clearSubscriptions();
@@ -1249,10 +1220,7 @@ const App: React.FC = () => {
           cleanupSubsRef.current.push(unsubThirdParty);
 
           setIsTripsLoading(true);
-          console.log(`Empresa selecionada: ${companyCnpj}`);
-          const unsubTrips = subscribeToTripsPage<Trip>(uid, { code: debouncedTripCode, companyCnpj, operationalUnit: activeOperationalUnit.name }, (items, lastDoc, hasMore) => {
-            console.log(`Viagens encontradas: ${items.length}`);
-            if (items.length > 0) console.log('[Firestore] primeiro documento de viagens:', items[0]);
+          const unsubTrips = subscribeToTripsPage<Trip>(uid, { code: debouncedTripCode }, (items, lastDoc, hasMore) => {
             setTrips(items);
             setTripCursor(lastDoc);
             setTripHasMore(hasMore);
@@ -1311,14 +1279,14 @@ const App: React.FC = () => {
       unsubscribeAuth();
       clearSubscriptions();
     };
-  }, [safeSetItem, showNotification, clearSubscriptions, debouncedDriverSearch, debouncedDriverPlate, debouncedDriverCpf, debouncedDriverAntt, debouncedTripCode, companyCnpj, activeOperationalUnit.name]);
+  }, [safeSetItem, showNotification, clearSubscriptions, debouncedDriverSearch, debouncedDriverPlate, debouncedDriverCpf, debouncedDriverAntt, debouncedTripCode]);
 
   const loadMoreTrips = useCallback(async () => {
     const currentUser = userRef.current;
     if (!currentUser || !tripCursor || !tripHasMore || isTripsLoading) return;
     setIsTripsLoading(true);
     try {
-      const page = await loadTripsPage<Trip>(currentUser.uid, { code: debouncedTripCode, companyCnpj, operationalUnit: activeOperationalUnit.name }, tripCursor);
+      const page = await loadTripsPage<Trip>(currentUser.uid, { code: debouncedTripCode }, tripCursor);
       setTrips(previous => [...previous, ...page.items.filter(item => !previous.some(existing => existing.id === item.id))]);
       setTripCursor(page.lastDoc);
       setTripHasMore(page.hasMore);
@@ -1327,7 +1295,7 @@ const App: React.FC = () => {
     } finally {
       setIsTripsLoading(false);
     }
-  }, [tripCursor, tripHasMore, isTripsLoading, debouncedTripCode, companyCnpj, activeOperationalUnit.name]);
+  }, [tripCursor, tripHasMore, isTripsLoading, debouncedTripCode]);
 
   useEffect(() => {
     const sentinel = tripsLoadMoreRef.current;
@@ -2052,7 +2020,7 @@ const App: React.FC = () => {
                   if (e.key === 'Escape') setIsEditingName(false);
                 }}
                 className="bg-red-900/90 border border-red-500/80 rounded px-2 py-0.5 text-white font-black text-xs uppercase tracking-tight outline-none focus:ring-2 focus:ring-red-400 w-full shadow-inner"
-                placeholder="GERA TRANSPORTES"
+                placeholder="MY SYSTEM"
               />
               <button
                 type="button"
@@ -2144,14 +2112,14 @@ const App: React.FC = () => {
                   className="group flex items-center gap-1.5 cursor-pointer select-none bg-red-900/70 hover:bg-red-900 border border-red-700/60 rounded-lg px-2.5 py-1 transition-all"
                   title="Clique para gerenciar os CNPJs e dados da Unidade Operacional"
                 >
-                <span className="text-white font-mono font-black text-xs tracking-tight leading-none group-hover:text-red-200 transition-colors">
-                  CNPJ {companyCnpj}
-                </span>
-                {(selectedCompany?.nome || selectedCompany?.companyName || selectedCompany?.razaoSocial || activeOperationalUnit.companyName || activeOperationalUnit.name) && (
-                  <span className="text-[10px] text-red-300 font-bold truncate max-w-[140px]">
-                    ({selectedCompany?.nome || selectedCompany?.companyName || selectedCompany?.razaoSocial || activeOperationalUnit.companyName || activeOperationalUnit.name})
+                  <span className="text-white font-mono font-black text-xs tracking-tight leading-none group-hover:text-red-200 transition-colors">
+                    CNPJ {activeOperationalUnit.cnpj}
                   </span>
-                )}
+                  {(activeOperationalUnit.companyName || activeOperationalUnit.name) && (
+                    <span className="text-[10px] text-red-300 font-bold truncate max-w-[140px]">
+                      ({activeOperationalUnit.companyName || activeOperationalUnit.name})
+                    </span>
+                  )}
                   <Pencil size={10} className="text-red-400 group-hover:text-white transition-colors ml-1" />
                 </button>
               )}
@@ -2185,9 +2153,9 @@ const App: React.FC = () => {
                   </div>
                 </div>
                 <button 
-  onClick={() => {
-  if (auth) void signOut(auth);
-  showNotification("Desconectado do banco em nuvem.", "info");
+                  onClick={() => {
+                    signOut(auth);
+                    showNotification("Desconectado do banco em nuvem.", "info");
                   }}
                   className="bg-emerald-800/40 hover:bg-red-700/40 text-emerald-200 hover:text-white p-1 rounded-lg border border-emerald-500/10 hover:border-red-500/10 transition-all text-[8px] font-black uppercase tracking-widest ml-1"
                   title="Sair da Conta em Nuvem"
@@ -3103,10 +3071,9 @@ const App: React.FC = () => {
                 freights={freights} 
                 drivers={drivers} 
                 trips={trips} 
-  operationalUnits={operationalUnits}
-  activeOperationalUnitId={activeOperationalUnit.id}
-  userId={user?.uid}
-  onOpenManageUnits={() => setIsOperationalUnitModalOpen(true)}
+                operationalUnits={operationalUnits}
+                activeOperationalUnitId={activeOperationalUnit.id}
+                onOpenManageUnits={() => setIsOperationalUnitModalOpen(true)}
                 onGenerateTrip={(d) => {
                   setEditingTrip({ ...d, id: 'temp-' + Date.now(), createdAt: new Date().toISOString() } as Trip);
                   setIsTripFormOpen(true);
