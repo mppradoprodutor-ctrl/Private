@@ -69,7 +69,7 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
   const selectedUnit = useMemo(() => {
     return operationalUnits.find(u => u.id === selectedUnitId) || operationalUnits[0] || {
       id: 'default',
-      cnpj: '29.543.880/0001-24',
+      cnpj: '33.777.479/0001-26',
       name: 'Matriz'
     };
   }, [operationalUnits, selectedUnitId]);
@@ -107,7 +107,7 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
     }
   };
 
-  const companyName = (typeof window !== 'undefined' && localStorage.getItem('tp_system_company_name')) || 'MY SYSTEM';
+  const companyName = (typeof window !== 'undefined' && localStorage.getItem('tp_system_company_name')) || 'GERA TRANSPORTES (CASTILHO/SP)';
   const effectiveCompanyName = selectedUnit?.companyName || companyName;
   const effectiveAddress = [
     selectedUnit?.street ? `${selectedUnit.street}${selectedUnit.number ? `, ${selectedUnit.number}` : ''}` : '',
@@ -708,34 +708,15 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
                   </select>
                 </div>
 
-                {/* Exibição detalhada dos dados do CNPJ selecionado */}
-                {selectedDeliveryUnit && (
-                  <div className="bg-white border border-slate-200 rounded-lg p-2 text-[10px] space-y-1 shadow-2xs">
-                    <div className="flex items-center justify-between font-bold">
-                      <span className="text-slate-900 uppercase font-black">
-                        {selectedDeliveryUnit.companyName || selectedDeliveryUnit.name}
-                        {selectedDeliveryUnit.name && selectedDeliveryUnit.companyName && selectedDeliveryUnit.name !== selectedDeliveryUnit.companyName ? ` (${selectedDeliveryUnit.name})` : ''}
-                      </span>
-                      {selectedDeliveryUnit.stateRegistration && (
-                        <span className="text-slate-500 font-mono text-[9px] bg-slate-100 border border-slate-200 px-1 py-0.2 rounded">
-                          IE: {selectedDeliveryUnit.stateRegistration}
-                        </span>
-                      )}
-                    </div>
-                    {(deliveryAddress || deliveryCityState) && (
-                      <p className="text-slate-600 font-medium">
-                        {deliveryAddress ? `${deliveryAddress}` : ''}
-                        {deliveryAddress && deliveryCityState ? ' • ' : ''}
-                        <strong className="text-slate-800">{deliveryCityState}</strong>
-                      </p>
-                    )}
-                  </div>
-                )}
+                {/* Os dados completos permanecem disponíveis no espelho/PDF; este resumo evita empurrar a placa para baixo. */}
+                <div className="hidden" aria-hidden="true">
+                  {selectedDeliveryUnit && `${selectedDeliveryUnit.companyName || selectedDeliveryUnit.name} ${deliveryAddress} ${deliveryCityState}`}
+                </div>
 
               </div>
 
-              {/* Dados do Veículo e Telefone */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {/* Placa e dados vinculados ficam na mesma linha para manter a operação visível sem rolagem. */}
+              <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-2 items-start">
                 <div>
                   <label className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">
                     Placa do Veículo (Cavalo)
@@ -754,6 +735,19 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
                     }}
                     className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-800 placeholder:text-slate-400 uppercase outline-none focus:ring-1 focus:ring-red-200 focus:bg-white transition-all font-mono"
                   />
+                </div>
+
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 min-w-0">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="text-[8px] font-black uppercase tracking-widest text-slate-500">Veículo e motorista</span>
+                    <span className="text-[9px] font-mono font-black text-slate-800 truncate">{manualTruckPlate || '—'}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[8px] leading-tight">
+                    <div className="min-w-0"><span className="block uppercase font-black text-slate-400">Motorista</span><strong className="block truncate text-slate-800">{manualDriverName || 'Não identificado'}</strong></div>
+                    <div className="min-w-0"><span className="block uppercase font-black text-slate-400">CPF</span><strong className="block truncate font-mono text-slate-800">{manualCpf || '—'}</strong></div>
+                    <div className="min-w-0"><span className="block uppercase font-black text-slate-400">Carretas</span><strong className="block truncate font-mono text-slate-800">{[manualTrailer1, manualTrailer2].filter(Boolean).join(' · ') || '—'}</strong></div>
+                    <div className="min-w-0"><span className="block uppercase font-black text-slate-400">Dolly / eixos</span><strong className="block truncate font-mono text-slate-800">{[manualDolly, manualAxles ? `${manualAxles} eixos` : ''].filter(Boolean).join(' · ') || '—'}</strong></div>
+                  </div>
                 </div>
 
                 <div className="hidden">
