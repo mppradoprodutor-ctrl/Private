@@ -238,8 +238,13 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
       return;
     }
 
-    // Verifica se a placa digitada bate com algum motorista cadastrado (sem caracteres especiais)
-    const match = drivers.find(d => (d.truckPlate || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase() === clean);
+  // Localiza o motorista mesmo quando o Firebase usa um nome alternativo para a placa.
+  // Isso permite colar uma placa vinda de documentos, planilhas ou outros cadastros.
+  const match = drivers.find(driver => {
+    const driverData = driver as Driver & Record<string, unknown>;
+    const storedPlate = driverData.truckPlate || driverData.plate || driverData.vehiclePlate || driverData.placa;
+    return String(storedPlate || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase() === clean;
+  });
     if (match) {
       setSelectedDriver(match);
       setManualDriverName(match.name || '');
