@@ -1220,7 +1220,7 @@ const App: React.FC = () => {
           const driverFilters = {
             name: debouncedDriverSearch,
             cpfCnh: debouncedDriverCpf,
-            plate: debouncedDriverPlate,
+            plate: '',
             antt: debouncedDriverAntt,
           };
           const unsubDrivers = subscribeToDriversPage<Driver>(uid, driverFilters, (items, lastDoc, hasMore) => {
