@@ -1,9 +1,24 @@
+import fs from 'fs';
 import path from 'path';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
+function readProjectEnv() {
+  const filePath = '/vercel/share/.env.project';
+  if (!fs.existsSync(filePath)) return {};
+
+  return fs.readFileSync(filePath, 'utf8').split(/\r?\n/).reduce<Record<string, string>>((values, line) => {
+    const match = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)=(.*)\s*$/);
+    if (!match) return values;
+    const value = match[2].trim().replace(/^(['\"])(.*)\1$/, '$2');
+    values[match[1]] = value;
+    return values;
+  }, {});
+}
+
 export default defineConfig(({ mode }) => {
     const env = {
+      ...readProjectEnv(),
       ...loadEnv(mode, process.cwd(), ''),
       ...process.env,
     };
