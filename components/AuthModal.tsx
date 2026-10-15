@@ -28,6 +28,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
     setError('');
     setLoading(true);
     try {
+      if (!auth) {
+        throw new Error('Firebase Auth não está configurado neste ambiente.');
+      }
       const provider = new GoogleAuthProvider();
       const userCredential = await signInWithPopup(auth, provider);
       onSuccess(userCredential.user.email || 'Conta Google');
@@ -46,6 +49,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
     setLoading(true);
 
     try {
+      if (!auth) {
+        throw new Error('Firebase Auth não está configurado neste ambiente.');
+      }
       if (isRegister) {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         onSuccess(userCredential.user.email || email);

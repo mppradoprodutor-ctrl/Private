@@ -60,7 +60,7 @@ const TripListPdfTemplate = React.forwardRef<HTMLDivElement, TripListPdfTemplate
 
   const rawCompanyName = typeof window !== 'undefined' ? localStorage.getItem('tp_system_company_name') : null;
   const effectiveCompanyName = systemCompanyName || rawCompanyName || 'GERA - COMÉRCIO E TRANSPORTE DE BIOMASSAS';
-  const effectiveCnpj = systemCnpj || (typeof window !== 'undefined' ? localStorage.getItem('tp_system_company_cnpj') : null) || '29.543.880/0001-24';
+  const effectiveCnpj = systemCnpj || (typeof window !== 'undefined' ? localStorage.getItem('tp_system_company_cnpj') : null) || '33.777.479/0001-26';
 
   const issueDateFormatted = new Date().toLocaleDateString('pt-BR');
   const issueTimeFormatted = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });

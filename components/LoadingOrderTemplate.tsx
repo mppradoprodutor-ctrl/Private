@@ -63,9 +63,9 @@ const LoadingOrderTemplate = React.forwardRef<HTMLDivElement, LoadingOrderTempla
 
   // Resolução da empresa emissora
   const rawCompanyName = readStorage('tp_system_company_name');
-  const systemCompanyName = rawCompanyName && rawCompanyName !== 'MY SYSTEM' ? rawCompanyName : 'GERA - COMÉRCIO E TRANSPORTE DE BIOMASSAS';
-  const effectiveCompanyName = props.companyName && props.companyName !== 'MY SYSTEM' ? props.companyName : (trip?.operationalUnitCompanyName || systemCompanyName);
-  const effectiveCnpj = props.cnpj || trip?.operationalUnitCnpj || defaultCnpj || readStorage('tp_system_company_cnpj') || '29.543.880/0001-24';
+  const systemCompanyName = rawCompanyName || 'GERA TRANSPORTES (CASTILHO/SP)';
+  const effectiveCompanyName = props.companyName ? props.companyName : (trip?.operationalUnitCompanyName || systemCompanyName);
+  const effectiveCnpj = props.cnpj || trip?.operationalUnitCnpj || defaultCnpj || readStorage('tp_system_company_cnpj') || '33.777.479/0001-26';
   const effectiveIe = props.ie || trip?.operationalUnitIe;
   const effectiveUnitName = props.unitName || trip?.operationalUnitName;
 
