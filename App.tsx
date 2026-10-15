@@ -3103,9 +3103,10 @@ const App: React.FC = () => {
                 freights={freights} 
                 drivers={drivers} 
                 trips={trips} 
-                operationalUnits={operationalUnits}
-                activeOperationalUnitId={activeOperationalUnit.id}
-                onOpenManageUnits={() => setIsOperationalUnitModalOpen(true)}
+  operationalUnits={operationalUnits}
+  activeOperationalUnitId={activeOperationalUnit.id}
+  userId={user?.uid}
+  onOpenManageUnits={() => setIsOperationalUnitModalOpen(true)}
                 onGenerateTrip={(d) => {
                   setEditingTrip({ ...d, id: 'temp-' + Date.now(), createdAt: new Date().toISOString() } as Trip);
                   setIsTripFormOpen(true);
