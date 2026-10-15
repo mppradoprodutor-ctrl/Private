@@ -6,6 +6,7 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import React, { useRef, useState, useMemo, useEffect, useCallback } from 'react';
 import { Driver, Freight, Trip, OperationalUnit } from '../types';
+import { findDriverByPlate } from '../lib/firebase';
 import LoadingOrderTemplate from './LoadingOrderTemplate';
 
 interface LoadingOrderViewProps {
@@ -15,6 +16,7 @@ interface LoadingOrderViewProps {
   operationalUnits?: OperationalUnit[];
   activeOperationalUnitId?: string;
   onOpenManageUnits?: () => void;
+  userId?: string;
   onGenerateTrip: (tripData: Omit<Trip, 'id' | 'createdAt'>) => void;
 }
 
@@ -25,7 +27,8 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
   operationalUnits = [], 
   activeOperationalUnitId,
   onOpenManageUnits,
-  onGenerateTrip 
+  userId,
+  onGenerateTrip
 }) => {
   const [selectedFreight, setSelectedFreight] = useState<Freight | null>(null);
   const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
@@ -220,7 +223,7 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
     return raw.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 7);
   };
 
-  const handleTruckPlateChange = (val: string) => {
+  const handleTruckPlateChange = async (val: string) => {
     // Exclui todo tipo de caracter mantendo apenas letras e números ajustados
     const clean = cleanTruckPlate(val);
     setManualTruckPlate(clean);
@@ -240,11 +243,20 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
 
   // Localiza o motorista mesmo quando o Firebase usa um nome alternativo para a placa.
   // Isso permite colar uma placa vinda de documentos, planilhas ou outros cadastros.
-  const match = drivers.find(driver => {
+  let match = drivers.find(driver => {
     const driverData = driver as Driver & Record<string, unknown>;
     const storedPlate = driverData.truckPlate || driverData.plate || driverData.vehiclePlate || driverData.placa;
     return String(storedPlate || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase() === clean;
   });
+
+    if (!match && userId) {
+      try {
+        match = await findDriverByPlate<Driver>(userId, clean);
+      } catch (error) {
+        console.error('[v0] Falha ao buscar placa no Firebase:', error);
+      }
+    }
+
     if (match) {
       setSelectedDriver(match);
       setManualDriverName(match.name || '');

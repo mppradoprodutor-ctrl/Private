@@ -86,12 +86,17 @@ function driversQuery(uid: string, filters: DriverQueryFilters = {}, cursor?: an
   const antt = filters.antt?.trim();
 
   if (name) {
-    constraints.push(where('name', '>=', name), where('name', '<=', `${name}\uf8ff`));
+    constraints.push(where('name', '>=', name), where('name', '<=', `${name}\uf8ff`), orderBy('name'));
+  } else if (cpfCnh) {
+    constraints.push(where('cpf', '==', cpfCnh));
+  } else if (plate) {
+    constraints.push(where('truckPlate', '==', plate));
+  } else if (antt) {
+    constraints.push(where('antt', '==', antt));
+  } else {
+    constraints.push(orderBy('name'));
   }
-  if (cpfCnh) constraints.push(where('cpf', '==', cpfCnh));
-  if (plate) constraints.push(where('truckPlate', '==', plate));
-  if (antt) constraints.push(where('antt', '==', antt));
-  constraints.push(orderBy('name'), limit(50));
+  constraints.push(limit(50));
   if (cursor) constraints.splice(constraints.length - 1, 0, startAfter(cursor));
   return query(collection(db, 'users', uid, 'motoristas'), ...constraints);
 }
@@ -105,6 +110,23 @@ export function subscribeToDriversPage<T extends { id: string }>(uid: string, fi
 export async function loadDriversPage<T extends { id: string }>(uid: string, filters: DriverQueryFilters, cursor?: any) {
   const snapshot = await getDocs(driversQuery(uid, filters, cursor));
   return { items: snapshot.docs.map(item => ({ id: item.id, ...item.data() }) as T), lastDoc: snapshot.docs.at(-1), hasMore: snapshot.size === 50 };
+}
+
+export async function findDriverByPlate<T extends { id: string }>(uid: string, rawPlate: string) {
+  const plate = rawPlate.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+  if (!plate) return null;
+
+  const fields = ['truckPlate', 'plate', 'vehiclePlate', 'placa'];
+  for (const field of fields) {
+    const snapshot = await getDocs(query(
+      collection(db, 'users', uid, 'motoristas'),
+      where(field, '==', plate),
+      limit(1),
+    ));
+    const match = snapshot.docs[0];
+    if (match) return { id: match.id, ...match.data() } as T;
+  }
+  return null;
 }
 
 export async function countUserCollection(uid: string, name: string, filters: DriverQueryFilters = {}) {
