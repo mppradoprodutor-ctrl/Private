@@ -27,6 +27,7 @@ const FreightFormModal: React.FC<FreightFormModalProps> = ({ isOpen, onClose, on
     destinationAddress: '',
     restrictions: '',
     notes: '',
+    emailDestino: '',
     axles: [],
     distance: '',
     deductIcms: false,
@@ -56,6 +57,7 @@ const FreightFormModal: React.FC<FreightFormModalProps> = ({ isOpen, onClose, on
         destinationAddress: initialData.destinationAddress || '',
         restrictions: initialData.restrictions || '',
         notes: initialData.notes || '',
+        emailDestino: initialData.emailDestino || '',
         axles: Array.isArray(initialData.axles) ? initialData.axles : (initialData.axles ? [initialData.axles] : []),
         distance: initialData.distance || '',
         deductIcms: initialData.deductIcms || false,
@@ -237,6 +239,11 @@ const FreightFormModal: React.FC<FreightFormModalProps> = ({ isOpen, onClose, on
         <div className="px-5 py-3 space-y-2.5 overflow-y-auto no-scrollbar max-h-[82vh]">
           <form id="freightForm" onSubmit={handleSubmit} className="space-y-2.5">
             
+            <div>
+              <label className="block text-[7.5px] font-black text-slate-400 uppercase tracking-widest mb-0.5 ml-0.5">E-MAIL PARA ENVIO DA ORDEM</label>
+              <input type="email" name="emailDestino" placeholder="ex: faturamento@cliente.com.br" value={formData.emailDestino || ''} onChange={handleChange} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-[11px] font-bold outline-none focus:ring-1 focus:ring-blue-100 transition-all" />
+            </div>
+
             {/* LINHA 1: Local, Origem, Destino e Tarifas */}
             <div className="grid grid-cols-12 gap-2">
               <div className="col-span-2">

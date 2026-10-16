@@ -29,7 +29,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
     setLoading(true);
     try {
       const provider = new GoogleAuthProvider();
+      provider.addScope('https://www.googleapis.com/auth/gmail.send');
       const userCredential = await signInWithPopup(auth, provider);
+      const credential = GoogleAuthProvider.credentialFromResult(userCredential);
+      if (credential?.accessToken && typeof window !== 'undefined') {
+        sessionStorage.setItem('gmailAccessToken', credential.accessToken);
+      }
       onSuccess(userCredential.user.email || 'Conta Google');
       onClose();
     } catch (err: any) {
