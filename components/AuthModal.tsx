@@ -29,15 +29,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
     setLoading(true);
     try {
       const provider = new GoogleAuthProvider();
-      provider.addScope('https://www.googleapis.com/auth/gmail.send');
-      provider.addScope('https://www.googleapis.com/auth/userinfo.email');
-      provider.setCustomParameters({ prompt: 'consent', access_type: 'offline', include_granted_scopes: 'true' });
       const userCredential = await signInWithPopup(auth, provider);
-      const credential = GoogleAuthProvider.credentialFromResult(userCredential);
-      if (credential?.accessToken && typeof window !== 'undefined') {
-        localStorage.setItem('gmail_access_token', credential.accessToken);
-        localStorage.setItem('gmail_token_time', Date.now().toString());
-      }
       onSuccess(userCredential.user.email || 'Conta Google');
       onClose();
     } catch (err: any) {
