@@ -17,8 +17,8 @@ export default async function handler(req: any, res: any) {
       pdfBase64 = pdfBase64.split('base64,')[1];
     }
 
-    if (!placa || !pdfBase64) {
-      return res.status(400).json({ error: 'Placa ou PDF faltando' });
+    if (!placa) {
+  return res.status(400).json({ error: 'Placa faltando' });
     }
 
     const apiKey = process.env.RESEND_API_KEY;
