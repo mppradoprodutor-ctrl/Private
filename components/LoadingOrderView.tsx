@@ -509,18 +509,17 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
     setIsSendingEmail(true);
     setEmailStatus(null);
     try {
-      const currentNum = orderNumber || 1;
-      const subject = `Ordem ${currentNum}`;
-      const printHtml = document.getElementById('ordem-print')?.innerHTML;
-      const html = printHtml || `<h2>Ordem ${currentNum}</h2><p>Empresa: ${effectiveCompanyName}</p><p>Placa: ${displayTruckPlate}</p>`;
+      const freteId = selectedFreight?.id || orderNumber || 1;
+      const subject = `Ordem ${freteId}`;
+      const html = document.getElementById('ordem-print')?.innerHTML;
       const response = await fetch('/api/enviar-ordem', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ to: recipient, subject, html }),
       });
-      const result = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
-      if (!response.ok || !result.ok) throw new Error(result.error || `Falha no envio (HTTP ${response.status}).`);
-      setEmailStatus({ type: 'success', message: `Ordem enviada para ${recipient}.` });
+      const data = await response.json();
+      if (data.ok) setEmailStatus({ type: 'success', message: data.message });
+      else setEmailStatus({ type: 'error', message: data.error || 'Erro ao enviar a ordem.' });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       console.error('[v0] Erro no envio da ordem:', message);
