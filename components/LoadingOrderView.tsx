@@ -6,8 +6,6 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import React, { useRef, useState, useMemo, useEffect, useCallback } from 'react';
 import { Driver, Freight, Trip, OperationalUnit } from '../types';
-import { auth } from '../lib/firebase';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import LoadingOrderTemplate from './LoadingOrderTemplate';
 
 interface LoadingOrderViewProps {
@@ -56,7 +54,7 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
   const [isDownloading, setIsDownloading] = useState(false);
   const [hasGeneratedOrder, setHasGeneratedOrder] = useState(false);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
-  const [isGmailAuthorized, setIsGmailAuthorized] = useState(() => typeof window !== 'undefined' && Boolean(localStorage.getItem('gmail_access_token')));
+  const [emailStatus, setEmailStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const isDownloadingRef = useRef(false);
   const lastDownloadTimeRef = useRef(0);
 
@@ -501,62 +499,36 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
     }
   };
 
-  const handleAuthorizeGmail = async () => {
-    try {
-      const provider = new GoogleAuthProvider();
-      provider.addScope('https://www.googleapis.com/auth/gmail.send');
-      provider.setCustomParameters({ prompt: 'consent' });
-      const result = await signInWithPopup(auth, provider);
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      if (!credential?.accessToken) throw new Error('Não foi possível obter autorização do Gmail.');
-      localStorage.setItem('gmail_access_token', credential.accessToken);
-      localStorage.setItem('gmail_token_time', Date.now().toString());
-      setIsGmailAuthorized(true);
-    } catch (error) {
-      console.error('[v0] Erro ao autorizar Gmail:', error);
-      alert('Não foi possível autorizar o Gmail.');
-    }
-  };
-
   const handleSendByEmail = async () => {
     const recipient = selectedFreight?.emailDestino?.trim();
     if (!recipient) {
-      alert('Esta base de frete não tem e-mail cadastrado. Vá em Base de Fretes > Editar Rota e cadastre.');
+      setEmailStatus({ type: 'error', message: 'Cadastre o e-mail na rota antes de enviar.' });
       return;
     }
-
-    const token = typeof window !== 'undefined' ? localStorage.getItem('gmail_access_token') : null;
-    if (!token || !auth.currentUser?.email) {
-      alert('Autorize o Gmail para envio antes de enviar a ordem.');
-      setIsGmailAuthorized(false);
-      return;
-    }
-    const sender = auth.currentUser.email;
 
     setIsSendingEmail(true);
+    setEmailStatus(null);
     try {
-      const escapeHtml = (value: string) => value.replace(/[&<>\"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', "'": '&#39;' }[character] || character));
-      const currentNum = orderNumber || 1;
-      const subject = `Ordem de Carregamento Nº ${currentNum} - ${selectedFreight?.serviceTaker || 'Rota'} - GERA TRANSPORTES`;
-      const html = `<h2>Ordem de Carregamento Nº ${currentNum}</h2><p><strong>Empresa:</strong> ${escapeHtml(effectiveCompanyName)}</p><p><strong>CNPJ:</strong> ${escapeHtml(selectedUnit?.cnpj || '')}</p><p><strong>Local de coleta:</strong> ${escapeHtml(displayLocation)}</p><p><strong>Local de entrega:</strong> ${escapeHtml(displayDeliveryLocation)}</p><p><strong>Produto:</strong> ${escapeHtml(displayProduct)}</p><p><strong>Placa:</strong> ${escapeHtml(displayTruckPlate)}</p><p><strong>Data de coleta:</strong> ${escapeHtml(loadingDate)}</p>`;
-      const raw = [`From: ${sender}`, `To: ${recipient}`, `Subject: ${subject}`, 'MIME-Version: 1.0', 'Content-Type: text/html; charset=UTF-8', '', html].join('\r\n');
-      const encoded = btoa(unescape(encodeURIComponent(raw))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
-      const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ raw: encoded }) });
-      if (response.status === 401) {
-        localStorage.removeItem('gmail_access_token');
-        localStorage.removeItem('gmail_token_time');
-        setIsGmailAuthorized(false);
-        throw new Error('TOKEN_EXPIRED_FACA_LOGIN_NOVAMENTE');
-      }
-      if (!response.ok) throw new Error(await response.text());
-      alert(`Ordem enviada com sucesso para ${recipient}`);
+      const freteId = selectedFreight?.id || orderNumber || 1;
+      const subject = `Ordem ${freteId}`;
+      const html = document.getElementById('ordem-print')?.innerHTML;
+      const response = await fetch('/api/enviar-ordem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: recipient, subject, html }),
+      });
+      const data = await response.json();
+      if (data.ok) setEmailStatus({ type: 'success', message: data.message });
+      else setEmailStatus({ type: 'error', message: data.error || 'Erro ao enviar a ordem.' });
     } catch (error) {
-      console.error('[v0] Erro ao enviar ordem pelo Gmail:', error);
-      alert('Não foi possível enviar a ordem.');
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('[v0] Erro no envio da ordem:', message);
+      setEmailStatus({ type: 'error', message });
     } finally {
       setIsSendingEmail(false);
     }
   };
+
 
   const handleDownloadPdf = async (e?: React.MouseEvent) => {
     if (e) {
@@ -997,10 +969,10 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
                 </>
               )}
             </button>
-            {!isGmailAuthorized && (
-              <button type="button" onClick={handleAuthorizeGmail} className="w-full bg-amber-400 border border-amber-500 text-amber-950 font-black text-[9px] uppercase tracking-wider py-2.5 rounded-lg shadow-sm flex items-center justify-center gap-2 active:scale-95 transition-all">
-                Autorizar Gmail para envio
-              </button>
+            {emailStatus && (
+              <p role="status" className={`text-[9px] font-bold ${emailStatus.type === 'success' ? 'text-emerald-600' : 'text-red-600'}`}>
+                {emailStatus.message}
+              </p>
             )}
             <button
               type="button"
