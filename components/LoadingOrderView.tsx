@@ -512,70 +512,43 @@ const handleSendByEmail = async () => {
     const placa = (selectedFreight as any)?.placa || (selectedFreight as any)?.placaCavalo || 'HKH0B84';
     const subject = `Ordem ${freteId}`;
     const element = document.getElementById('ordem-print');
-    const html = element?.innerHTML || '';
+    if (!element) throw new Error('Elemento ordem-print não encontrado');
+    
     const { jsPDF } = await import('jspdf');
-    const doc = new jsPDF();
-    doc.text(html.replace(/<[^>]*>/g, '').substring(0, 1000), 10, 10);
+    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+    
+    // Gera PDF com todo o conteúdo do documento
+    await doc.html(element, {
+      callback: function (pdf) {},
+      x: 15,
+      y: 15,
+      width: 565,
+      windowWidth: 800,
+      autoPaging: 'text'
+    });
+    
+    // Espera o html terminar
+    await new Promise(r => setTimeout(r, 1500));
+    
     const pdfBase64 = doc.output('datauristring');
+    const html = element.innerHTML;
+    
     const response = await fetch('/api/enviar-ordem', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ to: recipient, subject, html, placa, pdfBase64 }),
     });
     const data = await response.json();
-    if (data.ok) setEmailStatus({ type: 'success', message: 'Enviado!' });
+    if (data.ok) setEmailStatus({ type: 'success', message: 'PDF enviado com dados!' });
     else setEmailStatus({ type: 'error', message: data.error || 'Erro' });
   } catch (error: any) {
     setEmailStatus({ type: 'error', message: error.message });
   } finally {
     setIsSendingEmail(false);
-  }
+};
 };
 
-
-  const handleDownloadPdf = async (e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    const now = Date.now();
-    // Trava estrita contra clique duplo ou download simultâneo: 1 arquivo por clique
-    if (isDownloadingRef.current || (now - lastDownloadTimeRef.current < 1500)) {
-      return;
-    }
-    if (!orderRef.current) return;
-
-    isDownloadingRef.current = true;
-    lastDownloadTimeRef.current = now;
-    setIsDownloading(true);
-
-    try {
-      const currentNum = orderNumber || 1;
-      const success = await generateLoadingOrderPdf(currentNum);
-      if (success) {
-        // Segue a sequência automaticamente após o download do PDF
-        const nextNum = currentNum + 1;
-        setOrderNumber(nextNum);
-        try {
-          localStorage.setItem('tp_system_loading_order_seq', nextNum.toString());
-        } catch (e) {
-          console.error("Erro ao salvar sequencial de ordem:", e);
-        }
-      } else {
-        throw new Error("Não foi possível renderizar o arquivo PDF.");
-      }
-    } catch (error) {
-      console.error("Erro ao exportar Ordem em PDF:", error);
-      alert("Houve uma instabilidade ao gerar o arquivo PDF. Por favor, tente novamente.");
-    } finally {
-      setTimeout(() => {
-        isDownloadingRef.current = false;
-        setIsDownloading(false);
-      }, 800);
-    }
-  };
-
-  const handleDownloadPng = async (e?: React.MouseEvent) => {
+const handleDownloadPng = async (e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault();
       e.stopPropagation();
