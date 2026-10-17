@@ -510,12 +510,9 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
     setEmailStatus(null);
     try {
       const freteId = selectedFreight?.id || orderNumber || 1;
-      const subject = `Ordem ${freteId}`;
-      
-      // MESMO ELEMENTO DO DOWNLOAD - id ordem-print
       const el = document.getElementById('ordem-print');
-      if (!el) throw new Error('Elemento ordem-print não encontrado');
-      
+      if (!el) throw new Error('Elemento ordem-print nao encontrado');
+
       const canvas = await html2canvas(el, { scale: 2 });
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
@@ -523,6 +520,10 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
       const pdfBase64 = pdf.output('datauristring');
 
       const response = await fetch('/api/enviar-ordem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: recipient, pdfBase64 }),
+      });
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ to: recipient, subject, pdfBase64 }),
