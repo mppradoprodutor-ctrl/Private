@@ -524,6 +524,15 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ to: recipient, pdfBase64 }),
       });
+
+      if (!response.ok) throw new Error('Falha no envio');
+      setEmailStatus({ type: 'success', message: 'E-mail enviado com sucesso' });
+    } catch (err) {
+      setEmailStatus({ type: 'error', message: 'Erro ao enviar e-mail' });
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ to: recipient, subject, pdfBase64 }),
