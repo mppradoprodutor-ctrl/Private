@@ -1,26 +1,29 @@
-import nodemailer from 'nodemailer'
+import { Resend } from 'resend';
+import { NextResponse } from 'next/server';
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(req: Request) {
-  try {
-    const { to, nomeMotorista, placa, html } = await req.json()
+  const body = await req.json();
+  const placa = body.placa;
+  const pdfBase64 = body.pdfBase64;
 
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: 'mppradoprodutor@gmail.com',
-        pass: process.env.GMAIL_APP_PASSWORD
+  const result = await resend.emails.send({
+    from: 'onboarding@resend.dev',
+    to: 'mppradoprodutor@gmail.com',
+    subject: 'ORDEM ' + placa + ' - GERA TRANSPORTES',
+    html: '<p>Ordem ' + placa + ' - GERA TRANSPORTES</p>',
+    attachments: [
+      {
+        filename: 'ORDEM-' + placa + '.pdf',
+        content: pdfBase64
       }
-    })
+    ]
+  });
 
-    await transporter.sendMail({
-      from: 'GERA TRANSPORTES <mppradoprodutor@gmail.com>',
-      to: to,
-      subject: nomeMotorista + ' - PLACA ' + placa,
-      html: html
-    })
-
-    return new Response(JSON.stringify({ ok: true }), { status: 200 })
-  } catch (error: any) {
-    return new Response(JSON.stringify({ ok: false, error: error.message }), { status: 500 })
+  if (result.error) {
+    return NextResponse.json(result.error, { status: 400 });
   }
+  
+  return NextResponse.json(result.data);
 }
