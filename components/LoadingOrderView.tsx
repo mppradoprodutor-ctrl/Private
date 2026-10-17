@@ -499,7 +499,7 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
     }
   };
 
-  const handleSendByEmail = async () => {
+const handleSendByEmail = async () => {
   const recipient = selectedFreight?.emailDestino?.trim();
   if (!recipient) {
     setEmailStatus({ type: 'error', message: 'Cadastre o e-mail na rota antes de enviar' });
@@ -511,44 +511,26 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
     const freteId = selectedFreight?.id || orderNumber || 1;
     const placa = (selectedFreight as any)?.placa || (selectedFreight as any)?.placaCavalo || 'HKH0B84';
     const subject = `Ordem ${freteId}`;
-    
-    // Pega o HTML da ordem
     const element = document.getElementById('ordem-print');
     const html = element?.innerHTML || '';
-    
-    // GERA O PDF EM BASE64 AQUI!
     const { jsPDF } = await import('jspdf');
-    const doc = new jsPDF('p', 'mm', 'a4');
-    await doc.html(element as HTMLElement, {
-      callback: () => {},
-      x: 10,
-      y: 10,
-      width: 190,
-      windowWidth: 800
-    });
-    // espera renderizar
-    await new Promise(r => setTimeout(r, 500));
+    const doc = new jsPDF();
+    doc.text(html.replace(/<[^>]*>/g, '').substring(0, 1000), 10, 10);
     const pdfBase64 = doc.output('datauristring');
-
     const response = await fetch('/api/enviar-ordem', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ to: recipient, subject, html, placa, pdfBase64 }),
     });
     const data = await response.json();
-    if (data.ok) setEmailStatus({ type: 'success', message: data.message || 'Enviado!' });
-    else setEmailStatus({ type: 'error', message: data.error || 'Erro ao enviar' });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error(' Erro no envio da ordem:', message);
-    setEmailStatus({ type: 'error', message });
+    if (data.ok) setEmailStatus({ type: 'success', message: 'Enviado!' });
+    else setEmailStatus({ type: 'error', message: data.error || 'Erro' });
+  } catch (error: any) {
+    setEmailStatus({ type: 'error', message: error.message });
   } finally {
     setIsSendingEmail(false);
   }
 };
-      setIsSendingEmail(false);
-    }
-  };
 
 
   const handleDownloadPdf = async (e?: React.MouseEvent) => {
