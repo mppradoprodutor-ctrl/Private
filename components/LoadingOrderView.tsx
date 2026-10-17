@@ -565,9 +565,8 @@ const handleDownloadPdf = async (e?: React.MouseEvent) => {
     doc.setTextColor(0,0,0); doc.text(`VEICULO E PLACAS: Cavalo ${cavalo||'HKH0B84'} / Carreta 1: ${carreta||'RWI5E63'} / 6 Eixos`,12,75);
     
     // MOTORISTA
-    doc.text(`DADOS DO MOTORISTA: ${motorista||'JEVERSON DE ARAUJO ALVES'} - CPF ${cpf||'08536098961'} - CEL (18) 9xxxx-xxxx`,12,85);
-    
-    doc.save(`Ordem_${orderNumber||'3167'}_${cavalo||'HKH0B84'}.pdf`);
+    doc.text('DADOS DO MOTORISTA: ' + (motorista||'JEVERSON DE ARAUJO ALVES') + ' - CPF: ' + (cpf||''));
+doc.save('Ordem_' + (orderNumber||'3167') + '_' + (cavalo||'HKH0B84') + '.pdf');
   } finally { isDownloadingRef.current = false; }
 };
     doc.text('GERA TRANSPORTES',10,15);
