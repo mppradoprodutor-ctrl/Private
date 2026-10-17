@@ -7,7 +7,7 @@ import jsPDF from 'jspdf';
 import React, { useRef, useState, useMemo, useEffect, useCallback } from 'react';
 import { Driver, Freight, Trip, OperationalUnit } from '../types';
 import { auth } from '../lib/firebase';
-import { signOut } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import LoadingOrderTemplate from './LoadingOrderTemplate';
 
 interface LoadingOrderViewProps {
@@ -56,6 +56,7 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
   const [isDownloading, setIsDownloading] = useState(false);
   const [hasGeneratedOrder, setHasGeneratedOrder] = useState(false);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [isGmailAuthorized, setIsGmailAuthorized] = useState(() => typeof window !== 'undefined' && Boolean(localStorage.getItem('gmail_access_token')));
   const isDownloadingRef = useRef(false);
   const lastDownloadTimeRef = useRef(0);
 
@@ -500,6 +501,23 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
     }
   };
 
+  const handleAuthorizeGmail = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      provider.addScope('https://www.googleapis.com/auth/gmail.send');
+      provider.setCustomParameters({ prompt: 'consent' });
+      const result = await signInWithPopup(auth, provider);
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      if (!credential?.accessToken) throw new Error('Não foi possível obter autorização do Gmail.');
+      localStorage.setItem('gmail_access_token', credential.accessToken);
+      localStorage.setItem('gmail_token_time', Date.now().toString());
+      setIsGmailAuthorized(true);
+    } catch (error) {
+      console.error('[v0] Erro ao autorizar Gmail:', error);
+      alert('Não foi possível autorizar o Gmail.');
+    }
+  };
+
   const handleSendByEmail = async () => {
     const recipient = selectedFreight?.emailDestino?.trim();
     if (!recipient) {
@@ -508,15 +526,9 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
     }
 
     const token = typeof window !== 'undefined' ? localStorage.getItem('gmail_access_token') : null;
-    const tokenTime = Number(typeof window !== 'undefined' ? localStorage.getItem('gmail_token_time') : 0);
-    const tokenExpired = !tokenTime || Date.now() - tokenTime > 50 * 60 * 1000;
-    if (!token || tokenExpired || !auth.currentUser?.email) {
-      await signOut(auth).catch(() => undefined);
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('gmail_access_token');
-        localStorage.removeItem('gmail_token_time');
-        window.location.reload();
-      }
+    if (!token || !auth.currentUser?.email) {
+      alert('Autorize o Gmail para envio antes de enviar a ordem.');
+      setIsGmailAuthorized(false);
       return;
     }
     const sender = auth.currentUser.email;
@@ -533,9 +545,8 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
       if (response.status === 401) {
         localStorage.removeItem('gmail_access_token');
         localStorage.removeItem('gmail_token_time');
-        await signOut(auth).catch(() => undefined);
-        window.location.reload();
-        return;
+        setIsGmailAuthorized(false);
+        throw new Error('TOKEN_EXPIRED_FACA_LOGIN_NOVAMENTE');
       }
       if (!response.ok) throw new Error(await response.text());
       alert(`Ordem enviada com sucesso para ${recipient}`);
@@ -986,6 +997,11 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
                 </>
               )}
             </button>
+            {!isGmailAuthorized && (
+              <button type="button" onClick={handleAuthorizeGmail} className="w-full bg-amber-400 border border-amber-500 text-amber-950 font-black text-[9px] uppercase tracking-wider py-2.5 rounded-lg shadow-sm flex items-center justify-center gap-2 active:scale-95 transition-all">
+                Autorizar Gmail para envio
+              </button>
+            )}
             <button
               type="button"
               onClick={handleSendByEmail}

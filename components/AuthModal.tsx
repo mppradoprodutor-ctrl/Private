@@ -6,7 +6,6 @@ import {
   createUserWithEmailAndPassword,
   signInWithPopup,
   GoogleAuthProvider,
-  signOut,
 } from 'firebase/auth';
 
 interface AuthModalProps {
