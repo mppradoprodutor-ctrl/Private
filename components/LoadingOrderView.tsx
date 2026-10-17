@@ -595,10 +595,11 @@ const handleSendByEmail = async () => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        to: recipient,
-        subject: `Ordem ${orderNumber || 1}`,
-        fileName: `Ordem_Carregamento_${orderNumber || 1}.pdf`,
-        pdfBase64,
+     to: recipient,
+pdfBase64,
+nomeMotorista: displayDriverName,
+placaCavalo: displayTruckPlate,
+fileName: `${displayDriverName} - ${displayTruckPlate}.pdf`,   
       }),
     });
 
