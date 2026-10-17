@@ -502,7 +502,7 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
   const handleSendByEmail = async () => {
     const recipient = selectedFreight?.emailDestino?.trim();
     if (!recipient) {
-      setEmailStatus({ type: 'error', message: 'Cadastre o e-mail na rota antes de enviar' });
+      setEmailStatus({ type: 'error', message: 'Cadastre o e-mail na rota antes de enviar.' });
       return;
     }
 
@@ -510,32 +510,12 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
     setEmailStatus(null);
     try {
       const freteId = selectedFreight?.id || orderNumber || 1;
-      const el = document.getElementById('ordem-print');
-      if (!el) throw new Error('Elemento ordem-print nao encontrado');
-
-      const canvas = await html2canvas(el, { scale: 2 });
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      pdf.addImage(imgData, 'PNG', 0, 0, 210, 297);
-      const pdfBase64 = pdf.output('datauristring');
-
+      const subject = `Ordem ${freteId}`;
+      const html = document.getElementById('ordem-print')?.innerHTML;
       const response = await fetch('/api/enviar-ordem', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: recipient, pdfBase64 }),
-      });
-
-      if (!response.ok) throw new Error('Falha no envio');
-      setEmailStatus({ type: 'success', message: 'E-mail enviado com sucesso' });
-    } catch (err) {
-      setEmailStatus({ type: 'error', message: 'Erro ao enviar e-mail' });
-    } finally {
-      setIsSendingEmail(false);
-    }
-  };
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: recipient, subject, pdfBase64 }),
+        body: JSON.stringify({ to: recipient, subject, html }),
       });
       const data = await response.json();
       if (data.ok) setEmailStatus({ type: 'success', message: data.message });
