@@ -8,13 +8,15 @@ export default async function handler(req: any, res: any) {
     const body = req.body || {};
     const toRaw = body.to || '';
     const pdfBase64 = body.pdfBase64 || '';
+    const nomeMotorista = body.nomeMotorista || '';
+    const placaCavalo = body.placaCavalo || '';
 
     let base64 = pdfBase64;
     if (base64.indexOf(',') > -1) {
       base64 = base64.split(',')[1];
     }
 
-    const lista = toRaw.split(',').map(function(s){ return s.trim(); }).filter(function(s){ return s.indexOf('@') > -1; });
+    const lista = toRaw.split(',').map(function(s: any){ return s.trim(); }).filter(function(s: any){ return s.indexOf('@') > -1; });
 
     if (lista.length === 0) {
       return res.status(400).json({ error: 'Nenhum email informado' });
@@ -28,11 +30,16 @@ export default async function handler(req: any, res: any) {
       },
     });
 
+    let assunto = 'Ordem de Carregamento - GERA TRANSPORTES 33.777.479/0001-26';
+    if (nomeMotorista && placaCavalo) {
+      assunto = `${nomeMotorista} - ${placaCavalo} - Ordem de Carregamento`;
+    }
+
     await transporter.sendMail({
       from: 'PRADO SYSTEM <mppradoprodutor@gmail.com>',
       to: lista,
-      subject: 'Ordem de Carregamento - GERA TRANSPORTES 33.777.479/0001-26',
-      html: '<p>Segue ordem de carregamento em anexo.</p><p>GERA TRANSPORTES</p>',
+      subject: assunto,
+      html: `<p>Segue ordem de carregamento em anexo.</p><p><b>Motorista:</b> ${nomeMotorista}<br/><b>Placa:</b> ${placaCavalo}</p><p>GERA TRANSPORTES</p>`,
       attachments: [{ filename: 'ordem.pdf', content: base64, encoding: 'base64' }],
     });
 
