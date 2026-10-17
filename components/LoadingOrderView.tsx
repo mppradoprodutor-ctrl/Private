@@ -1,11 +1,12 @@
 
-import { Download, PlusCircle, Save, Plus, Building2, Loader2, FileText, Phone, Scale, MapPin } from 'lucide-react';
+import { Download, PlusCircle, Save, Plus, Building2, Loader2, FileText, Phone, Scale, MapPin, Mail } from 'lucide-react';
 import { toBlob, toPng } from 'html-to-image';
 import { saveAs } from 'file-saver';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import React, { useRef, useState, useMemo, useEffect, useCallback } from 'react';
 import { Driver, Freight, Trip, OperationalUnit } from '../types';
+import { auth } from '../lib/firebase';
 import LoadingOrderTemplate from './LoadingOrderTemplate';
 
 interface LoadingOrderViewProps {
@@ -52,6 +53,8 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
   const [manualNetWeight, setManualNetWeight] = useState('');
 
   const [isDownloading, setIsDownloading] = useState(false);
+  const [hasGeneratedOrder, setHasGeneratedOrder] = useState(false);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
   const isDownloadingRef = useRef(false);
   const lastDownloadTimeRef = useRef(0);
 
@@ -484,7 +487,11 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
     };
 
     onGenerateTrip(tripData);
+    setHasGeneratedOrder(true);
     setNotes('');
+
+    // Mantém a ordem renderizada disponível para exportação e envio.
+    return currentOrderNum;
 
     const nextNum = currentOrderNum + 1;
     setOrderNumber(nextNum);
@@ -492,6 +499,39 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
       localStorage.setItem('tp_system_loading_order_seq', nextNum.toString());
     } catch (e) {
       console.error("Erro ao salvar sequencial de ordem:", e);
+    }
+  };
+
+  const handleSendByEmail = async () => {
+    const recipient = selectedFreight?.emailDestino?.trim();
+    if (!recipient) {
+      alert('Esta base de frete não tem e-mail cadastrado. Vá em Base de Fretes > Editar Rota e cadastre.');
+      return;
+    }
+
+    const accessToken = typeof window !== 'undefined' ? sessionStorage.getItem('gmailAccessToken') : null;
+    const sender = auth.currentUser?.email;
+    if (!accessToken || !sender) {
+      alert('Faça login com o Google novamente para autorizar o envio pelo Gmail.');
+      return;
+    }
+
+    setIsSendingEmail(true);
+    try {
+      const escapeHtml = (value: string) => value.replace(/[&<>\"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', "'": '&#39;' }[character] || character));
+      const currentNum = orderNumber || 1;
+      const subject = `Ordem de Carregamento Nº ${currentNum} - ${selectedFreight?.serviceTaker || 'Rota'} - GERA TRANSPORTES`;
+      const html = `<h2>Ordem de Carregamento Nº ${currentNum}</h2><p><strong>Empresa:</strong> ${escapeHtml(effectiveCompanyName)}</p><p><strong>CNPJ:</strong> ${escapeHtml(selectedUnit?.cnpj || '')}</p><p><strong>Local de coleta:</strong> ${escapeHtml(displayLocation)}</p><p><strong>Local de entrega:</strong> ${escapeHtml(displayDeliveryLocation)}</p><p><strong>Produto:</strong> ${escapeHtml(displayProduct)}</p><p><strong>Placa:</strong> ${escapeHtml(displayTruckPlate)}</p><p><strong>Data de coleta:</strong> ${escapeHtml(loadingDate)}</p>`;
+      const raw = [`From: ${sender}`, `To: ${recipient}`, `Subject: ${subject}`, 'MIME-Version: 1.0', 'Content-Type: text/html; charset=UTF-8', '', html].join('\\r\\n');
+      const encoded = btoa(unescape(encodeURIComponent(raw))).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/g, '');
+      const response = await fetch('https://www.googleapis.com/gmail/v1/users/me/messages/send', { method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ raw: encoded }) });
+      if (!response.ok) throw new Error(await response.text());
+      alert(`Ordem enviada para ${recipient}`);
+    } catch (error) {
+      console.error('Erro ao enviar ordem pelo Gmail:', error);
+      alert('Não foi possível enviar a ordem. Autorize o Gmail novamente e tente outra vez.');
+    } finally {
+      setIsSendingEmail(false);
     }
   };
 
@@ -933,6 +973,15 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
                   Baixar Documento em PDF
                 </>
               )}
+            </button>
+            <button
+              type="button"
+              onClick={handleSendByEmail}
+              disabled={!hasGeneratedOrder || isSendingEmail}
+              className="w-full bg-white border border-slate-900 text-slate-900 font-black text-[9px] uppercase tracking-wider py-2.5 rounded-lg shadow-sm flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+            >
+              {isSendingEmail ? <Loader2 size={13} className="animate-spin" /> : <Mail size={13} />}
+              {isSendingEmail ? 'Enviando...' : 'Enviar por E-mail'}
             </button>
             <div className="flex items-center justify-between px-1">
               <p className="text-[7.5px] font-bold text-slate-400 uppercase tracking-widest">

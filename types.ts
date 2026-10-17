@@ -49,7 +49,8 @@ export interface Freight {
   collectionAddress: string; 
   destinationAddress: string; 
   restrictions: string;     
-  notes: string;            
+  notes: string;
+  emailDestino?: string;
   axles?: string[];         
   distance?: string;        
   deductIcms: boolean;      
