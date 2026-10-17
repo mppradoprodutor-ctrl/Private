@@ -41,7 +41,7 @@ export default function LoadingOrderView(props: any) {
 
   return (
     <div className="p-4 bg-gray-100 min-h-screen">
-      <div className="bg-white rounded-lg shadow-lg max-w-3xl mx-auto overflow-hidden">
+      <div id="ordem-print" className="bg-white rounded-lg shadow-lg max-w-3xl mx-auto overflow-hidden">
         <div className="bg-gradient-to-r from-[#4a0f0f] to-[#7a1f1f] text-white p-4">
           <h1 className="font-bold text-lg">GERA TRANSPORTES</h1>
           <p className="text-xs opacity-80">33.777.479/0001-26 - CASTILHO/SP - ORDEM DE CARREGAMENTO - {dataHoje}</p>
