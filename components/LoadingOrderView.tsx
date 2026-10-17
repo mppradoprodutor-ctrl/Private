@@ -510,28 +510,27 @@ const handleSendByEmail = async () => {
   try {
     const freteId = selectedFreight?.id || orderNumber || 1;
     const placa = (selectedFreight as any)?.placa || (selectedFreight as any)?.placaCavalo || 'HKH0B84';
-    const subject = `Ordem ${freteId}`;
-    const element = document.getElementById('ordem-print');
-    if (!element) throw new Error('Elemento ordem-print não encontrado');
+    const subject = `Ordem ${freteId} - Placa ${placa}`;
     
     const { jsPDF } = await import('jspdf');
-    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+    const doc = new jsPDF();
     
-    // Gera PDF com todo o conteúdo do documento
-    await doc.html(element, {
-      callback: function (pdf) {},
-      x: 15,
-      y: 15,
-      width: 565,
-      windowWidth: 800,
-      autoPaging: 'text'
-    });
+    // PDF COM DADOS - sem usar html que quebra
+    doc.setFontSize(16);
+    doc.text(`ORDEM DE CARREGAMENTO - ${freteId}`, 15, 20);
+    doc.setFontSize(11);
+    doc.text(`Placa: ${placa}`, 15, 35);
+    doc.text(`Motorista: ${(selectedFreight as any)?.motorista || ''}`, 15, 45);
+    doc.text(`Origem: ${(selectedFreight as any)?.origem || ''}`, 15, 55);
+    doc.text(`Destino: ${(selectedFreight as any)?.destino || ''}`, 15, 65);
+    doc.text(`Produto: ${(selectedFreight as any)?.produto || ''}`, 15, 75);
+    doc.text(`Peso: ${(selectedFreight as any)?.peso || ''}`, 15, 85);
+    doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 15, 95);
     
-    // Espera o html terminar
-    await new Promise(r => setTimeout(r, 1500));
+    const element = document.getElementById('ordem-print');
+    const html = element ? element.innerHTML : `Ordem ${freteId} Placa ${placa}`;
     
     const pdfBase64 = doc.output('datauristring');
-    const html = element.innerHTML;
     
     const response = await fetch('/api/enviar-ordem', {
       method: 'POST',
@@ -539,13 +538,13 @@ const handleSendByEmail = async () => {
       body: JSON.stringify({ to: recipient, subject, html, placa, pdfBase64 }),
     });
     const data = await response.json();
-    if (data.ok) setEmailStatus({ type: 'success', message: 'PDF enviado com dados!' });
-    else setEmailStatus({ type: 'error', message: data.error || 'Erro' });
+    if (data.ok) setEmailStatus({ type: 'success', message: 'PDF com dados enviado!' });
+    else setEmailStatus({ type: 'error', message: data.error || 'Erro ao enviar' });
   } catch (error: any) {
     setEmailStatus({ type: 'error', message: error.message });
   } finally {
     setIsSendingEmail(false);
-};
+  }
 };
 
 const handleDownloadPng = async (e?: React.MouseEvent) => {
