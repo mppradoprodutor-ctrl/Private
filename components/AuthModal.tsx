@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { X, Mail, Lock, LogIn, UserPlus, Shield, Eye, EyeOff } from 'lucide-react';
 import { auth } from '../lib/firebase';
-import { 
-  signInWithEmailAndPassword, 
+import {
+  signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
-  GoogleAuthProvider
+  GoogleAuthProvider,
+  signOut,
 } from 'firebase/auth';
 
 interface AuthModalProps {
@@ -30,10 +31,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
     try {
       const provider = new GoogleAuthProvider();
       provider.addScope('https://www.googleapis.com/auth/gmail.send');
+      provider.addScope('https://www.googleapis.com/auth/userinfo.email');
+      provider.setCustomParameters({ prompt: 'consent', access_type: 'offline', include_granted_scopes: 'true' });
       const userCredential = await signInWithPopup(auth, provider);
       const credential = GoogleAuthProvider.credentialFromResult(userCredential);
       if (credential?.accessToken && typeof window !== 'undefined') {
-        sessionStorage.setItem('gmailAccessToken', credential.accessToken);
+        localStorage.setItem('gmail_access_token', credential.accessToken);
+        localStorage.setItem('gmail_token_time', Date.now().toString());
       }
       onSuccess(userCredential.user.email || 'Conta Google');
       onClose();

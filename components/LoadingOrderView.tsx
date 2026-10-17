@@ -7,6 +7,7 @@ import jsPDF from 'jspdf';
 import React, { useRef, useState, useMemo, useEffect, useCallback } from 'react';
 import { Driver, Freight, Trip, OperationalUnit } from '../types';
 import { auth } from '../lib/firebase';
+import { signOut } from 'firebase/auth';
 import LoadingOrderTemplate from './LoadingOrderTemplate';
 
 interface LoadingOrderViewProps {
@@ -490,9 +491,6 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
     setHasGeneratedOrder(true);
     setNotes('');
 
-    // Mantém a ordem renderizada disponível para exportação e envio.
-    return currentOrderNum;
-
     const nextNum = currentOrderNum + 1;
     setOrderNumber(nextNum);
     try {
@@ -509,12 +507,19 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
       return;
     }
 
-    const accessToken = typeof window !== 'undefined' ? sessionStorage.getItem('gmailAccessToken') : null;
-    const sender = auth.currentUser?.email;
-    if (!accessToken || !sender) {
-      alert('Faça login com o Google novamente para autorizar o envio pelo Gmail.');
+    const token = typeof window !== 'undefined' ? localStorage.getItem('gmail_access_token') : null;
+    const tokenTime = Number(typeof window !== 'undefined' ? localStorage.getItem('gmail_token_time') : 0);
+    const tokenExpired = !tokenTime || Date.now() - tokenTime > 50 * 60 * 1000;
+    if (!token || tokenExpired || !auth.currentUser?.email) {
+      await signOut(auth).catch(() => undefined);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('gmail_access_token');
+        localStorage.removeItem('gmail_token_time');
+        window.location.reload();
+      }
       return;
     }
+    const sender = auth.currentUser.email;
 
     setIsSendingEmail(true);
     try {
@@ -522,14 +527,21 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
       const currentNum = orderNumber || 1;
       const subject = `Ordem de Carregamento Nº ${currentNum} - ${selectedFreight?.serviceTaker || 'Rota'} - GERA TRANSPORTES`;
       const html = `<h2>Ordem de Carregamento Nº ${currentNum}</h2><p><strong>Empresa:</strong> ${escapeHtml(effectiveCompanyName)}</p><p><strong>CNPJ:</strong> ${escapeHtml(selectedUnit?.cnpj || '')}</p><p><strong>Local de coleta:</strong> ${escapeHtml(displayLocation)}</p><p><strong>Local de entrega:</strong> ${escapeHtml(displayDeliveryLocation)}</p><p><strong>Produto:</strong> ${escapeHtml(displayProduct)}</p><p><strong>Placa:</strong> ${escapeHtml(displayTruckPlate)}</p><p><strong>Data de coleta:</strong> ${escapeHtml(loadingDate)}</p>`;
-      const raw = [`From: ${sender}`, `To: ${recipient}`, `Subject: ${subject}`, 'MIME-Version: 1.0', 'Content-Type: text/html; charset=UTF-8', '', html].join('\\r\\n');
-      const encoded = btoa(unescape(encodeURIComponent(raw))).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/g, '');
-      const response = await fetch('https://www.googleapis.com/gmail/v1/users/me/messages/send', { method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ raw: encoded }) });
+      const raw = [`From: ${sender}`, `To: ${recipient}`, `Subject: ${subject}`, 'MIME-Version: 1.0', 'Content-Type: text/html; charset=UTF-8', '', html].join('\r\n');
+      const encoded = btoa(unescape(encodeURIComponent(raw))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+      const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ raw: encoded }) });
+      if (response.status === 401) {
+        localStorage.removeItem('gmail_access_token');
+        localStorage.removeItem('gmail_token_time');
+        await signOut(auth).catch(() => undefined);
+        window.location.reload();
+        return;
+      }
       if (!response.ok) throw new Error(await response.text());
-      alert(`Ordem enviada para ${recipient}`);
+      alert(`Ordem enviada com sucesso para ${recipient}`);
     } catch (error) {
-      console.error('Erro ao enviar ordem pelo Gmail:', error);
-      alert('Não foi possível enviar a ordem. Autorize o Gmail novamente e tente outra vez.');
+      console.error('[v0] Erro ao enviar ordem pelo Gmail:', error);
+      alert('Não foi possível enviar a ordem.');
     } finally {
       setIsSendingEmail(false);
     }
