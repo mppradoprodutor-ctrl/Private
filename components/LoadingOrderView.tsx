@@ -546,10 +546,6 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
     setIsSendingEmail(false);
   }
 };
-      setIsSendingEmail(false);
-    }
-  };
-
 
   const handleDownloadPdf = async (e?: React.MouseEvent) => {
     if (e) {
