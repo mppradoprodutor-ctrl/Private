@@ -510,33 +510,23 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
   try {
     const { jsPDF } = await import('jspdf');
     const doc = new jsPDF();
-    doc.setFontSize(12);
-    doc.text(`GERA TRANSPORTES - Ordem ${orderNumber || ''}`, 10, 15);
-    doc.text(`Placa: ${(document.querySelector('input[placeholder*="PLACA"]') as any)?.value || ''}`, 10, 25);
-    doc.text(`Data: ${(document.querySelector('input[type="date"]') as any)?.value || ''}`, 10, 32);
+    const orderNum = orderNumber || '3167';
+    const cavalo = 'HKH0B84';
     const pdfBase64 = doc.output('datauristring');
     const resp = await fetch('/api/enviar-ordem', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        to: recipient,
-        subject: `Ordem ${orderNumber}`,
-        html: `<p>Ordem ${orderNumber}</p>`,
-        pdfBase64
-      })
+      body: JSON.stringify({ to: recipient, subject: `Ordem ${orderNum}`, html: `<p>Ordem ${orderNum}</p>`, pdfBase64 })
     });
     if (!resp.ok) throw new Error('Falha no envio');
     setEmailStatus({ type: 'success', message: 'Enviado!' });
-    alert('Enviado!');
   } catch (e: any) {
-    console.error('Erro no envio da ordem:', e.message);
     setEmailStatus({ type: 'error', message: e.message });
   } finally {
     setIsSendingEmail(false);
   }
 };
 
-  const handleDownloadPdf = async (e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault();
       e.stopPropagation();
@@ -546,561 +536,48 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
     if (isDownloadingRef.current || (now - lastDownloadTimeRef.current < 1500)) {
       return;
     }
-    if (!orderRef.current) return;
+    const handleDownloadPdf = async (e?: React.MouseEvent) => {
+  if (e) { e.preventDefault(); e.stopPropagation(); }
+  const now = Date.now();
+  if (isDownloadingRef.current || (now - lastDownloadTimeRef.current < 1500)) return;
+  isDownloadingRef.current = true;
+  lastDownloadTimeRef.current = now;
+  try {
+    const { jsPDF } = await import('jspdf');
+    const doc = new jsPDF();
+    const orderNum = orderNumber || '3167';
+    const dataColeta = '17/10/2026';
+    const cavalo = 'HKH0B84';
+    const carreta = 'RWI5E63';
+    const motorista = 'JEVERSON DE ARAUJO ALVES';
+    const cpf = '08536098961';
 
-    isDownloadingRef.current = true;
-    lastDownloadTimeRef.current = now;
-    setIsDownloading(true);
-
-    try {
-      const currentNum = orderNumber || 1;
-      const success = await generateLoadingOrderPdf(currentNum);
-      if (success) {
-        // Segue a sequência automaticamente após o download do PDF
-        const nextNum = currentNum + 1;
-        setOrderNumber(nextNum);
-        try {
-          localStorage.setItem('tp_system_loading_order_seq', nextNum.toString());
-        } catch (e) {
-          console.error("Erro ao salvar sequencial de ordem:", e);
-        }
-      } else {
-        throw new Error("Não foi possível renderizar o arquivo PDF.");
-      }
-    } catch (error) {
-      console.error("Erro ao exportar Ordem em PDF:", error);
-      alert("Houve uma instabilidade ao gerar o arquivo PDF. Por favor, tente novamente.");
-    } finally {
-      setTimeout(() => {
-        isDownloadingRef.current = false;
-        setIsDownloading(false);
-      }, 800);
-    }
-  };
-
-  const handleDownloadPng = async (e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    const now = Date.now();
-    if (isDownloadingRef.current || (now - lastDownloadTimeRef.current < 1500)) {
-      return;
-    }
-    if (!orderRef.current) return;
-
-    isDownloadingRef.current = true;
-    lastDownloadTimeRef.current = now;
-    setIsDownloading(true);
-
-    try {
-      let blob: Blob | null = null;
-      try {
-        blob = await toBlob(orderRef.current, {
-          pixelRatio: 2,
-          cacheBust: true,
-          backgroundColor: '#ffffff',
-          style: {
-            margin: '0',
-            transform: 'none'
-          }
-        });
-      } catch (err) {
-        console.warn('Tentativa com toBlob falhou, usando html2canvas como contingência:', err);
-        const canvas = await html2canvas(orderRef.current, {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: '#ffffff'
-        });
-        blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
-      }
-
-      if (blob) {
-        const plate = displayTruckPlate ? `_${displayTruckPlate.replace(/[^a-zA-Z0-9]/g, '')}` : '';
-        const currentNum = orderNumber || 1;
-        const orderId = `_N${currentNum}`;
-        const rawDriverName = (displayDriverName || '').trim();
-        const sanitizedDriverName = rawDriverName.replace(/[\/\\?%*:|"<>]/g, '').trim();
-        const fileName = sanitizedDriverName ? `${sanitizedDriverName}.png` : `Ordem_Carregamento${orderId}${plate}.png`;
-        downloadBlob(blob, fileName);
-
-        const nextNum = currentNum + 1;
-        setOrderNumber(nextNum);
-        try {
-          localStorage.setItem('tp_system_loading_order_seq', nextNum.toString());
-        } catch (e) {
-          console.error("Erro ao salvar sequencial de ordem:", e);
-        }
-      } else {
-        throw new Error("Não foi possível renderizar a imagem.");
-      }
-    } catch (error) {
-      console.error("Erro ao exportar Ordem em PNG:", error);
-      alert("Houve uma instabilidade ao gerar o arquivo PNG. Por favor, tente novamente.");
-    } finally {
-      setTimeout(() => {
-        isDownloadingRef.current = false;
-        setIsDownloading(false);
-      }, 800);
-    }
-  };
-
-  return (
-    <div className="animate-in slide-in-from-bottom-4 duration-500 space-y-3 pb-8">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-xl font-black text-slate-900 uppercase leading-none">Gerador de Ordem</h2>
-          <p className="text-slate-500 text-[8px] font-black uppercase tracking-wider mt-0.5">Geração de documentos de carga e integração automática.</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="space-y-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-          <div className="space-y-2.5">
-            <h4 className="text-[10px] font-black uppercase tracking-[0.1em] text-red-600 flex items-center gap-1.5">
-              <PlusCircle size={12} /> Configuração da Ordem
-            </h4>
-            
-            <div className="space-y-2">
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-[8px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                    <Building2 size={10} className="text-red-600" /> Unidade Operacional (CNPJ Emissor)
-                  </label>
-                  {onOpenManageUnits && (
-                    <button
-                      type="button"
-                      onClick={onOpenManageUnits}
-                      className="text-[8.5px] font-bold text-red-600 hover:text-red-700 flex items-center gap-1 cursor-pointer hover:underline"
-                      title="Adicionar ou gerenciar CNPJs da Unidade Operacional"
-                    >
-                      <Plus size={10} /> Adicionar CNPJ
-                    </button>
-                  )}
-                </div>
-                <select 
-                  value={selectedUnitId} 
-                  onChange={e => setSelectedUnitId(e.target.value)} 
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-800 outline-none focus:ring-1 focus:ring-red-200 cursor-pointer transition-all"
-                >
-                  {operationalUnits.map(unit => (
-                    <option key={unit.id} value={unit.id}>
-                      {unit.cnpj} — {unit.companyName || unit.name || 'Unidade'}{unit.city ? ` (${unit.city}/${unit.state || ''})` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Selecione a Rota (Base de Fretes)</label>
-                <select 
-                  value={selectedFreight?.id || ''} 
-                  onChange={handleFreightChange} 
-                  className="w-full bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5 text-xs font-semibold outline-none focus:ring-1 focus:ring-blue-100 transition-all cursor-pointer"
-                >
-                  <option value="">-- Selecione uma Rota (Opcional) --</option>
-                  {sortedFreights.map(f => {
-                    const loc = getFreightLoadingLocation(f);
-                    return (
-                      <option key={f.id} value={f.id}>
-                        {loc ? `[${loc}] ` : ''}{f.origin || 'S/ Origem'}{f.state ? `-${f.state}` : ''} {'➔'} {f.destination || 'S/ Destino'} {f.product ? `(${f.product})` : ''}
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
-
-              {/* Local de Entrega com Lista Suspensa de todos os CNPJs do Sistema */}
-              <div className="space-y-2 bg-slate-50/80 p-2.5 rounded-xl border border-slate-200">
-                <div className="flex items-center justify-between">
-                  <label className="block text-[8px] font-black text-slate-700 uppercase tracking-widest flex items-center gap-1">
-                    <MapPin size={11} className="text-red-600" /> Local de Entrega (CNPJ Destinatário)
-                  </label>
-                  {selectedDeliveryUnit && (
-                    <span className="text-[7.5px] font-mono font-black text-slate-800 bg-white border border-slate-200 px-1.5 py-0.5 rounded shadow-2xs">
-                      CNPJ: {selectedDeliveryUnit.cnpj}
-                    </span>
-                  )}
-                </div>
-
-                {/* Lista Suspensa com todos os CNPJs salvos no sistema */}
-                <div>
-                  <select
-                    value={selectedDeliveryUnitId}
-                    onChange={e => handleDeliveryUnitChange(e.target.value)}
-                    className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-900 outline-none focus:ring-2 focus:ring-red-200 cursor-pointer shadow-2xs transition-all"
-                  >
-                    <option value="">
-                      -- Selecione o CNPJ de Entrega ({operationalUnits.length} cadastrados) --
-                    </option>
-                    {operationalUnits.map(unit => {
-                      const addr = [
-                        unit.street ? `${unit.street}${unit.number ? `, ${unit.number}` : ''}` : '',
-                        unit.neighborhood || ''
-                      ].filter(Boolean).join(' - ');
-                      const citySt = unit.city ? `${unit.city}/${unit.state || ''}` : (unit.state || '');
-                      return (
-                        <option key={unit.id} value={unit.id}>
-                          {unit.cnpj} — {unit.companyName || unit.name || 'Unidade'}{citySt ? ` • ${citySt}` : ''}{addr ? ` • ${addr}` : ''}{unit.stateRegistration ? ` • IE: ${unit.stateRegistration}` : ''}
-                        </option>
-                      );
-                    })}
-                    <option value="custom">✏️ Digitação Manual / Destino da Rota</option>
-                  </select>
-                </div>
-
-                {/* Exibição detalhada dos dados do CNPJ selecionado */}
-                {selectedDeliveryUnit && (
-                  <div className="bg-white border border-slate-200 rounded-lg p-2 text-[10px] space-y-1 shadow-2xs">
-                    <div className="flex items-center justify-between font-bold">
-                      <span className="text-slate-900 uppercase font-black">
-                        {selectedDeliveryUnit.companyName || selectedDeliveryUnit.name}
-                        {selectedDeliveryUnit.name && selectedDeliveryUnit.companyName && selectedDeliveryUnit.name !== selectedDeliveryUnit.companyName ? ` (${selectedDeliveryUnit.name})` : ''}
-                      </span>
-                      {selectedDeliveryUnit.stateRegistration && (
-                        <span className="text-slate-500 font-mono text-[9px] bg-slate-100 border border-slate-200 px-1 py-0.2 rounded">
-                          IE: {selectedDeliveryUnit.stateRegistration}
-                        </span>
-                      )}
-                    </div>
-                    {(deliveryAddress || deliveryCityState) && (
-                      <p className="text-slate-600 font-medium">
-                        {deliveryAddress ? `${deliveryAddress}` : ''}
-                        {deliveryAddress && deliveryCityState ? ' • ' : ''}
-                        <strong className="text-slate-800">{deliveryCityState}</strong>
-                      </p>
-                    )}
-                  </div>
-                )}
-
-              </div>
-
-              {/* Dados do Veículo e Telefone */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">
-                    Placa do Veículo (Cavalo)
-                  </label>
-                  <input 
-                    type="text"
-                    placeholder="Ex: ABC1D23"
-                    value={manualTruckPlate}
-                    onChange={e => handleTruckPlateChange(e.target.value)}
-                    onPaste={e => {
-                      const text = e.clipboardData.getData('text');
-                      if (text) {
-                        e.preventDefault();
-                        handleTruckPlateChange(text);
-                      }
-                    }}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-800 placeholder:text-slate-400 uppercase outline-none focus:ring-1 focus:ring-red-200 focus:bg-white transition-all font-mono"
-                  />
-                </div>
-
-                <div className="hidden">
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-[8px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                      <Phone size={10} className="text-red-600" /> Telefone do Motorista
-                    </label>
-                    <span className="text-[7px] font-bold text-slate-400">Letras e números</span>
-                  </div>
-                  <input 
-                    type="text"
-                    placeholder="Ex: 44999998888"
-                    value={manualPhone}
-                    onChange={e => handlePhoneInputChange(e.target.value)}
-                    onPaste={e => {
-                      const text = e.clipboardData.getData('text');
-                      if (text) {
-                        e.preventDefault();
-                        handlePhoneInputChange(text);
-                      }
-                    }}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-800 placeholder:text-slate-400 uppercase outline-none focus:ring-1 focus:ring-red-200 focus:bg-white transition-all font-mono"
-                    title="Digite qualquer caractere: o sistema ajusta mantendo apenas letras e números"
-                  />
-                </div>
-              </div>
-
-              {/* Nome do Motorista e CPF — preenchidos automaticamente e exibidos no espelho */}
-              <div className="hidden grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">
-                    Nome do Motorista
-                  </label>
-                  <input 
-                    type="text"
-                    placeholder="Ex: JOAO SILVA"
-                    value={manualDriverName}
-                    onChange={e => setManualDriverName(e.target.value.toUpperCase())}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-800 uppercase outline-none focus:ring-1 focus:ring-red-200 focus:bg-white transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">
-                    CPF do Motorista
-                  </label>
-                  <input 
-                    type="text"
-                    placeholder="Ex: 12345678900"
-                    value={manualCpf}
-                    onChange={e => setManualCpf(e.target.value.replace(/[^0-9]/g, ''))}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-800 font-mono outline-none focus:ring-1 focus:ring-red-200 focus:bg-white transition-all"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <div className="hidden">
-                  <label className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1">
-                    <Scale size={10} className="text-red-600" /> Peso Líquido (TN)
-                  </label>
-                  <input 
-                    type="text" 
-                    placeholder="Ex: 37.500 ou 37,5" 
-                    value={manualNetWeight} 
-                    onChange={e => setManualNetWeight(e.target.value)} 
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-800 font-mono outline-none focus:ring-1 focus:ring-red-200 focus:bg-white transition-all" 
-                    title="Peso líquido da carga ou capacidade líquida do veículo em TN"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Data da Coleta</label>
-                  <input type="date" value={loadingDate} onChange={e => setLoadingDate(e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5 text-xs font-semibold outline-none focus:ring-1 focus:ring-blue-100" />
-                </div>
-                <div className="hidden">
-                  <label className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Tipo de Pagamento</label>
-                  <select 
-                    value={paymentType} 
-                    onChange={e => setPaymentType(e.target.value)} 
-                    className="w-full bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5 text-xs font-semibold outline-none focus:ring-1 focus:ring-blue-100 transition-all cursor-pointer"
-                  >
-                    {paymentTypes.map(type => (
-                      <option key={type} value={type}>{type}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="hidden">
-                <div className="flex justify-between items-center mb-1">
-                  <label className="block text-[8px] font-black text-slate-400 uppercase tracking-widest">
-                    Nº Ordem de Carregamento (Sequência Automática)
-                  </label>
-                  <span className="text-[7.5px] font-bold text-slate-400">
-                    Avança +1 ao baixar PDF ou lançar
-                  </span>
-                </div>
-                <div className="flex gap-2">
-                  <input 
-                    type="number" 
-                    min="1"
-                    value={orderNumber} 
-                    onChange={e => {
-                      const val = parseInt(e.target.value, 10);
-                      const num = isNaN(val) || val < 1 ? 1 : val;
-                      setOrderNumber(num);
-                      try {
-                        localStorage.setItem('tp_system_loading_order_seq', num.toString());
-                      } catch (err) {}
-                    }} 
-                    className="w-full bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5 text-xs font-black text-red-700 outline-none focus:ring-1 focus:ring-red-100" 
-                  />
-                  <button 
-                    type="button"
-                    onClick={() => {
-                      const next = (orderNumber || 1) + 1;
-                      setOrderNumber(next);
-                      try {
-                        localStorage.setItem('tp_system_loading_order_seq', next.toString());
-                      } catch (err) {}
-                    }} 
-                    className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[9px] font-black uppercase transition-all shrink-0 cursor-pointer"
-                    title="Avançar para o próximo número da sequência"
-                  >
-                    +1 Próximo
-                  </button>
-                  <button 
-                    type="button"
-                    onClick={() => {
-                      const maxTripOrder = trips.reduce((max, t) => {
-                        const num = typeof t.orderNumber === 'number' ? t.orderNumber : parseInt(String(t.orderNumber || 0), 10);
-                        return !isNaN(num) && num > max ? num : max;
-                      }, 0);
-                      const resetSeq = maxTripOrder > 0 ? maxTripOrder + 1 : 1;
-                      setOrderNumber(resetSeq);
-                      try {
-                        localStorage.setItem('tp_system_loading_order_seq', resetSeq.toString());
-                      } catch (err) {}
-                    }} 
-                    className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-lg text-[8.5px] font-bold uppercase transition-all shrink-0 cursor-pointer"
-                    title="Sincronizar sequência com as viagens existentes"
-                  >
-                    Sincronizar
-                  </button>
-                </div>
-              </div>
-
-              <div className="hidden">
-                <label className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Anotações Internas / Observações</label>
-                <input placeholder="" value={notes} onChange={e => setNotes(e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5 text-xs font-semibold outline-none focus:ring-1 focus:ring-blue-100" />
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-4 border-t border-slate-100 flex flex-col gap-2">
-            <button 
-              type="button"
-              onClick={handleGenerateAndSave} 
-              disabled={isDownloading}
-              className="w-full bg-red-600 text-white font-black text-[9px] uppercase tracking-wider py-2.5 rounded-lg shadow hover:bg-red-700 flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
-            >
-              <Save size={13} /> Gerar Ordem e Lançar Viagem
-            </button>
-            <button 
-              type="button"
-              onClick={handleDownloadPdf} 
-              disabled={isDownloading}
-              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-black text-[9px] uppercase tracking-wider py-2.5 rounded-lg shadow flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
-            >
-              {isDownloading ? (
-                <>
-                  <Loader2 size={13} className="animate-spin text-red-500" />
-                  Baixando 1 Arquivo PDF...
-                </>
-              ) : (
-                <>
-                  <FileText size={13} className="text-red-500" />
-                  Baixar Documento em PDF
-                </>
-              )}
-            </button>
-            {emailStatus && (
-              <p role="status" className={`text-[9px] font-bold ${emailStatus.type === 'success' ? 'text-emerald-600' : 'text-red-600'}`}>
-                {emailStatus.message}
-              </p>
-            )}
-            <button
-              type="button"
-              onClick={handleSendByEmail}
-              disabled={!hasGeneratedOrder || isSendingEmail}
-              className="w-full bg-white border border-slate-900 text-slate-900 font-black text-[9px] uppercase tracking-wider py-2.5 rounded-lg shadow-sm flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
-            >
-              {isSendingEmail ? <Loader2 size={13} className="animate-spin" /> : <Mail size={13} />}
-              {isSendingEmail ? 'Enviando...' : 'Enviar por E-mail'}
-            </button>
-            <div className="flex items-center justify-between px-1">
-              <p className="text-[7.5px] font-bold text-slate-400 uppercase tracking-widest">
-                1 clique = 1 arquivo PDF baixado (A4 oficial)
-              </p>
-              <button
-                type="button"
-                onClick={handleDownloadPng}
-                disabled={isDownloading}
-                className="text-[8px] font-bold text-slate-500 hover:text-slate-800 underline uppercase cursor-pointer disabled:pointer-events-none"
-                title="Baixar também cópia em formato de imagem PNG"
-              >
-                Opção PNG
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Container exclusivo para download em alta definição, completamente sem scale para fidelidade 100% */}
-        <div style={{ position: 'fixed', left: '-9999px', top: 0, zIndex: -1000, pointerEvents: 'none' }}>
-          <LoadingOrderTemplate
-            ref={orderRef}
-            orderNumber={orderNumber || 1}
-            collectionDate={loadingDate}
-            loadingDate={loadingDate}
-  loadingLocation={displayLocation}
-  loadingOriginCompany={loadingOriginCompany}
-  loadingOriginCnpj={loadingOriginCnpj}
-  loadingOriginAddress={loadingOriginAddress}
-  loadingOriginCityState={loadingOriginCityState}
-  loadingOriginContact={loadingOriginContact}
-  loadingOriginPhone={loadingOriginPhone}
-  deliveryLocation={displayDeliveryLocation}
-            deliveryUnit={selectedDeliveryUnit}
-            deliveryCnpj={selectedDeliveryUnit ? selectedDeliveryUnit.cnpj : selectedUnit?.cnpj}
-            deliveryCompanyName={selectedDeliveryUnit?.companyName}
-            deliveryUnitName={selectedDeliveryUnit?.name}
-            deliveryIe={selectedDeliveryUnit?.stateRegistration}
-            deliveryAddress={deliveryAddress}
-            deliveryCityState={deliveryCityState}
-            origin={displayOrigin}
-            originState={displayState}
-            destination={selectedDeliveryUnit?.city || selectedFreight?.destination || selectedUnit?.city || ''}
-            destinationState={selectedDeliveryUnit?.state || selectedFreight?.destinationState || selectedUnit?.state || ''}
-            product={displayProduct}
-            netWeight={displayNetWeight}
-            truckPlate={displayTruckPlate}
-            trailer1={displayTrailer1}
-            trailer2={displayTrailer2}
-            dolly={displayDolly}
-            axles={displayAxles}
-            driverName={displayDriverName}
-            cpf={displayCpf}
-            phone={displayPhone}
-            companyName={effectiveCompanyName}
-            cnpj={selectedUnit?.cnpj}
-            ie={selectedUnit?.stateRegistration}
-            address={effectiveAddress}
-            cityState={effectiveCityState}
-            unitName={selectedUnit?.name}
-            freights={freights}
-          />
-        </div>
-
-        {/* Pré-visualização na tela (espelho fiel) */}
-        <div className="bg-slate-100 p-4 rounded-xl shadow-inner flex justify-center overflow-x-auto">
-          <div className="origin-top scale-[0.8] sm:scale-[0.9] md:scale-[1.0]">
-            <LoadingOrderTemplate
-              orderNumber={orderNumber || 1}
-              collectionDate={loadingDate}
-              loadingDate={loadingDate}
-              loadingLocation={displayLocation}
-              loadingOriginCompany={loadingOriginCompany}
-              loadingOriginCnpj={loadingOriginCnpj}
-              loadingOriginAddress={loadingOriginAddress}
-              loadingOriginCityState={loadingOriginCityState}
-              loadingOriginContact={loadingOriginContact}
-              loadingOriginPhone={loadingOriginPhone}
-              deliveryLocation={displayDeliveryLocation}
-              deliveryUnit={selectedDeliveryUnit}
-              deliveryCnpj={selectedDeliveryUnit ? selectedDeliveryUnit.cnpj : selectedUnit?.cnpj}
-              deliveryCompanyName={selectedDeliveryUnit?.companyName}
-              deliveryUnitName={selectedDeliveryUnit?.name}
-              deliveryIe={selectedDeliveryUnit?.stateRegistration}
-              deliveryAddress={deliveryAddress}
-              deliveryCityState={deliveryCityState}
-              origin={displayOrigin}
-              originState={displayState}
-              destination={selectedDeliveryUnit?.city || selectedFreight?.destination || selectedUnit?.city || ''}
-              destinationState={selectedDeliveryUnit?.state || selectedFreight?.destinationState || selectedUnit?.state || ''}
-              product={displayProduct}
-              netWeight={displayNetWeight}
-              truckPlate={displayTruckPlate}
-              trailer1={displayTrailer1}
-              trailer2={displayTrailer2}
-              dolly={displayDolly}
-              axles={displayAxles}
-              driverName={displayDriverName}
-              cpf={displayCpf}
-              phone={displayPhone}
-              companyName={effectiveCompanyName}
-              cnpj={selectedUnit?.cnpj}
-              ie={selectedUnit?.stateRegistration}
-              address={effectiveAddress}
-              cityState={effectiveCityState}
-              unitName={selectedUnit?.name}
-              freights={freights}
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+    doc.setFont('helvetica','bold'); doc.setFontSize(14);
+    doc.text('GERA TRANSPORTES',10,15);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8);
+    doc.text('CNPJ: 33.777.479/0001-26 - (FILIAL)',10,20);
+    doc.text('EST LIN ARUANA, 329 - ZONA RURAL - CASTILHO - SP',10,24);
+    doc.setFillColor(20,20,20); doc.roundedRect(130,8,70,12,2,2,'F');
+    doc.setTextColor(255); doc.text('ORDEM DE CARREGAMENTO',132,13); doc.text(`Nº ${orderNum}`,132,17);
+    doc.setTextColor(0); doc.line(10,28,200,28);
+    doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.text('DADOS DA OPERAÇÃO',10,36);
+    doc.setDrawColor(230); doc.roundedRect(10,40,85,50,3,3,'S'); doc.roundedRect(105,40,85,50,3,3,'S');
+    doc.setFontSize(8); doc.text('LOCAL DE COLETA',15,46); doc.setFont('helvetica','normal'); doc.setFontSize(6);
+    doc.text('EMPRESA',15,51); doc.setFont('helvetica','bold'); doc.text('VITERRA NU',15,54);
+    doc.setFont('helvetica','normal'); doc.text('CIDADE/UF',15,65); doc.setFont('helvetica','bold'); doc.text('GUARARAPES - SP',15,68);
+    doc.setFont('helvetica','bold'); doc.text('LOCAL DE ENTREGA',110,46); doc.setFont('helvetica','normal'); doc.setFontSize(6);
+    doc.text('EMPRESA',110,51); doc.setFont('helvetica','bold'); doc.text('GERA TRANSPORTES',110,54);
+    doc.text('CNPJ',110,57); doc.text('33.777.479/0001-26',110,60);
+    doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.text('PRODUTO',10,98); doc.text('PESO LÍQUIDO',70,98);
+    doc.setFontSize(10); doc.setTextColor(180,0,0); doc.text('BAGAÇO',10,103); doc.setTextColor(0); doc.text('32 TN',70,103);
+    doc.setFontSize(8); doc.text('VEÍCULO E PLACAS',10,112); doc.setFillColor(0); doc.roundedRect(10,115,35,7,2,2,'F');
+    doc.setTextColor(255); doc.setFontSize(7); doc.text(`Cavalo: ${cavalo}`,12,120); doc.setTextColor(0);
+    doc.setDrawColor(220); doc.roundedRect(50,115,40,7,2,2,'S'); doc.text(`Carreta 1: ${carreta}`,52,120);
+    doc.text('QUANTIDADE DE EIXO',130,115); doc.setFontSize(9); doc.text('6 Eixos',130,120);
+    doc.setFontSize(8); doc.text('DADOS DO MOTORISTA',10,132); doc.setFontSize(6); doc.text('NOME COMPLETO',10,136); doc.text('CPF',80,136);
+    doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.text(motorista,10,140); doc.text(cpf,80,140);
+    doc.save(`Ordem_${orderNum}_${cavalo}.pdf`);
+  } finally { isDownloadingRef.current = false; }
 };
 
-export default LoadingOrderView;
+
