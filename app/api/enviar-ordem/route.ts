@@ -1,7 +1,26 @@
+import nodemailer from 'nodemailer'
+
 export async function POST(req: Request) {
-  const { to, subject, html } = await req.json()
-  console.log("Enviando ordem para", to)
-  // Simula envio - troque depois por serviço real
-  // Por enquanto apenas retorna OK para testar o fluxo sem erro de domínio
-  return Response.json({ ok: true, message: `Ordem enviada para ${to}` })
+  try {
+    const { to, nomeMotorista, placa, html } = await req.json()
+
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: 'mppradoprodutor@gmail.com',
+        pass: process.env.GMAIL_APP_PASSWORD
+      }
+    })
+
+    await transporter.sendMail({
+      from: 'GERA TRANSPORTES <mppradoprodutor@gmail.com>',
+      to: to,
+      subject: nomeMotorista + ' - PLACA ' + placa,
+      html: html
+    })
+
+    return new Response(JSON.stringify({ ok: true }), { status: 200 })
+  } catch (error: any) {
+    return new Response(JSON.stringify({ ok: false, error: error.message }), { status: 500 })
+  }
 }
