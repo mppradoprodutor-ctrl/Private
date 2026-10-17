@@ -527,16 +527,6 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
   }
 };
 const handleDownloadPdf = async (e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    const now = Date.now();
-    // Trava estrita contra clique duplo ou download simultâneo: 1 arquivo por clique
-    if (isDownloadingRef.current || (now - lastDownloadTimeRef.current < 1500)) {
-      return;
-    }
-    const handleDownloadPdf = async (e?: React.MouseEvent) => {
   if (e) { e.preventDefault(); e.stopPropagation(); }
   const now = Date.now();
   if (isDownloadingRef.current || (now - lastDownloadTimeRef.current < 1500)) return;
@@ -545,14 +535,41 @@ const handleDownloadPdf = async (e?: React.MouseEvent) => {
   try {
     const { jsPDF } = await import('jspdf');
     const doc = new jsPDF();
-    const orderNum = orderNumber || '3167';
-    const dataColeta = '17/10/2026';
-    const cavalo = 'HKH0B84';
-    const carreta = 'RWI5E63';
-    const motorista = 'JEVERSON DE ARAUJO ALVES';
-    const cpf = '08536098961';
-
+    
+    // HEADER
     doc.setFont('helvetica','bold'); doc.setFontSize(14);
+    doc.text('GERA TRANSPORTES',10,15);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8);
+    doc.text('CNPJ: 33.777.479/0001-26',10,20);
+    doc.text('EST LIN ARUANA, 329 - ZONA RURAL - CASTILHO - SP - CEP 16920-000',10,24);
+    
+    // CAIXA PRETA ORDEM
+    doc.setFillColor(0,0,0); doc.rect(10,28,190,10,'F');
+    doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(10);
+    doc.text(`ORDEM DE CARREGAMENTO Nº ${orderNumber||'3167'}`,12,35);
+    doc.text(`DATA DA COLETA ${new Date().toLocaleDateString('pt-BR')}`,130,35);
+    
+    // COLETA / ENTREGA
+    doc.setTextColor(0,0,0); doc.setFontSize(9);
+    doc.setFont('helvetica','bold'); doc.text('LOCAL DE COLETA',12,45); doc.text('LOCAL DE ENTREGA',110,45);
+    doc.setFont('helvetica','normal');
+    doc.text('VITERRA NU - GUARARAPES - SP',12,50);
+    doc.text('FAZENDA NOVA UNIAO',12,54);
+    doc.text('GERA TRANSPORTES - CASTILHO - SP',110,50);
+    
+    // PRODUTO EM VERMELHO
+    doc.setFont('helvetica','bold'); doc.setTextColor(180,0,0);
+    doc.text(`PRODUTO: BAGAÇO - PESO LIQUIDO 32 TN`,12,65);
+    
+    // VEICULO
+    doc.setTextColor(0,0,0); doc.text(`VEICULO E PLACAS: Cavalo ${cavalo||'HKH0B84'} / Carreta 1: ${carreta||'RWI5E63'} / 6 Eixos`,12,75);
+    
+    // MOTORISTA
+    doc.text(`DADOS DO MOTORISTA: ${motorista||'JEVERSON DE ARAUJO ALVES'} - CPF ${cpf||'08536098961'} - CEL (18) 9xxxx-xxxx`,12,85);
+    
+    doc.save(`Ordem_${orderNumber||'3167'}_${cavalo||'HKH0B84'}.pdf`);
+  } finally { isDownloadingRef.current = false; }
+};
     doc.text('GERA TRANSPORTES',10,15);
     doc.setFont('helvetica','normal'); doc.setFontSize(8);
     doc.text('CNPJ: 33.777.479/0001-26 - (FILIAL)',10,20);
