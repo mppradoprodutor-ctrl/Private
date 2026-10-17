@@ -499,35 +499,136 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
     }
   };
 
-  const handleSendByEmail = async () => {
-    const recipient = selectedFreight?.emailDestino?.trim();
-    if (!recipient) {
-      setEmailStatus({ type: 'error', message: 'Cadastre o e-mail na rota antes de enviar.' });
-      return;
+  
+const handleSendByEmail = async () => {
+  const recipient = selectedFreight?.emailDestino?.trim();
+
+  if (!recipient) {
+    setEmailStatus({
+      type: 'error',
+      message: 'Cadastre o e-mail na rota antes de enviar.',
+    });
+    return;
+  }
+
+  if (!orderRef.current) {
+    setEmailStatus({
+      type: 'error',
+      message: 'Não foi possível localizar a ordem para gerar o PDF.',
+    });
+    return;
+  }
+
+  setIsSendingEmail(true);
+  setEmailStatus(null);
+
+  try {
+    // Captura o modelo original da ordem já preenchido.
+    let pdfDataUrl: string;
+
+    try {
+      pdfDataUrl = await toPng(orderRef.current, {
+        pixelRatio: 2,
+        cacheBust: true,
+        backgroundColor: '#ffffff',
+        style: {
+          margin: '0',
+          transform: 'none',
+        },
+      });
+    } catch (captureError) {
+      console.warn('Tentando gerar o PDF com html2canvas:', captureError);
+
+      const canvas = await html2canvas(orderRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+      });
+
+      pdfDataUrl = canvas.toDataURL('image/png');
     }
 
-    setIsSendingEmail(true);
-    setEmailStatus(null);
-    try {
-      const freteId = selectedFreight?.id || orderNumber || 1;
-      const subject = `Ordem ${freteId}`;
-      const html = document.getElementById('ordem-print')?.innerHTML;
-      const response = await fetch('/api/enviar-ordem', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: recipient, subject, html }),
-      });
-      const data = await response.json();
-      if (data.ok) setEmailStatus({ type: 'success', message: data.message });
-      else setEmailStatus({ type: 'error', message: data.error || 'Erro ao enviar a ordem.' });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      console.error('[v0] Erro no envio da ordem:', message);
-      setEmailStatus({ type: 'error', message });
-    } finally {
-      setIsSendingEmail(false);
+    if (!pdfDataUrl || pdfDataUrl === 'data:,') {
+      throw new Error('A ordem ficou vazia ao gerar o documento.');
     }
-  };
+
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
+      compress: true,
+    });
+
+    const pageWidth = 210;
+    const pageHeight = 297;
+    const image = pdf.getImageProperties(pdfDataUrl);
+    const ratio = image.width / image.height;
+
+    let width = pageWidth;
+    let height = width / ratio;
+
+    if (height > pageHeight) {
+      height = pageHeight;
+      width = height * ratio;
+    }
+
+    pdf.addImage(
+      pdfDataUrl,
+      'PNG',
+      (pageWidth - width) / 2,
+      (pageHeight - height) / 2,
+      width,
+      height,
+      undefined,
+      'FAST',
+    );
+
+    const pdfBase64 = pdf.output('datauristring').split(',')[1];
+
+    if (!pdfBase64) {
+      throw new Error('Não foi possível converter a ordem para PDF.');
+    }
+
+    const response = await fetch('/api/enviar-ordem', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        to: recipient,
+        subject: `Ordem ${orderNumber || 1}`,
+        fileName: `Ordem_Carregamento_${orderNumber || 1}.pdf`,
+        pdfBase64,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.ok) {
+      throw new Error(
+        data.error || 'Não foi possível enviar o e-mail.',
+      );
+    }
+
+    setEmailStatus({
+      type: 'success',
+      message: 'PDF gerado e enviado com sucesso.',
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : String(error);
+
+    console.error('Erro ao enviar ordem por e-mail:', error);
+
+    setEmailStatus({
+      type: 'error',
+      message,
+    });
+  } finally {
+    setIsSendingEmail(false);
+  }
+};
+
 
 
   const handleDownloadPdf = async (e?: React.MouseEvent) => {
