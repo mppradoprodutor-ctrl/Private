@@ -904,8 +904,12 @@ fileName: `${displayDriverName} - ${displayTruckPlate}.pdf`,
                       <span className="text-[7px] font-black uppercase tracking-widest text-slate-400 shrink-0">CPF</span>
                       <span className="text-[8px] font-bold font-mono text-slate-700">{displayCpf || 'Não informado'}</span>
                     </div>
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="text-[7px] font-black uppercase tracking-widest text-slate-400 shrink-0">Carretas</span>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="text-[7px] font-black uppercase tracking-widest text-slate-400 shrink-0">Telefone</span>
+                    <span className="text-[8px] font-bold font-mono text-slate-700 truncate">{displayPhone || 'Não informado'}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="text-[7px] font-black uppercase tracking-widest text-slate-400 shrink-0">Carretas</span>
                       <span className="text-[8px] font-bold font-mono text-slate-700 truncate">{[displayTrailer1, displayTrailer2, displayDolly].filter(Boolean).join(' • ') || 'Nenhuma cadastrada'}</span>
                     </div>
                   </div>
