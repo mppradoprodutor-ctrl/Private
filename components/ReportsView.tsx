@@ -1018,8 +1018,8 @@ const ReportsView: React.FC<ReportsViewProps> = ({ trips, drivers, onNavigateToT
             <div className="flex items-center gap-1.5">
               <div className="bg-slate-900 p-1 rounded-md text-white shadow-2xs"><Award size={12} /></div>
               <div>
-                <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-tight leading-none">Top 10 Motoristas</h4>
-                <p className="text-[6.5px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">R$/Ton · Frete Empresa · Frete Motorista</p>
+                <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-tight leading-none">Top 10 Motoristas</h4>
+                <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">R$/Ton · Frete Empresa · Frete Motorista</p>
               </div>
             </div>
             <span className="text-[8px] font-black text-slate-600 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded-md">
@@ -1042,7 +1042,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ trips, drivers, onNavigateToT
                     });
                   }
                 }}
-                className="h-[27px] px-2 py-1 bg-slate-50/90 rounded-md border border-slate-200/80 hover:bg-red-50/40 hover:border-red-400 transition-all flex items-center shadow-2xs cursor-pointer group select-none"
+                className="h-[29px] px-2 py-1 bg-slate-50/90 rounded-md border border-slate-200/80 hover:bg-red-50/40 hover:border-red-400 transition-all flex items-center shadow-2xs cursor-pointer group select-none"
                 title={`Clique para ver as viagens do motorista "${item.name}" no menu Lançar Viagens`}
               >
                 {/* Linha compacta: posição, motorista e viagens */}
@@ -1060,10 +1060,10 @@ const ReportsView: React.FC<ReportsViewProps> = ({ trips, drivers, onNavigateToT
                     }`}>
                       {index + 1}º
                     </div>
-                    <span className="text-[8.5px] font-black text-slate-900 uppercase truncate leading-none min-w-0 flex-1">{item.name}</span>
+                    <span className="text-[9.5px] font-black text-slate-900 uppercase truncate leading-none min-w-0 flex-1">{item.name}</span>
                   </div>
                   <div className="text-right shrink-0">
-                    <span className="text-[7.5px] font-black text-red-600 tabular-nums bg-red-50 border border-red-200 px-2 py-0.5 rounded-full shadow-2xs whitespace-nowrap">
+                    <span className="text-[8.5px] font-black text-red-600 tabular-nums bg-red-50 border border-red-200 px-2 py-0.5 rounded-full shadow-2xs whitespace-nowrap">
                       {item.count} {item.count === 1 ? 'viagem' : 'viagens'} · {item.totalTons.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} TN
                     </span>
                   </div>
