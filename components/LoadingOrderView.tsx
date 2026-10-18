@@ -501,7 +501,11 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
 
   
 const handleSendByEmail = async () => {
-  const recipient = selectedFreight?.emailDestino?.trim();
+  const recipients = (selectedFreight?.emailDestino || '')
+  .split(/[;,\s]+/)
+  .map(email => email.trim())
+  .filter(Boolean);
+    const recipient = recipients.join(', ');
 
   if (!recipient) {
     setEmailStatus({

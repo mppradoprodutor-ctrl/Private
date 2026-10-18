@@ -241,7 +241,8 @@ const FreightFormModal: React.FC<FreightFormModalProps> = ({ isOpen, onClose, on
             
             <div>
               <label className="block text-[7.5px] font-black text-slate-400 uppercase tracking-widest mb-0.5 ml-0.5">E-MAIL PARA ENVIO DA ORDEM</label>
-              <input type="email" name="emailDestino" placeholder="ex: faturamento@cliente.com.br" value={formData.emailDestino || ''} onChange={handleChange} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-[11px] font-bold outline-none focus:ring-1 focus:ring-blue-100 transition-all" />
+              <input type="text" name="emailDestino" placeholder="ex: faturamento@cliente.com.br; fiscal@cliente.com.br" value={formData.emailDestino || ''} onChange={handleChange} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-[11px] font-bold outline-none focus:ring-1 focus:ring-blue-100 transition-all" />
+              <p className="mt-0.5 text-[8px] font-semibold text-slate-400">Separe vários e-mails por vírgula, ponto e vírgula ou espaço.</p>
             </div>
 
             {/* LINHA 1: Local, Origem, Destino e Tarifas */}
