@@ -811,9 +811,9 @@ fileName: `${displayDriverName} - ${displayTruckPlate}.pdf`,
               </div>
 
               {/* Local de Entrega com Lista Suspensa de todos os CNPJs do Sistema */}
-              <div className="hidden space-y-2 bg-slate-50/80 p-2.5 rounded-xl border border-slate-200">
+              <div className="space-y-1 bg-slate-50/70 p-1.5 rounded-lg border border-slate-200">
                 <div className="flex items-center justify-between">
-                  <label className="block text-[8px] font-black text-slate-700 uppercase tracking-widest flex items-center gap-1">
+                  <label className="block text-[7px] font-black text-slate-700 uppercase tracking-widest flex items-center gap-1">
                     <MapPin size={11} className="text-red-600" /> Local de Entrega (CNPJ Destinatário)
                   </label>
                   {selectedDeliveryUnit && (
@@ -828,7 +828,7 @@ fileName: `${displayDriverName} - ${displayTruckPlate}.pdf`,
                   <select
                     value={selectedDeliveryUnitId}
                     onChange={e => handleDeliveryUnitChange(e.target.value)}
-                    className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-900 outline-none focus:ring-2 focus:ring-red-200 cursor-pointer shadow-2xs transition-all"
+                    className="w-full bg-white border border-slate-300 rounded-md px-2 py-1 text-[10px] font-bold text-slate-900 outline-none focus:ring-1 focus:ring-red-200 cursor-pointer shadow-2xs transition-all"
                   >
                     <option value="">
                       -- Selecione o CNPJ de Entrega ({operationalUnits.length} cadastrados) --
@@ -851,7 +851,7 @@ fileName: `${displayDriverName} - ${displayTruckPlate}.pdf`,
 
                 {/* Exibição detalhada dos dados do CNPJ selecionado */}
                 {selectedDeliveryUnit && (
-                  <div className="bg-white border border-slate-200 rounded-lg p-2 text-[10px] space-y-1 shadow-2xs">
+                  <div className="bg-white border border-slate-200 rounded-md px-2 py-1 text-[9px] space-y-0.5 shadow-2xs">
                     <div className="flex items-center justify-between font-bold">
                       <span className="text-slate-900 uppercase font-black">
                         {selectedDeliveryUnit.companyName || selectedDeliveryUnit.name}
