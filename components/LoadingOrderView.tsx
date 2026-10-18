@@ -811,7 +811,7 @@ fileName: `${displayDriverName} - ${displayTruckPlate}.pdf`,
               </div>
 
               {/* Local de Entrega com Lista Suspensa de todos os CNPJs do Sistema */}
-              <div className="space-y-2 bg-slate-50/80 p-2.5 rounded-xl border border-slate-200">
+              <div className="hidden space-y-2 bg-slate-50/80 p-2.5 rounded-xl border border-slate-200">
                 <div className="flex items-center justify-between">
                   <label className="block text-[8px] font-black text-slate-700 uppercase tracking-widest flex items-center gap-1">
                     <MapPin size={11} className="text-red-600" /> Local de Entrega (CNPJ Destinatário)
@@ -895,6 +895,20 @@ fileName: `${displayDriverName} - ${displayTruckPlate}.pdf`,
                     }}
                     className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-800 placeholder:text-slate-400 uppercase outline-none focus:ring-1 focus:ring-red-200 focus:bg-white transition-all font-mono"
                   />
+                  <div className="mt-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 space-y-1">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="text-[7px] font-black uppercase tracking-widest text-slate-400 shrink-0">Motorista</span>
+                      <span className="text-[9px] font-black uppercase text-slate-800 truncate">{displayDriverName || 'Não selecionado'}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="text-[7px] font-black uppercase tracking-widest text-slate-400 shrink-0">CPF</span>
+                      <span className="text-[8px] font-bold font-mono text-slate-700">{displayCpf || 'Não informado'}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="text-[7px] font-black uppercase tracking-widest text-slate-400 shrink-0">Carretas</span>
+                      <span className="text-[8px] font-bold font-mono text-slate-700 truncate">{[displayTrailer1, displayTrailer2, displayDolly].filter(Boolean).join(' • ') || 'Nenhuma cadastrada'}</span>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="hidden">
