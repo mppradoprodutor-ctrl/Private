@@ -1027,7 +1027,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ trips, drivers, onNavigateToT
             </span>
           </div>
           
-          <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-1.5 custom-scrollbar">
+          <div className="flex-1 min-h-0 overflow-hidden pr-0.5 space-y-0.5">
             {driverRanking.map((item, index) => (
               <div 
                 key={item.name} 
@@ -1042,13 +1042,13 @@ const ReportsView: React.FC<ReportsViewProps> = ({ trips, drivers, onNavigateToT
                     });
                   }
                 }}
-                className="p-2 bg-slate-50/90 rounded-xl border border-slate-200/80 hover:bg-red-50/40 hover:border-red-400 transition-all flex flex-col gap-1.5 shadow-2xs cursor-pointer group select-none"
+                className="p-1 bg-slate-50/90 rounded-lg border border-slate-200/80 hover:bg-red-50/40 hover:border-red-400 transition-all flex flex-col gap-0.5 shadow-2xs cursor-pointer group select-none"
                 title={`Clique para ver as viagens do motorista "${item.name}" no menu Lançar Viagens`}
               >
                 {/* Header: Position, Name, Route (Origem ➔ Destino), Plate & Count/Tons */}
                 <div className="flex items-center justify-between relative z-10 gap-1.5 min-w-0">
                   <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                    <div className={`w-5 h-5 rounded-lg shrink-0 flex items-center justify-center font-black text-[8px] ${
+                    <div className={`w-4 h-4 rounded-md shrink-0 flex items-center justify-center font-black text-[7px] ${
                       index === 0 ? 'bg-amber-400 text-white shadow-xs' : 
                       index === 1 ? 'bg-slate-300 text-slate-800' : 
                       index === 2 ? 'bg-amber-600 text-white' : 
@@ -1086,20 +1086,20 @@ const ReportsView: React.FC<ReportsViewProps> = ({ trips, drivers, onNavigateToT
                 </div>
 
                 {/* Metric Badges: R$/Ton | Frete Empresa | Frete Motorista */}
-                <div className="grid grid-cols-3 gap-1 pt-1 border-t border-slate-200/60">
-                  <div className="bg-white border border-slate-200 p-1 rounded-md text-center shadow-2xs">
+                <div className="grid grid-cols-3 gap-0.5 pt-0.5 border-t border-slate-200/60">
+                  <div className="bg-white border border-slate-200 px-0.5 py-0.5 rounded-md text-center shadow-2xs">
                     <div className="text-[6.5px] font-black text-slate-400 uppercase tracking-wider leading-none">R$/Ton Média</div>
                     <div className="text-[8px] font-black text-slate-800 tabular-nums mt-0.5">
                       {formatCurrency(item.avgTonPrice)}
                     </div>
                   </div>
-                  <div className="bg-emerald-50 border border-emerald-200 p-1 rounded-md text-center shadow-2xs">
+                  <div className="bg-emerald-50 border border-emerald-200 px-0.5 py-0.5 rounded-md text-center shadow-2xs">
                     <div className="text-[6.5px] font-black text-emerald-600 uppercase tracking-wider leading-none">Frete Empresa</div>
                     <div className="text-[8px] font-black text-emerald-700 tabular-nums mt-0.5">
                       {formatCurrency(item.totalCompanyFreight)}
                     </div>
                   </div>
-                  <div className="bg-blue-50 border border-blue-200 p-1 rounded-md text-center shadow-2xs">
+                  <div className="bg-blue-50 border border-blue-200 px-0.5 py-0.5 rounded-md text-center shadow-2xs">
                     <div className="text-[6.5px] font-black text-blue-600 uppercase tracking-wider leading-none">Frete Motorista</div>
                     <div className="text-[8px] font-black text-blue-700 tabular-nums mt-0.5">
                       {formatCurrency(item.totalDriverFreight)}
