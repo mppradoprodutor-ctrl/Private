@@ -1042,78 +1042,33 @@ const ReportsView: React.FC<ReportsViewProps> = ({ trips, drivers, onNavigateToT
                     });
                   }
                 }}
-                className="p-1 bg-slate-50/90 rounded-lg border border-slate-200/80 hover:bg-red-50/40 hover:border-red-400 transition-all flex flex-col gap-0.5 shadow-2xs cursor-pointer group select-none"
+                className="h-[27px] px-2 py-1 bg-slate-50/90 rounded-md border border-slate-200/80 hover:bg-red-50/40 hover:border-red-400 transition-all flex items-center shadow-2xs cursor-pointer group select-none"
                 title={`Clique para ver as viagens do motorista "${item.name}" no menu Lançar Viagens`}
               >
-                {/* Header: Position, Name, Route (Origem ➔ Destino), Plate & Count/Tons */}
+                {/* Linha compacta: posição, motorista e viagens */}
                 <div className="flex items-center justify-between relative z-10 gap-1.5 min-w-0">
                   <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                    <div className={`w-4 h-4 rounded-md shrink-0 flex items-center justify-center font-black text-[7px] ${
-                      index === 0 ? 'bg-amber-400 text-white shadow-xs' : 
-                      index === 1 ? 'bg-slate-300 text-slate-800' : 
-                      index === 2 ? 'bg-amber-600 text-white' : 
-                      'bg-white text-slate-500 border border-slate-200'
+                    <div className={`w-2 h-2 rounded-full shrink-0 flex items-center justify-center font-black text-[0px] ${
+                      index === 0 ? 'bg-red-500 shadow-xs' :
+                      index === 1 ? 'bg-orange-500' :
+                      index === 2 ? 'bg-amber-500' :
+                      index === 3 ? 'bg-emerald-500' :
+                      index === 4 ? 'bg-blue-500' :
+                      index === 5 ? 'bg-indigo-500' :
+                      index === 6 ? 'bg-violet-500' :
+                      'bg-slate-400'
                     }`}>
                       {index + 1}º
                     </div>
-                    <div className="flex flex-col min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
-                        <span className="text-[9.5px] font-black text-slate-900 uppercase truncate leading-tight shrink-0">{item.name}</span>
-                        {item.topRoute && (
-                          <div 
-                            className="inline-flex items-center gap-1 bg-white border border-slate-200 text-slate-700 px-1.5 py-0.2 rounded-md text-[7.5px] font-bold min-w-0 truncate max-w-[210px] shadow-2xs"
-                            title={item.allRoutesTooltip || item.routeDisplay}
-                          >
-                            <span className="text-slate-800 uppercase truncate font-black">{item.topRoute.origin}</span>
-                            <span className="text-red-500 font-black text-[8px] shrink-0">➔</span>
-                            <span className="text-slate-800 uppercase truncate font-black">{item.topRoute.destination}</span>
-                            {item.extraRoutesCount > 0 && (
-                              <span className="text-[6.5px] text-red-600 font-black shrink-0 bg-red-50 px-1 py-0 rounded border border-red-200 ml-0.5">
-                                +{item.extraRoutesCount}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      <span className="text-[7.5px] font-bold text-slate-400 uppercase tracking-wider leading-none mt-0.5">{item.plate || 'SEM PLACA'}</span>
-                    </div>
+                    <span className="text-[8.5px] font-black text-slate-900 uppercase truncate leading-none min-w-0 flex-1">{item.name}</span>
                   </div>
                   <div className="text-right shrink-0">
-                    <span className="text-[8.5px] font-black text-slate-900 tabular-nums bg-white border border-slate-200 px-1.5 py-0.5 rounded-md shadow-2xs">
+                    <span className="text-[7.5px] font-black text-red-600 tabular-nums bg-red-50 border border-red-200 px-2 py-0.5 rounded-full shadow-2xs whitespace-nowrap">
                       {item.count} {item.count === 1 ? 'viagem' : 'viagens'} · {item.totalTons.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} TN
                     </span>
                   </div>
                 </div>
 
-                {/* Metric Badges: R$/Ton | Frete Empresa | Frete Motorista */}
-                <div className="grid grid-cols-3 gap-0.5 pt-0.5 border-t border-slate-200/60">
-                  <div className="bg-white border border-slate-200 px-0.5 py-0.5 rounded-md text-center shadow-2xs">
-                    <div className="text-[6.5px] font-black text-slate-400 uppercase tracking-wider leading-none">R$/Ton Média</div>
-                    <div className="text-[8px] font-black text-slate-800 tabular-nums mt-0.5">
-                      {formatCurrency(item.avgTonPrice)}
-                    </div>
-                  </div>
-                  <div className="bg-emerald-50 border border-emerald-200 px-0.5 py-0.5 rounded-md text-center shadow-2xs">
-                    <div className="text-[6.5px] font-black text-emerald-600 uppercase tracking-wider leading-none">Frete Empresa</div>
-                    <div className="text-[8px] font-black text-emerald-700 tabular-nums mt-0.5">
-                      {formatCurrency(item.totalCompanyFreight)}
-                    </div>
-                  </div>
-                  <div className="bg-blue-50 border border-blue-200 px-0.5 py-0.5 rounded-md text-center shadow-2xs">
-                    <div className="text-[6.5px] font-black text-blue-600 uppercase tracking-wider leading-none">Frete Motorista</div>
-                    <div className="text-[8px] font-black text-blue-700 tabular-nums mt-0.5">
-                      {formatCurrency(item.totalDriverFreight)}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Progress bar */}
-                <div className="w-full bg-slate-200/80 h-1 rounded-full overflow-hidden">
-                  <div 
-                    className={`h-full transition-all duration-700 ${index === 0 ? 'bg-amber-500' : 'bg-red-600'}`} 
-                    style={{ width: `${(item.count / (driverRanking[0]?.count || 1)) * 100}%` }}
-                  />
-                </div>
               </div>
             ))}
             {driverRanking.length === 0 && (
