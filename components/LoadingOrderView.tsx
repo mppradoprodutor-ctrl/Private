@@ -1107,20 +1107,9 @@ fileName: `${displayDriverName} - ${displayTruckPlate}.pdf`,
               {isSendingEmail ? <Loader2 size={13} className="animate-spin" /> : <Mail size={13} />}
               {isSendingEmail ? 'Enviando...' : 'Enviar por E-mail'}
             </button>
-            <div className="flex items-center justify-between px-1">
-              <p className="text-[7.5px] font-bold text-slate-400 uppercase tracking-widest">
-                1 clique = 1 arquivo PDF baixado (A4 oficial)
-              </p>
-              <button
-                type="button"
-                onClick={handleDownloadPng}
-                disabled={isDownloading}
-                className="text-[8px] font-bold text-slate-500 hover:text-slate-800 underline uppercase cursor-pointer disabled:pointer-events-none"
-                title="Baixar também cópia em formato de imagem PNG"
-              >
-                Opção PNG
-              </button>
-            </div>
+            <p className="px-1 text-[7.5px] font-bold text-slate-400 uppercase tracking-widest">
+              1 clique = 1 arquivo PDF baixado (A4 oficial)
+            </p>
           </div>
         </div>
 
