@@ -1064,7 +1064,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ trips, drivers, onNavigateToT
                   </div>
                   <div className="text-right shrink-0">
                     <span className="text-[8.5px] font-black text-red-600 tabular-nums bg-red-50 border border-red-200 px-2 py-0.5 rounded-full shadow-2xs whitespace-nowrap">
-                      {item.count} {item.count === 1 ? 'viagem' : 'viagens'} · {item.totalTons.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} TN
+                      {item.count} {item.count === 1 ? 'viagem' : 'viagens'} · {item.totalTons.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TN
                     </span>
                   </div>
                 </div>
