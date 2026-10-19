@@ -896,21 +896,21 @@ fileName: `${displayDriverName} - ${displayTruckPlate}.pdf`,
                     className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-800 placeholder:text-slate-400 uppercase outline-none focus:ring-1 focus:ring-red-200 focus:bg-white transition-all font-mono"
                   />
                   <div className="mt-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 grid grid-cols-2 gap-x-2 gap-y-1">
-                    <div className="flex items-center gap-1 min-w-0">
+                    <div className="flex items-start gap-1 min-w-0">
                       <span className="text-[7px] font-black uppercase tracking-widest text-slate-400 shrink-0">Motorista</span>
-                      <span className="text-[8px] font-black uppercase text-slate-800 truncate">{displayDriverName || 'Não selecionado'}</span>
+                      <span className="text-[8px] font-black uppercase leading-tight text-slate-800 whitespace-normal break-words">{displayDriverName || 'Não selecionado'}</span>
                     </div>
-                    <div className="flex items-center gap-1 min-w-0">
+                    <div className="flex items-start gap-1 min-w-0">
                       <span className="text-[7px] font-black uppercase tracking-widest text-slate-400 shrink-0">CPF</span>
-                      <span className="text-[8px] font-bold font-mono text-slate-700 truncate">{displayCpf || 'Não informado'}</span>
+                      <span className="text-[8px] font-bold font-mono leading-tight text-slate-700 whitespace-normal break-all">{displayCpf || 'Não informado'}</span>
                     </div>
-                    <div className="flex items-center gap-1 min-w-0">
+                    <div className="flex items-start gap-1 min-w-0">
                       <span className="text-[7px] font-black uppercase tracking-widest text-slate-400 shrink-0">Telefone</span>
-                      <span className="text-[8px] font-bold font-mono text-slate-700 truncate">{displayPhone || 'Não informado'}</span>
+                      <span className="text-[8px] font-bold font-mono leading-tight text-slate-700 whitespace-normal break-all">{displayPhone || 'Não informado'}</span>
                     </div>
-                    <div className="flex items-center gap-1 min-w-0">
+                    <div className="flex items-start gap-1 min-w-0">
                       <span className="text-[7px] font-black uppercase tracking-widest text-slate-400 shrink-0">Carretas</span>
-                      <span className="text-[8px] font-bold font-mono text-slate-700 truncate">{[displayTrailer1, displayTrailer2, displayDolly].filter(Boolean).join(' • ') || 'Nenhuma cadastrada'}</span>
+                      <span className="text-[8px] font-bold font-mono leading-tight text-slate-700 whitespace-normal break-all">{[displayTrailer1, displayTrailer2, displayDolly].filter(Boolean).join(' • ') || 'Nenhuma cadastrada'}</span>
                     </div>
                   </div>
                 </div>
