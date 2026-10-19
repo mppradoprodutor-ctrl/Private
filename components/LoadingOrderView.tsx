@@ -895,21 +895,21 @@ fileName: `${displayDriverName} - ${displayTruckPlate}.pdf`,
                     }}
                     className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-800 placeholder:text-slate-400 uppercase outline-none focus:ring-1 focus:ring-red-200 focus:bg-white transition-all font-mono"
                   />
-                  <div className="mt-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 space-y-1">
-                    <div className="flex items-center gap-1.5 min-w-0">
+                  <div className="mt-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 grid grid-cols-2 gap-x-2 gap-y-1">
+                    <div className="flex items-center gap-1 min-w-0">
                       <span className="text-[7px] font-black uppercase tracking-widest text-slate-400 shrink-0">Motorista</span>
-                      <span className="text-[9px] font-black uppercase text-slate-800 truncate">{displayDriverName || 'Não selecionado'}</span>
+                      <span className="text-[8px] font-black uppercase text-slate-800 truncate">{displayDriverName || 'Não selecionado'}</span>
                     </div>
-                    <div className="flex items-center gap-1.5 min-w-0">
+                    <div className="flex items-center gap-1 min-w-0">
                       <span className="text-[7px] font-black uppercase tracking-widest text-slate-400 shrink-0">CPF</span>
-                      <span className="text-[8px] font-bold font-mono text-slate-700">{displayCpf || 'Não informado'}</span>
+                      <span className="text-[8px] font-bold font-mono text-slate-700 truncate">{displayCpf || 'Não informado'}</span>
                     </div>
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="text-[7px] font-black uppercase tracking-widest text-slate-400 shrink-0">Telefone</span>
-                    <span className="text-[8px] font-bold font-mono text-slate-700 truncate">{displayPhone || 'Não informado'}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="text-[7px] font-black uppercase tracking-widest text-slate-400 shrink-0">Carretas</span>
+                    <div className="flex items-center gap-1 min-w-0">
+                      <span className="text-[7px] font-black uppercase tracking-widest text-slate-400 shrink-0">Telefone</span>
+                      <span className="text-[8px] font-bold font-mono text-slate-700 truncate">{displayPhone || 'Não informado'}</span>
+                    </div>
+                    <div className="flex items-center gap-1 min-w-0">
+                      <span className="text-[7px] font-black uppercase tracking-widest text-slate-400 shrink-0">Carretas</span>
                       <span className="text-[8px] font-bold font-mono text-slate-700 truncate">{[displayTrailer1, displayTrailer2, displayDolly].filter(Boolean).join(' • ') || 'Nenhuma cadastrada'}</span>
                     </div>
                   </div>
@@ -1066,12 +1066,12 @@ fileName: `${displayDriverName} - ${displayTruckPlate}.pdf`,
             </div>
           </div>
 
-          <div className="pt-4 border-t border-slate-100 flex flex-col gap-2">
+          <div className="pt-2 border-t border-slate-100 flex flex-col gap-1">
             <button 
               type="button"
               onClick={handleGenerateAndSave} 
               disabled={isDownloading}
-              className="w-full bg-red-600 text-white font-black text-[9px] uppercase tracking-wider py-2.5 rounded-lg shadow hover:bg-red-700 flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+              className="w-full bg-red-600 text-white font-black text-[8px] uppercase tracking-wider py-1.5 rounded-md shadow hover:bg-red-700 flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
             >
               <Save size={13} /> Gerar Ordem e Lançar Viagem
             </button>
@@ -1079,7 +1079,7 @@ fileName: `${displayDriverName} - ${displayTruckPlate}.pdf`,
               type="button"
               onClick={handleDownloadPdf} 
               disabled={isDownloading}
-              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-black text-[9px] uppercase tracking-wider py-2.5 rounded-lg shadow flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-black text-[8px] uppercase tracking-wider py-1.5 rounded-md shadow flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
             >
               {isDownloading ? (
                 <>
@@ -1102,7 +1102,7 @@ fileName: `${displayDriverName} - ${displayTruckPlate}.pdf`,
               type="button"
               onClick={handleSendByEmail}
               disabled={!hasGeneratedOrder || isSendingEmail}
-              className="w-full bg-white border border-slate-900 text-slate-900 font-black text-[9px] uppercase tracking-wider py-2.5 rounded-lg shadow-sm flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+              className="w-full bg-white border border-slate-900 text-slate-900 font-black text-[8px] uppercase tracking-wider py-1.5 rounded-md shadow-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
             >
               {isSendingEmail ? <Loader2 size={13} className="animate-spin" /> : <Mail size={13} />}
               {isSendingEmail ? 'Enviando...' : 'Enviar por E-mail'}
