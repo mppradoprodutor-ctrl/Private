@@ -469,6 +469,7 @@ const App: React.FC = () => {
   const [tripSelectedPlates, setTripSelectedPlates] = useState<string[]>([]);
   const [tripAnttFilter, setTripAnttFilter] = useState('');
   const [tripDriverFilter, setTripDriverFilter] = useState('');
+  const [tripNotesFilter, setTripNotesFilter] = useState('');
   const [tripNfFilter, setTripNfFilter] = useState('');
   const [tripStatusListFilter, setTripStatusListFilter] = useState<'all' | 'Carregado' | 'Pendente'>('all');
   const [tripDocFilter, setTripDocFilter] = useState<'all' | 'Pendente' | 'OK'>('all');
@@ -534,6 +535,7 @@ const App: React.FC = () => {
   const [dashStartDate, setDashStartDate] = useState('');
   const [dashEndDate, setDashEndDate] = useState('');
   const [dashTakerFilter, setDashTakerFilter] = useState('');
+  const [dashAnttFilter, setDashAnttFilter] = useState('');
   const [rankingViewMode, setRankingViewMode] = useState<'table' | 'split'>('table');
 
   // FILTROS EMBARQUE (SHIPMENT)
@@ -1400,6 +1402,8 @@ const App: React.FC = () => {
       // Filtro ANTT
       const matchesAntt = !tripAnttFilter || (tripDriver && tripDriver.antt && tripDriver.antt.trim().toUpperCase() === tripAnttFilter.trim().toUpperCase());
 
+      const matchesNotes = !tripNotesFilter || normalizeText(t.notes).includes(normalizeText(tripNotesFilter));
+
       // Filtro Motorista
       let matchesDriver = true;
       if (driverWords.length > 0) {
@@ -1430,7 +1434,7 @@ const App: React.FC = () => {
         return true;
       })();
       
-      return matchesDate && matchesOrigin && matchesDestination && matchesTaker && matchesCte && matchesPlate && matchesAntt && matchesDriver && matchesNf && matchesMdfe && matchesPaymentType && matchesAd && matchesSd && matchesWeight;
+      return matchesDate && matchesOrigin && matchesDestination && matchesTaker && matchesCte && matchesPlate && matchesAntt && matchesNotes && matchesDriver && matchesNf && matchesMdfe && matchesPaymentType && matchesAd && matchesSd && matchesWeight;
     }).sort((a, b) => {
       const dateA = a.date ? new Date(a.date).getTime() : 0;
       const dateB = b.date ? new Date(b.date).getTime() : 0;
@@ -1440,7 +1444,7 @@ const App: React.FC = () => {
       const createdB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
       return createdB - createdA;
     });
-  }, [trips, drivers, freights, shipments, tripOriginFilter, tripDestinationFilter, tripCteFilter, tripPlateFilter, tripSelectedPlates, tripAnttFilter, tripDriverFilter, tripNfFilter, tripStatusListFilter, tripDocFilter, tripMdfeFilter, tripAdFilter, tripSdFilter, tripWeightFilter, tripStartDate, tripEndDate, tripTakerFilter, tripPaymentTypeFilter, normalizeText]);
+  }, [trips, drivers, freights, shipments, tripOriginFilter, tripDestinationFilter, tripCteFilter, tripPlateFilter, tripSelectedPlates, tripAnttFilter, tripDriverFilter, tripNotesFilter, tripNfFilter, tripStatusListFilter, tripDocFilter, tripMdfeFilter, tripAdFilter, tripSdFilter, tripWeightFilter, tripStartDate, tripEndDate, tripTakerFilter, tripPaymentTypeFilter, normalizeText]);
 
   const tripStats = useMemo(() => {
     let totalProfit = 0;
@@ -1640,8 +1644,10 @@ const App: React.FC = () => {
                           (!dashEndDate || (t.date && tDate <= end));
       
       const effectiveTaker = resolveTripServiceTaker(t, freights, shipments) || t.serviceTaker || '';
-      const matchesTaker = !dashTakerFilter || normalizeText(effectiveTaker) === normalizeText(dashTakerFilter);
-      return matchesDate && matchesTaker;
+const matchesTaker = !dashTakerFilter || normalizeText(effectiveTaker) === normalizeText(dashTakerFilter);
+  const tripDriver = drivers.find(d => d.truckPlate && t.truckPlate && normalizeText(d.truckPlate) === normalizeText(t.truckPlate));
+  const matchesAntt = !dashAnttFilter || normalizeText(tripDriver?.antt || '') === normalizeText(dashAnttFilter);
+  return matchesDate && matchesTaker && matchesAntt;
     });
     
     let grossRevenue = 0;
@@ -1779,7 +1785,7 @@ const App: React.FC = () => {
       driversCount: drivers.length,
       freightsCount: freights.length
     };
-  }, [trips, freights, shipments, drivers.length, freights.length, dashStartDate, dashEndDate, dashTakerFilter, normalizeText]);
+  }, [trips, freights, shipments, drivers.length, freights.length, dashStartDate, dashEndDate, dashTakerFilter, dashAnttFilter, drivers, normalizeText]);
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
   const formatKg = (val: number) => new Intl.NumberFormat('pt-BR').format(val) + ' KG';
@@ -1794,6 +1800,7 @@ const App: React.FC = () => {
     setTripSelectedPlates([]);
     setTripAnttFilter('');
     setTripDriverFilter('');
+    setTripNotesFilter('');
     setTripNfFilter('');
     setTripStatusListFilter('all');
     setTripDocFilter('all');
@@ -2174,7 +2181,7 @@ const App: React.FC = () => {
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="bg-slate-50 border border-slate-200/80 p-1 rounded-xl flex items-center gap-2">
                       <button 
-                        onClick={() => { setDashStartDate(''); setDashEndDate(''); setDashTakerFilter(''); }}
+                        onClick={() => { setDashStartDate(''); setDashEndDate(''); setDashTakerFilter(''); setDashAnttFilter(''); }}
                         className="p-1.5 text-slate-400 hover:text-red-700 transition-colors"
                         title="Limpar Filtros"
                       >
@@ -2209,6 +2216,13 @@ const App: React.FC = () => {
                         {uniqueTakers.map(t => (
                           <option key={t} value={t}>{t}</option>
                         ))}
+                      </select>
+                    </div>
+                    <div className="bg-slate-50 border border-slate-200/80 px-2.5 py-1 rounded-xl flex items-center gap-2 min-w-[170px]">
+                      <ClipboardList size={13} className="text-slate-400 shrink-0" />
+                      <select value={dashAnttFilter} onChange={e => setDashAnttFilter(e.target.value)} className="w-full bg-transparent text-[9.5px] font-black uppercase tracking-wider outline-none text-slate-700 cursor-pointer">
+                        <option value="">ANTT: TODAS</option>
+                        {Array.from(new Set(drivers.map(d => d.antt).filter(Boolean))).sort().map(antt => <option key={antt} value={antt}>{antt}</option>)}
                       </select>
                     </div>
                   </div>
@@ -3205,6 +3219,11 @@ const App: React.FC = () => {
                             <X size={10} />
                           </button>
                         )}
+                      </div>
+                      <div className="relative w-full max-w-[260px]">
+                        <FileText size={10} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        <input type="text" placeholder="Anotações..." title="Buscar qualquer texto salvo nas anotações da viagem" value={tripNotesFilter} onChange={e => setTripNotesFilter(e.target.value)} className={`w-full bg-white rounded-lg pl-6 pr-6 py-1 text-[8.5px] font-bold outline-none border transition-all uppercase placeholder:normal-case placeholder:text-slate-400 shadow-xs ${tripNotesFilter ? 'border-blue-500 text-blue-900 bg-blue-50/50 ring-1 ring-blue-400' : 'border-slate-200 text-slate-700 hover:border-slate-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-400'}`} />
+                        {tripNotesFilter && <button onClick={() => setTripNotesFilter('')} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 cursor-pointer p-0.5" title="Limpar filtro de anotações"><X size={10} /></button>}
                       </div>
 
                       {/* Badges de filtros ativos vindos de Relatórios (ANTT e Placas Selecionadas) */}
