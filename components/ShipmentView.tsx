@@ -504,7 +504,17 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
       <div className="shrink-0 bg-white border border-slate-200/90 rounded-xl p-2 flex flex-wrap items-center justify-between gap-2 shadow-xs">
         
         {/* Title & View Switcher */}
-        <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            title="Resetar menu e buscar novamente os dados do sistema"
+            aria-label="Resetar menu e atualizar dados"
+            className="order-first flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-1.5 py-1 text-[8px] font-black uppercase tracking-wide text-slate-500 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600 cursor-pointer"
+          >
+            <RefreshCw size={11} />
+            <span className="hidden sm:inline">Atualizar</span>
+          </button>
           <div className="bg-gradient-to-br from-red-600 to-red-700 p-1.5 rounded-lg text-white shadow-sm shadow-red-200">
             <Package size={17} />
           </div>
@@ -732,7 +742,7 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
               return (
                 <div 
                   key={group.productName} 
-                  className="w-[290px] sm:w-[320px] shrink-0 h-full flex flex-col bg-white border border-slate-200/90 rounded-xl overflow-hidden shadow-sm transition-all hover:border-red-300"
+                  className="w-[260px] sm:w-[285px] shrink-0 h-full flex flex-col bg-white border border-slate-200/90 rounded-xl overflow-hidden shadow-sm transition-all hover:border-red-300"
                 >
                   {/* PRODUCT COLUMN HEADER */}
                   <div className={`shrink-0 p-2 bg-gradient-to-r ${badge.color} border-b border-slate-200 space-y-1`}>
@@ -817,7 +827,7 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
                         /* COMPACT SUMMARIZED CARD MODE */
                         <div 
                           key={item.id}
-                          className="bg-white border border-slate-200 hover:border-red-300 rounded-lg p-2 space-y-1.5 transition-all shadow-2xs hover:shadow-xs"
+                          className="bg-white border border-slate-200 hover:border-red-300 rounded-lg p-1.5 space-y-1 transition-all shadow-2xs hover:shadow-xs"
                         >
                           {/* ORIGIN & DESTINATION + STATUS */}
                           <div className="flex items-center justify-between gap-1 pb-1 border-b border-slate-100">
