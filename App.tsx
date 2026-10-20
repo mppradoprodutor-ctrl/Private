@@ -2948,14 +2948,16 @@ const matchesTaker = !dashTakerFilter || normalizeText(effectiveTaker) === norma
                 freights={freights}
                 drivers={drivers}
                 onImport={(data) => { saveShipments([...data, ...shipments]); showNotification(`${data.length} embarques importados!`, "success"); }} 
+                onRefresh={() => {
+                  saveShipments([]);
+                  showNotification("Embarques resetados; viagens recarregadas de Lançar Viagens.", "success");
+                }}
                 onDelete={(id) => { 
                   if (id.startsWith('trip_')) {
-                    const tripId = id.replace('trip_', '');
-                    saveTrips(trips.filter(t => t.id !== tripId));
-                    showNotification("Viagem excluída de Lançar Viagens!", "info");
+                    showNotification("Viagens lançadas não podem ser excluídas pelo menu Embarques.", "info");
                   } else {
-                    saveShipments(shipments.filter(s => s.id !== id)); 
-                    showNotification("Embarque excluído!", "info"); 
+                    saveShipments(shipments.filter(s => s.id !== id));
+                    showNotification("Embarque excluído!", "info");
                   }
                 }}
                 onEdit={(s) => { 
@@ -2986,10 +2988,8 @@ const matchesTaker = !dashTakerFilter || normalizeText(effectiveTaker) === norma
                 onAdd={(data) => { saveShipments([{ ...data, id: generateId(), createdAt: new Date().toISOString() }, ...shipments]); showNotification("Embarque cadastrado!", "success"); }}
                 onClearAll={(ids) => { 
                   const shipmentIds = ids.filter(id => !id.startsWith('trip_'));
-                  const tripIds = ids.filter(id => id.startsWith('trip_')).map(id => id.replace('trip_', ''));
                   if (shipmentIds.length > 0) saveShipments(shipments.filter(s => !shipmentIds.includes(s.id)));
-                  if (tripIds.length > 0) saveTrips(trips.filter(t => !tripIds.includes(t.id)));
-                  showNotification("Itens selecionados removidos!", "info"); 
+                  showNotification("Cards selecionados removidos apenas do menu Embarques.", "info"); 
                 }}
                 filters={{
                   startDate: shipmentStartDate,
