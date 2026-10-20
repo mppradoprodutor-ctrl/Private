@@ -543,34 +543,34 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
           </div>
           
           {/* Quick Presets */}
-          <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+          <div className="flex bg-slate-100 p-0.5 rounded-md border border-slate-200">
             <button 
               onClick={() => handleSetPeriod('today')} 
-              className="px-2 py-0.5 text-[9.5px] font-black uppercase rounded text-slate-600 hover:text-slate-900 hover:bg-white transition-all cursor-pointer"
+              className="px-1.5 py-0.5 text-[8px] font-black uppercase rounded text-slate-600 hover:text-slate-900 hover:bg-white transition-all cursor-pointer"
             >
               Hoje
             </button>
             <button 
               onClick={() => handleSetPeriod('week')} 
-              className="px-2 py-0.5 text-[9.5px] font-black uppercase rounded text-slate-600 hover:text-slate-900 hover:bg-white transition-all cursor-pointer"
+              className="px-1.5 py-0.5 text-[8px] font-black uppercase rounded text-slate-600 hover:text-slate-900 hover:bg-white transition-all cursor-pointer"
             >
               Semana
             </button>
             <button 
               onClick={() => handleSetPeriod('month')} 
-              className="px-2 py-0.5 text-[9.5px] font-black uppercase rounded text-slate-600 hover:text-slate-900 hover:bg-white transition-all cursor-pointer"
+              className="px-1.5 py-0.5 text-[8px] font-black uppercase rounded text-slate-600 hover:text-slate-900 hover:bg-white transition-all cursor-pointer"
             >
               Mês
             </button>
             <button 
               onClick={() => handleSetPeriod('year')} 
-              className="px-2 py-0.5 text-[9.5px] font-black uppercase rounded text-slate-600 hover:text-slate-900 hover:bg-white transition-all cursor-pointer"
+              className="px-1.5 py-0.5 text-[8px] font-black uppercase rounded text-slate-600 hover:text-slate-900 hover:bg-white transition-all cursor-pointer"
             >
               Ano
             </button>
             <button 
               onClick={() => handleSetPeriod('all')} 
-              className="px-2 py-0.5 text-[9.5px] font-black uppercase rounded text-slate-600 hover:text-slate-900 hover:bg-white transition-all cursor-pointer"
+              className="px-1.5 py-0.5 text-[8px] font-black uppercase rounded text-slate-600 hover:text-slate-900 hover:bg-white transition-all cursor-pointer"
             >
               Tudo
             </button>
@@ -622,10 +622,10 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
           </div>
 
           {/* View Mode Toggle */}
-          <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+          <div className="flex bg-slate-100 p-0.5 rounded-md border border-slate-200">
             <button
               onClick={() => setViewMode('columns')}
-              className={`px-2 py-0.5 rounded text-[9.5px] font-black uppercase flex items-center gap-1 transition-all cursor-pointer ${
+              className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase flex items-center gap-0.5 transition-all cursor-pointer ${
                 viewMode === 'columns' 
                   ? 'bg-red-600 text-white shadow-xs' 
                   : 'text-slate-600 hover:text-slate-900'
@@ -636,7 +636,7 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
             </button>
             <button
               onClick={() => setViewMode('ultra')}
-              className={`px-2 py-0.5 rounded text-[9.5px] font-black uppercase flex items-center gap-1 transition-all cursor-pointer ${
+              className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase flex items-center gap-0.5 transition-all cursor-pointer ${
                 viewMode === 'ultra' 
                   ? 'bg-red-600 text-white shadow-xs' 
                   : 'text-slate-600 hover:text-slate-900'
@@ -647,7 +647,7 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
             </button>
             <button
               onClick={() => setViewMode('table')}
-              className={`px-2 py-0.5 rounded text-[9.5px] font-black uppercase flex items-center gap-1 transition-all cursor-pointer ${
+              className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase flex items-center gap-0.5 transition-all cursor-pointer ${
                 viewMode === 'table' 
                   ? 'bg-red-600 text-white shadow-xs' 
                   : 'text-slate-600 hover:text-slate-900'
