@@ -164,6 +164,7 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
   const [editingShipment, setEditingShipment] = useState<Shipment | null>(null);
   const [viewMode, setViewMode] = useState<'columns' | 'ultra' | 'table'>('columns');
   const [selectedShipmentIds, setSelectedShipmentIds] = useState<string[]>([]);
+  const [hiddenShipmentIds, setHiddenShipmentIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Period Presets
@@ -370,6 +371,7 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
   // Filter items based on user criteria
   const filteredItems = useMemo(() => {
     return processedItems.filter(item => {
+      if (hiddenShipmentIds.includes(item.id)) return false;
       // Date filter
       if (startDate && item.date < startDate) return false;
       if (endDate && item.date > endDate) return false;
@@ -400,7 +402,7 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
 
       return true;
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [processedItems, startDate, endDate, statusFilter, searchQuery, productFilter, destinationFilter]);
+  }, [processedItems, hiddenShipmentIds, startDate, endDate, statusFilter, searchQuery, productFilter, destinationFilter]);
 
   // Financial KPIs
   const kpis = useMemo(() => {
@@ -494,6 +496,7 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
   const toggleShipment = (id: string) => setSelectedShipmentIds(current => current.includes(id) ? current.filter(itemId => itemId !== id) : [...current, id]);
   const deleteSelected = () => {
     if (!selectedShipmentIds.length) return;
+    setHiddenShipmentIds(current => [...new Set([...current, ...selectedShipmentIds])]);
     onClearAll(selectedShipmentIds);
     setSelectedShipmentIds([]);
   };
@@ -518,7 +521,7 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
           <div className="flex items-center gap-2.5">
           <button
             type="button"
-            onClick={onRefresh}
+            onClick={() => { setHiddenShipmentIds([]); setSelectedShipmentIds([]); onRefresh(); }}
             title="Resetar menu e buscar novamente os dados do sistema"
             aria-label="Resetar menu e atualizar dados"
             className="order-first flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-1.5 py-1 text-[8px] font-black uppercase tracking-wide text-slate-500 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600 cursor-pointer"
@@ -749,7 +752,7 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
               return (
                 <div 
                   key={group.productName} 
-                  className="w-[260px] sm:w-[285px] shrink-0 h-full flex flex-col bg-white border border-slate-200/90 rounded-xl overflow-hidden shadow-sm transition-all hover:border-red-300"
+                  className="w-[230px] sm:w-[250px] shrink-0 h-full flex flex-col bg-white border border-slate-200/90 rounded-xl overflow-hidden shadow-sm transition-all hover:border-red-300"
                 >
                   {/* PRODUCT COLUMN HEADER */}
                   <div className={`shrink-0 p-2 bg-gradient-to-r ${badge.color} border-b border-slate-200 space-y-1`}>
@@ -789,13 +792,13 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
                   </div>
 
                   {/* COLUMN ITEMS LIST (INNER SCROLLBAR ONLY) */}
-                  <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-1.5 space-y-1.5 bg-slate-50/40">
+                  <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-1 space-y-1 bg-slate-50/40">
                     {group.items.map(item => (
                       viewMode === 'ultra' ? (
                         /* ULTRA COMPACT SINGLE-BOX STRIP */
                         <div 
                           key={item.id}
-                          className="relative bg-white border border-slate-200 hover:border-red-300 rounded-md p-1.5 space-y-1 transition-all shadow-2xs hover:shadow-xs"
+                          className="relative bg-white border border-slate-200 hover:border-red-300 rounded-md p-1 space-y-0.5 transition-all shadow-2xs hover:shadow-xs"
                         >
                           <div className="absolute right-1 top-1 z-10"><input type="checkbox" checked={selectedShipmentIds.includes(item.id)} onChange={() => toggleShipment(item.id)} aria-label={`Selecionar viagem ${item.id}`} className="accent-red-600 cursor-pointer" /></div>
                           <div className="flex items-center justify-between gap-1 pr-4">
