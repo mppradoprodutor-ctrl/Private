@@ -1369,6 +1369,13 @@ const App: React.FC = () => {
     const driverWords = driverSearchNorm ? driverSearchNorm.split(/\s+/).filter(Boolean) : [];
 
     return trips.filter(t => {
+      if (tripWeightFilter === 'withoutWeight') {
+        const weightValue = typeof t.weight === 'number' ? t.weight : parseFloat(String(t.weight || '0').replace(',', '.'));
+        const hasWeight = Number.isFinite(weightValue) && weightValue > 0;
+        const hasSaldo = Boolean((t.sdNote && t.sdNote.trim() !== '') || t.sdFlag || t.status === 'Finalizado');
+        if (hasWeight || hasSaldo) return false;
+      }
+
       const tDate = t.date ? new Date(t.date).getTime() : 0;
       const start = tripStartDate ? new Date(tripStartDate).getTime() : Number.NEGATIVE_INFINITY;
       const end = tripEndDate ? new Date(tripEndDate).getTime() : Number.POSITIVE_INFINITY;
@@ -1418,13 +1425,10 @@ const App: React.FC = () => {
 
       const matchesNf = !tripNfFilter || (t.invoiceNumber && t.invoiceNumber.includes(tripNfFilter));
       const isDocPending = t.pendingDocument && t.pendingDocument.trim() !== "";
-      const weightValue = typeof t.weight === 'number' ? t.weight : parseFloat(String(t.weight || '0').replace(',', '.'));
-      const hasWeight = !isNaN(weightValue) && weightValue > 0;
-      const hasSaldo = (t.sdNote && t.sdNote.trim() !== '') || !!t.sdFlag || t.status === 'Finalizado';
       const matchesMdfe = tripMdfeFilter === 'all' || (t.mdfeStatus || 'Pendente') === tripMdfeFilter;
       const matchesAd = tripAdFilter === 'all' || (!t.adNote || t.adNote.trim() === '');
       const matchesSd = tripSdFilter === 'all' || (!t.sdNote || t.sdNote.trim() === '');
-      const matchesWeight = tripWeightFilter === 'all' || (!hasWeight && !hasSaldo);
+      const matchesWeight = true;
       const matchesPaymentType = !tripPaymentTypeFilter || (() => {
         const pType = String(t.paymentType || '').toLowerCase();
         if (tripPaymentTypeFilter === 'pix') return pType.includes('pix');

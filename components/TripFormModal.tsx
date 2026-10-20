@@ -196,7 +196,8 @@ const TripFormModal: React.FC<TripFormModalProps> = ({ isOpen, onClose, onSubmit
       setFormData(prev => ({
         ...prev,
         truckPlate: formattedPlate,
-        driverName: foundDriver ? foundDriver.name : (formattedPlate.length < prev.truckPlate.length ? '' : prev.driverName)
+        driverName: foundDriver ? foundDriver.name : (formattedPlate.length < prev.truckPlate.length ? '' : prev.driverName),
+        weight: foundDriver && foundDriver.netWeight > 0 && prev.weight <= 0 ? foundDriver.netWeight : prev.weight
       }));
     } else if (name === 'origin') {
       const cityNorm = normalizeText(String(val));
