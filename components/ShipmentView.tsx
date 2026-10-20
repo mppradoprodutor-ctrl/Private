@@ -17,6 +17,7 @@ interface ShipmentViewProps {
   drivers?: Driver[];
   onImport: (data: Shipment[]) => void;
   onDelete: (id: string) => void;
+  onRefresh: () => void;
   onEdit: (shipment: Shipment) => void;
   onAdd: (data: Omit<Shipment, 'id' | 'createdAt'>) => void;
   onClearAll: (ids: string[]) => void;
@@ -145,7 +146,7 @@ const findProductFromFreights = (
 };
 
 const ShipmentView: React.FC<ShipmentViewProps> = ({ 
-  shipments, trips = [], freights = [], drivers = [], onImport, onDelete, onEdit, onAdd, onClearAll,
+  shipments, trips = [], freights = [], drivers = [], onImport, onDelete, onRefresh, onEdit, onAdd, onClearAll,
   filters, setFilters
 }) => {
   const {
@@ -517,7 +518,7 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
           <div className="flex items-center gap-2.5">
           <button
             type="button"
-            onClick={() => window.location.reload()}
+            onClick={onRefresh}
             title="Resetar menu e buscar novamente os dados do sistema"
             aria-label="Resetar menu e atualizar dados"
             className="order-first flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-1.5 py-1 text-[8px] font-black uppercase tracking-wide text-slate-500 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600 cursor-pointer"
