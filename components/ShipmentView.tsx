@@ -162,6 +162,7 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [editingShipment, setEditingShipment] = useState<Shipment | null>(null);
   const [viewMode, setViewMode] = useState<'columns' | 'ultra' | 'table'>('columns');
+  const [selectedShipmentIds, setSelectedShipmentIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Period Presets
@@ -487,6 +488,15 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
     new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(tn) + ' TN';
 
   // Product Icon helper
+  const selectableIds = filteredItems.map(item => item.id);
+  const allSelected = selectableIds.length > 0 && selectableIds.every(id => selectedShipmentIds.includes(id));
+  const toggleShipment = (id: string) => setSelectedShipmentIds(current => current.includes(id) ? current.filter(itemId => itemId !== id) : [...current, id]);
+  const deleteSelected = () => {
+    if (!selectedShipmentIds.length) return;
+    onClearAll(selectedShipmentIds);
+    setSelectedShipmentIds([]);
+  };
+
   const getProductBadge = (name: string) => {
     const p = name.toUpperCase();
     if (p.includes('MILHO')) return { icon: '🌽', color: 'from-amber-500/10 via-amber-500/5 to-white text-amber-900 border-amber-200' };
@@ -504,23 +514,29 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
       <div className="shrink-0 bg-white border border-slate-200/90 rounded-xl p-2 flex flex-wrap items-center justify-between gap-2 shadow-xs">
         
         {/* Title & View Switcher */}
-        <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            title="Resetar menu e buscar novamente os dados do sistema"
+            aria-label="Resetar menu e atualizar dados"
+            className="order-first flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-1.5 py-1 text-[8px] font-black uppercase tracking-wide text-slate-500 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600 cursor-pointer"
+          >
+            <RefreshCw size={11} />
+            <span className="hidden sm:inline">Atualizar</span>
+          </button>
+          <button type="button" onClick={() => setSelectedShipmentIds(allSelected ? [] : selectableIds)} className="rounded-md border border-slate-200 bg-slate-50 px-1.5 py-1 text-[8px] font-black uppercase text-slate-500 hover:bg-slate-100 cursor-pointer" title="Selecionar todos os cards filtrados">{allSelected ? 'Desmarcar' : 'Selecionar todos'}</button>
+          {selectedShipmentIds.length > 0 && <button type="button" onClick={deleteSelected} className="flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-1.5 py-1 text-[8px] font-black uppercase text-red-600 hover:bg-red-100 cursor-pointer" title="Excluir cards selecionados"><Trash2 size={10} /> Excluir ({selectedShipmentIds.length})</button>}
           <div className="bg-gradient-to-br from-red-600 to-red-700 p-1.5 rounded-lg text-white shadow-sm shadow-red-200">
             <Package size={17} />
           </div>
           <div>
             <div className="flex items-center gap-1.5">
               <h2 className="text-sm sm:text-base font-black text-slate-900 uppercase tracking-tight leading-none">Painel de Embarques</h2>
-              <span className="bg-red-50 text-red-700 border border-red-200 text-[9.5px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
-                {kpis.totalCount} Viagens
-              </span>
+              <span className="bg-red-50 text-red-700 border border-red-200 text-[9.5px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">{kpis.totalCount} Viagens</span>
             </div>
             <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Visão Executiva Agrupada por Produto</p>
           </div>
-        </div>
-
-        {/* Date Period Selector & Quick Presets */}
-        <div className="flex flex-wrap items-center gap-1.5">
           
           {/* Quick Presets */}
           <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200">
@@ -732,7 +748,7 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
               return (
                 <div 
                   key={group.productName} 
-                  className="w-[290px] sm:w-[320px] shrink-0 h-full flex flex-col bg-white border border-slate-200/90 rounded-xl overflow-hidden shadow-sm transition-all hover:border-red-300"
+                  className="w-[260px] sm:w-[285px] shrink-0 h-full flex flex-col bg-white border border-slate-200/90 rounded-xl overflow-hidden shadow-sm transition-all hover:border-red-300"
                 >
                   {/* PRODUCT COLUMN HEADER */}
                   <div className={`shrink-0 p-2 bg-gradient-to-r ${badge.color} border-b border-slate-200 space-y-1`}>
@@ -778,9 +794,10 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
                         /* ULTRA COMPACT SINGLE-BOX STRIP */
                         <div 
                           key={item.id}
-                          className="bg-white border border-slate-200 hover:border-red-300 rounded-md p-1.5 space-y-1 transition-all shadow-2xs hover:shadow-xs"
+                          className="relative bg-white border border-slate-200 hover:border-red-300 rounded-md p-1.5 space-y-1 transition-all shadow-2xs hover:shadow-xs"
                         >
-                          <div className="flex items-center justify-between gap-1">
+                          <div className="absolute right-1 top-1 z-10"><input type="checkbox" checked={selectedShipmentIds.includes(item.id)} onChange={() => toggleShipment(item.id)} aria-label={`Selecionar viagem ${item.id}`} className="accent-red-600 cursor-pointer" /></div>
+                          <div className="flex items-center justify-between gap-1 pr-4">
                             <div className="flex items-center gap-1 font-black text-slate-900 text-[9.5px] uppercase truncate min-w-0">
                               <MapPin size={10} className="text-red-600 shrink-0" />
                               <span className="text-slate-700 truncate">{item.origin}</span>
@@ -817,10 +834,11 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
                         /* COMPACT SUMMARIZED CARD MODE */
                         <div 
                           key={item.id}
-                          className="bg-white border border-slate-200 hover:border-red-300 rounded-lg p-2 space-y-1.5 transition-all shadow-2xs hover:shadow-xs"
+                          className="relative bg-white border border-slate-200 hover:border-red-300 rounded-lg p-1.5 space-y-1 transition-all shadow-2xs hover:shadow-xs"
                         >
+                          <div className="absolute right-1 top-1 z-10"><input type="checkbox" checked={selectedShipmentIds.includes(item.id)} onChange={() => toggleShipment(item.id)} aria-label={`Selecionar viagem ${item.id}`} className="accent-red-600 cursor-pointer" /></div>
                           {/* ORIGIN & DESTINATION + STATUS */}
-                          <div className="flex items-center justify-between gap-1 pb-1 border-b border-slate-100">
+                          <div className="flex items-center justify-between gap-1 pb-1 pr-4 border-b border-slate-100">
                             <div className="flex items-center gap-1 text-[10px] sm:text-[10.5px] font-black text-slate-900 uppercase truncate min-w-0">
                               <MapPin size={11} className="text-red-600 shrink-0" />
                               <span className="text-slate-700 truncate">{item.origin}</span>
