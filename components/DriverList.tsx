@@ -16,30 +16,30 @@ const formatKg = (val: number) => {
 const DriverRow = memo(({ driver, onRemove, onEdit }: DriverRowProps) => {
   return (
     <tr className="hover:bg-slate-50/40 transition-colors duration-150 group">
-      <td className="px-4 py-2.5">
+      <td className="px-3 py-1.5">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-red-50 border border-red-100 text-red-600 rounded-lg flex items-center justify-center font-black text-xs shrink-0">
+          <div className="w-7 h-7 bg-red-50 border border-red-100 text-red-600 rounded-lg flex items-center justify-center font-black text-xs shrink-0">
             {(driver.name || 'M').charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0">
-            <p className="text-xs sm:text-[13px] font-bold text-slate-800 leading-tight truncate">{driver.name || 'Sem Nome'}</p>
+            <p className="text-[11px] font-bold text-slate-800 leading-tight truncate">{driver.name || 'Sem Nome'}</p>
             <div className="flex items-center gap-2 mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis">
-              <span className="text-[9.5px] text-slate-500 font-semibold flex items-center gap-1">
+              <span className="text-[8.5px] text-slate-500 font-semibold flex items-center gap-1">
                 <Phone size={9.5} className="text-slate-400 shrink-0" /> {driver.phone || 'N/A'}
               </span>
               <span className="text-slate-300 text-[9px] font-bold">|</span>
-              <span className="text-[9.5px] text-slate-500 font-semibold flex items-center gap-1">
+              <span className="text-[8.5px] text-slate-500 font-semibold flex items-center gap-1">
                 <Fingerprint size={9.5} className="text-slate-400 shrink-0" /> {driver.cpf || 'N/A'}
               </span>
               <span className="text-slate-300 text-[9px] font-bold">|</span>
-              <span className="text-[9.5px] text-red-600 font-bold uppercase flex items-center gap-0.5">
+              <span className="text-[8.5px] text-red-600 font-bold uppercase flex items-center gap-0.5">
                 <MapPin size={9.5} className="text-red-500 shrink-0" /> {driver.state || 'UF'}
               </span>
             </div>
           </div>
         </div>
       </td>
-      <td className="px-4 py-2.5">
+      <td className="px-3 py-1.5">
         <div className="flex items-center gap-2">
           <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider font-mono shrink-0 ${
             driver.truckPlate 
@@ -70,13 +70,13 @@ const DriverRow = memo(({ driver, onRemove, onEdit }: DriverRowProps) => {
       <td className="px-4 py-2.5 text-center">
         <span className="text-xs font-bold text-slate-700 bg-slate-50 w-6 h-6 rounded-full inline-flex items-center justify-center border border-slate-200">{driver.axisCount || '0'}</span>
       </td>
-      <td className="px-4 py-2.5">
+      <td className="px-3 py-1.5">
         <div className="flex items-center gap-1.5 shrink-0">
           <Scale size={11} className="text-slate-300" />
           <p className="text-xs font-semibold text-slate-700">{formatKg(driver.netWeight)}</p>
         </div>
       </td>
-      <td className="px-4 py-2.5">
+      <td className="px-3 py-1.5">
         <div className="flex items-center gap-1.5 shrink-0">
           <Scale size={11} className="text-red-500" />
           <p className="text-xs font-bold text-slate-900">{formatKg(driver.grossWeight)}</p>
