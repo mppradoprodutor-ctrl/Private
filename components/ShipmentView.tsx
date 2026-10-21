@@ -575,6 +575,11 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
               Tudo
             </button>
           </div>
+          <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-md border border-slate-200 self-start">
+            <button onClick={() => setViewMode('columns')} className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase flex items-center gap-0.5 transition-all cursor-pointer ${viewMode === 'columns' ? 'bg-red-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'}`} title="Cards Compactos"><Columns size={11} /> Compacto</button>
+            <button onClick={() => setViewMode('ultra')} className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase flex items-center gap-0.5 transition-all cursor-pointer ${viewMode === 'ultra' ? 'bg-red-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'}`} title="Lista Resumida de Alta Densidade"><Layers size={11} /> Super Compacto</button>
+            <button onClick={() => setViewMode('table')} className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase flex items-center gap-0.5 transition-all cursor-pointer ${viewMode === 'table' ? 'bg-red-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'}`} title="Visão em Tabela Completa"><Table size={11} /> Tabela</button>
+          </div>
 
           {/* Date Inputs */}
           <div className="flex items-center gap-1 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200 text-[10px]">
@@ -621,42 +626,6 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
             </select>
           </div>
 
-          {/* View Mode Toggle */}
-          <div className="flex bg-slate-100 p-0.5 rounded-md border border-slate-200">
-            <button
-              onClick={() => setViewMode('columns')}
-              className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase flex items-center gap-0.5 transition-all cursor-pointer ${
-                viewMode === 'columns' 
-                  ? 'bg-red-600 text-white shadow-xs' 
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-              title="Cards Compactos"
-            >
-              <Columns size={11} /> Compacto
-            </button>
-            <button
-              onClick={() => setViewMode('ultra')}
-              className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase flex items-center gap-0.5 transition-all cursor-pointer ${
-                viewMode === 'ultra' 
-                  ? 'bg-red-600 text-white shadow-xs' 
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-              title="Lista Resumida de Alta Densidade"
-            >
-              <Layers size={11} /> Super Compacto
-            </button>
-            <button
-              onClick={() => setViewMode('table')}
-              className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase flex items-center gap-0.5 transition-all cursor-pointer ${
-                viewMode === 'table' 
-                  ? 'bg-red-600 text-white shadow-xs' 
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-              title="Visão em Tabela Completa"
-            >
-              <Table size={11} /> Tabela
-            </button>
-          </div>
         </div>
       </div>
 

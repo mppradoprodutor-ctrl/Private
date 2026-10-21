@@ -2142,8 +2142,10 @@ const matchesTaker = !dashTakerFilter || normalizeText(effectiveTaker) === norma
         <div className={`flex-1 overflow-y-auto ${currentView === 'dashboard' ? 'p-3 sm:p-4' : 'p-6'} custom-scrollbar`}>
           <div className={`max-w-[1700px] mx-auto w-full ${currentView === 'dashboard' ? 'space-y-3' : 'space-y-5'}`}>
             
-            {currentView === 'dashboard' && (
-              <div className="space-y-3 animate-in fade-in duration-300">
+  {currentView === 'dashboard' && (
+  <>
+  <style>{`@media print { @page { margin: 8mm; } body { background: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } body > * { visibility: hidden; } .dashboard-print-area, .dashboard-print-area * { visibility: visible !important; } .dashboard-print-area { position: absolute !important; inset: 0 !important; width: 100% !important; padding: 0 !important; margin: 0 !important; } .dashboard-print-area button, .dashboard-print-area select { visibility: hidden !important; } .dashboard-print-area select { display: none !important; } }`}</style>
+  <div className="dashboard-print-area space-y-3 animate-in fade-in duration-300">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2.5 bg-white p-2.5 rounded-xl border border-slate-200/80 shadow-2xs">
                   <div className="flex items-center gap-3 flex-wrap">
                     <div>
@@ -2222,6 +2224,7 @@ const matchesTaker = !dashTakerFilter || normalizeText(effectiveTaker) === norma
                         ))}
                       </select>
                     </div>
+                    <button type="button" onClick={() => window.print()} className="flex items-center gap-1 rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[8px] font-black uppercase text-slate-500 hover:border-red-200 hover:bg-red-50 hover:text-red-600 cursor-pointer" title="Imprimir dashboard em PDF"><Printer size={11} /> PDF</button>
                     <div className="bg-slate-50 border border-slate-200/80 px-2.5 py-1 rounded-xl flex items-center gap-2 min-w-[170px]">
                       <ClipboardList size={13} className="text-slate-400 shrink-0" />
                       <select value={dashAnttFilter} onChange={e => setDashAnttFilter(e.target.value)} className="w-full bg-transparent text-[9.5px] font-black uppercase tracking-wider outline-none text-slate-700 cursor-pointer">
@@ -2624,6 +2627,7 @@ const matchesTaker = !dashTakerFilter || normalizeText(effectiveTaker) === norma
                   </div>
                 </div>
               </div>
+            </>
             )}
 
             {currentView === 'drivers' && (
@@ -2937,8 +2941,8 @@ const matchesTaker = !dashTakerFilter || normalizeText(effectiveTaker) === norma
                     setIsFreightFormOpen(true);
                     showNotification("Frete duplicado! Ajuste os dados conforme necessário.", "info");
                   }}
-                />
-              </div>
+                  />
+                </div>
             )}
 
             {currentView === 'shipments' && (
