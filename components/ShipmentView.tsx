@@ -880,25 +880,25 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
 
           /* TABLE VIEW OPTION (COMPACT LIGHT THEME) */
           <div className="h-full bg-white border border-slate-200 rounded-xl overflow-hidden flex flex-col shadow-xs">
-            <div className="flex-1 overflow-auto custom-scrollbar">
-              <table className="min-w-[1180px] w-max table-auto text-left border-collapse text-[9px]">
+            <div className="flex-1 overflow-hidden">
+              <table className="w-full table-fixed text-left border-collapse text-[7px] leading-tight">
                 <thead className="sticky top-0 bg-slate-100 border-b border-slate-200 z-10 text-slate-700">
                   <tr>
-                    <th className="w-[92px] px-1.5 py-1 text-[8px] font-black uppercase">Data</th>
-                    <th className="w-[95px] px-1.5 py-1 text-[8px] font-black uppercase">Produto</th>
-                    <th className="w-[260px] px-1.5 py-1 text-[8px] font-black uppercase">Origem ➔ Destino</th>
-                    <th className="w-[245px] px-1.5 py-1 text-[8px] font-black uppercase">Veículo / Motorista</th>
-                    <th className="px-1.5 py-1 text-[8px] font-black uppercase text-right">Peso (TN)</th>
-                    <th className="px-1.5 py-1 text-[8px] font-black text-emerald-700 uppercase text-right">Frete Empresa</th>
-                    <th className="px-1.5 py-1 text-[8px] font-black text-amber-700 uppercase text-right">Frete Motorista</th>
-                    <th className="px-1.5 py-1 text-[8px] font-black text-red-700 uppercase text-right">Saldo Líquido</th>
-                    <th className="px-1.5 py-1 text-[8px] font-black uppercase text-center">Status</th>
+                    <th className="w-[8%] px-1 py-1 text-[7px] font-black uppercase">Data</th>
+                    <th className="w-[7%] px-1 py-1 text-[7px] font-black uppercase">Produto</th>
+                    <th className="w-[21%] px-1 py-1 text-[7px] font-black uppercase">Origem ➔ Destino</th>
+                    <th className="w-[22%] px-1 py-1 text-[7px] font-black uppercase">Veículo / Motorista</th>
+                    <th className="w-[7%] px-1 py-1 text-[7px] font-black uppercase text-right">Peso (TN)</th>
+                    <th className="w-[10%] px-1 py-1 text-[7px] font-black text-emerald-700 uppercase text-right">Frete Empresa</th>
+                    <th className="w-[10%] px-1 py-1 text-[7px] font-black text-amber-700 uppercase text-right">Frete Motorista</th>
+                    <th className="w-[10%] px-1 py-1 text-[7px] font-black text-red-700 uppercase text-right">Saldo Líquido</th>
+                    <th className="w-[5%] px-1 py-1 text-[7px] font-black uppercase text-center">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 text-xs">
+                <tbody className="divide-y divide-slate-100 text-[7px]">
                   {filteredItems.map(item => (
                     <tr key={item.id} className="hover:bg-red-50/40 transition-colors">
-                      <td className="px-1.5 py-1 font-bold text-slate-700 whitespace-nowrap">{item.date}</td>
+                      <td className="px-1 py-1 font-bold text-slate-700 whitespace-nowrap">{item.date}</td>
                       <td className="px-1.5 py-1 font-black text-slate-900 uppercase whitespace-nowrap">
                         <span className="bg-slate-100 px-1 py-0 rounded text-[8px] border border-slate-200">
                           {item.product}
@@ -907,7 +907,7 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
                       <td className="px-1.5 py-1 font-bold text-slate-800 whitespace-nowrap">
                         {item.origin} <span className="text-red-600 font-black mx-1">➔</span> {item.destination}
                       </td>
-                      <td className="px-1.5 py-1 whitespace-nowrap">
+                      <td className="px-1 py-1 whitespace-normal break-words">
                         <span className="font-black text-slate-900">{item.plate}</span>
                         <span className="text-slate-500 text-[9px] ml-1">({item.driver})</span>
                       </td>
@@ -918,7 +918,7 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
                         {formatCurrency(item.netMargin)} ({item.marginPercent.toFixed(0)}%)
                       </td>
                       <td className="px-1.5 py-1 text-center whitespace-nowrap">
-                        <span className={`text-[8.5px] font-black px-2.5 py-0.5 rounded uppercase inline-flex items-center gap-1 ${
+                        <span className={`text-[6.5px] font-black px-1 py-0.5 rounded uppercase inline-flex items-center gap-1 ${
                           item.status.toLowerCase().includes('finaliz') || item.isFinalized
                             ? 'bg-emerald-600 text-white border border-emerald-700 shadow-xs' 
                             : item.status.toLowerCase().includes('carregado') 
