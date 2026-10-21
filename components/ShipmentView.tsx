@@ -880,14 +880,14 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
 
           /* TABLE VIEW OPTION (COMPACT LIGHT THEME) */
           <div className="h-full bg-white border border-slate-200 rounded-xl overflow-hidden flex flex-col shadow-xs">
-            <div className="flex-1 overflow-y-auto custom-scrollbar">
-              <table className="w-full table-fixed text-left border-collapse text-[10px]">
+            <div className="flex-1 overflow-auto custom-scrollbar">
+              <table className="min-w-[1180px] w-max table-auto text-left border-collapse text-[9px]">
                 <thead className="sticky top-0 bg-slate-100 border-b border-slate-200 z-10 text-slate-700">
                   <tr>
-                    <th className="px-1.5 py-1 text-[8px] font-black uppercase">Data</th>
-                    <th className="px-1.5 py-1 text-[8px] font-black uppercase">Produto</th>
-                    <th className="px-1.5 py-1 text-[8px] font-black uppercase">Origem ➔ Destino</th>
-                    <th className="px-1.5 py-1 text-[8px] font-black uppercase">Veículo / Motorista</th>
+                    <th className="w-[92px] px-1.5 py-1 text-[8px] font-black uppercase">Data</th>
+                    <th className="w-[95px] px-1.5 py-1 text-[8px] font-black uppercase">Produto</th>
+                    <th className="w-[260px] px-1.5 py-1 text-[8px] font-black uppercase">Origem ➔ Destino</th>
+                    <th className="w-[245px] px-1.5 py-1 text-[8px] font-black uppercase">Veículo / Motorista</th>
                     <th className="px-1.5 py-1 text-[8px] font-black uppercase text-right">Peso (TN)</th>
                     <th className="px-1.5 py-1 text-[8px] font-black text-emerald-700 uppercase text-right">Frete Empresa</th>
                     <th className="px-1.5 py-1 text-[8px] font-black text-amber-700 uppercase text-right">Frete Motorista</th>
@@ -909,7 +909,7 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
                       </td>
                       <td className="px-1.5 py-1 whitespace-nowrap">
                         <span className="font-black text-slate-900">{item.plate}</span>
-                        <span className="text-slate-500 text-[10px] ml-1">({item.driver})</span>
+                        <span className="text-slate-500 text-[9px] ml-1">({item.driver})</span>
                       </td>
                       <td className="px-1.5 py-1 font-black text-slate-800 text-right whitespace-nowrap">{formatTn(item.weightTn)}</td>
                       <td className="px-1.5 py-1 font-black text-emerald-700 text-right whitespace-nowrap">{formatCurrency(item.companyFreightTotal)}</td>
