@@ -881,33 +881,33 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
           /* TABLE VIEW OPTION (COMPACT LIGHT THEME) */
           <div className="h-full bg-white border border-slate-200 rounded-xl overflow-hidden flex flex-col shadow-xs">
             <div className="flex-1 overflow-hidden">
-              <table className="w-full table-fixed text-left border-collapse text-[7px] leading-tight">
+              <table className="w-full table-fixed text-left border-collapse text-[9px] leading-tight">
                 <thead className="sticky top-0 bg-slate-100 border-b border-slate-200 z-10 text-slate-700">
                   <tr>
-                    <th className="w-[8%] px-1 py-1 text-[7px] font-black uppercase">Data</th>
-                    <th className="w-[7%] px-1 py-1 text-[7px] font-black uppercase">Produto</th>
-                    <th className="w-[20%] px-1 py-1 text-[6.5px] font-black uppercase">Origem ➔ Destino</th>
-                    <th className="w-[20%] px-1 py-1 text-[6.5px] font-black uppercase">Veículo / Motorista</th>
-                    <th className="w-[7%] px-1 py-1 text-[6.5px] font-black uppercase text-right">Peso (TN)</th>
-                    <th className="w-[11%] px-1 py-1 text-[6.5px] font-black text-emerald-700 uppercase text-right">Frete Empresa</th>
-                    <th className="w-[11%] px-1 py-1 text-[6.5px] font-black text-amber-700 uppercase text-right">Frete Motorista</th>
-                    <th className="w-[10%] px-1 py-1 text-[6.5px] font-black text-red-700 uppercase text-right">Saldo Líquido</th>
-                    <th className="w-[5%] px-1 py-1 text-[7px] font-black uppercase text-center">Status</th>
+                    <th className="w-[8%] px-1 py-1.5 text-[8px] font-black uppercase">Data</th>
+                    <th className="w-[7%] px-1 py-1.5 text-[8px] font-black uppercase">Produto</th>
+                    <th className="w-[20%] px-1 py-1.5 text-[6.5px] font-black uppercase">Origem ➔ Destino</th>
+                    <th className="w-[20%] px-1 py-1.5 text-[6.5px] font-black uppercase">Veículo / Motorista</th>
+                    <th className="w-[7%] px-1 py-1.5 text-[6.5px] font-black uppercase text-right">Peso (TN)</th>
+                    <th className="w-[11%] px-1 py-1.5 text-[6.5px] font-black text-emerald-700 uppercase text-right">Frete Empresa</th>
+                    <th className="w-[11%] px-1 py-1.5 text-[6.5px] font-black text-amber-700 uppercase text-right">Frete Motorista</th>
+                    <th className="w-[10%] px-1 py-1.5 text-[6.5px] font-black text-red-700 uppercase text-right">Saldo Líquido</th>
+                    <th className="w-[5%] px-1 py-1.5 text-[8px] font-black uppercase text-center">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 text-[7px]">
+                <tbody className="divide-y divide-slate-100 text-[9px]">
                   {filteredItems.map(item => (
                     <tr key={item.id} className="hover:bg-red-50/40 transition-colors">
-                      <td className="px-1 py-1 font-bold text-slate-700 whitespace-nowrap">{item.date}</td>
+                      <td className="px-1 py-1.5 font-bold text-slate-700 whitespace-nowrap">{item.date}</td>
                       <td className="px-1.5 py-1 font-black text-slate-900 uppercase whitespace-nowrap">
                         <span className="bg-slate-100 px-1 py-0 rounded text-[8px] border border-slate-200">
                           {item.product}
                         </span>
                       </td>
-                      <td className="px-1 py-1 font-bold text-[6px] leading-none text-slate-800 whitespace-nowrap">
+                      <td className="px-1 py-1.5 font-bold text-[8px] leading-none text-slate-800 whitespace-nowrap">
                         {item.origin} <span className="text-red-600 font-black mx-0.5">➔</span> {item.destination}
                       </td>
-                      <td className="px-1 py-1 whitespace-nowrap text-[6px] leading-none">
+                      <td className="px-1 py-1.5 whitespace-nowrap text-[8px] leading-none">
                         <span className="font-black text-slate-900">{item.plate}</span>
                         <span className="text-slate-500 text-[6px] ml-0.5">({item.driver})</span>
                       </td>
