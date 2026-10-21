@@ -886,12 +886,12 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
                   <tr>
                     <th className="w-[8%] px-1 py-1 text-[7px] font-black uppercase">Data</th>
                     <th className="w-[7%] px-1 py-1 text-[7px] font-black uppercase">Produto</th>
-                    <th className="w-[21%] px-1 py-1 text-[7px] font-black uppercase">Origem ➔ Destino</th>
-                    <th className="w-[22%] px-1 py-1 text-[7px] font-black uppercase">Veículo / Motorista</th>
-                    <th className="w-[7%] px-1 py-1 text-[7px] font-black uppercase text-right">Peso (TN)</th>
-                    <th className="w-[10%] px-1 py-1 text-[7px] font-black text-emerald-700 uppercase text-right">Frete Empresa</th>
-                    <th className="w-[10%] px-1 py-1 text-[7px] font-black text-amber-700 uppercase text-right">Frete Motorista</th>
-                    <th className="w-[10%] px-1 py-1 text-[7px] font-black text-red-700 uppercase text-right">Saldo Líquido</th>
+                    <th className="w-[20%] px-1 py-1 text-[6.5px] font-black uppercase">Origem ➔ Destino</th>
+                    <th className="w-[20%] px-1 py-1 text-[6.5px] font-black uppercase">Veículo / Motorista</th>
+                    <th className="w-[7%] px-1 py-1 text-[6.5px] font-black uppercase text-right">Peso (TN)</th>
+                    <th className="w-[11%] px-1 py-1 text-[6.5px] font-black text-emerald-700 uppercase text-right">Frete Empresa</th>
+                    <th className="w-[11%] px-1 py-1 text-[6.5px] font-black text-amber-700 uppercase text-right">Frete Motorista</th>
+                    <th className="w-[10%] px-1 py-1 text-[6.5px] font-black text-red-700 uppercase text-right">Saldo Líquido</th>
                     <th className="w-[5%] px-1 py-1 text-[7px] font-black uppercase text-center">Status</th>
                   </tr>
                 </thead>
@@ -904,12 +904,12 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
                           {item.product}
                         </span>
                       </td>
-                      <td className="px-1.5 py-1 font-bold text-slate-800 whitespace-nowrap">
-                        {item.origin} <span className="text-red-600 font-black mx-1">➔</span> {item.destination}
+                      <td className="px-1 py-1 font-bold text-[6px] leading-none text-slate-800 whitespace-nowrap">
+                        {item.origin} <span className="text-red-600 font-black mx-0.5">➔</span> {item.destination}
                       </td>
-                      <td className="px-1 py-1 whitespace-normal break-words">
+                      <td className="px-1 py-1 whitespace-nowrap text-[6px] leading-none">
                         <span className="font-black text-slate-900">{item.plate}</span>
-                        <span className="text-slate-500 text-[9px] ml-1">({item.driver})</span>
+                        <span className="text-slate-500 text-[6px] ml-0.5">({item.driver})</span>
                       </td>
                       <td className="px-1.5 py-1 font-black text-slate-800 text-right whitespace-nowrap">{formatTn(item.weightTn)}</td>
                       <td className="px-1.5 py-1 font-black text-emerald-700 text-right whitespace-nowrap">{formatCurrency(item.companyFreightTotal)}</td>
