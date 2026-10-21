@@ -2222,6 +2222,7 @@ const matchesTaker = !dashTakerFilter || normalizeText(effectiveTaker) === norma
                         ))}
                       </select>
                     </div>
+                    <button type="button" onClick={() => window.print()} className="flex items-center gap-1 rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[8px] font-black uppercase text-slate-500 hover:border-red-200 hover:bg-red-50 hover:text-red-600 cursor-pointer" title="Imprimir dashboard em PDF"><Printer size={11} /> PDF</button>
                     <div className="bg-slate-50 border border-slate-200/80 px-2.5 py-1 rounded-xl flex items-center gap-2 min-w-[170px]">
                       <ClipboardList size={13} className="text-slate-400 shrink-0" />
                       <select value={dashAnttFilter} onChange={e => setDashAnttFilter(e.target.value)} className="w-full bg-transparent text-[9.5px] font-black uppercase tracking-wider outline-none text-slate-700 cursor-pointer">
