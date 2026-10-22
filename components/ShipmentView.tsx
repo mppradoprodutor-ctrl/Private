@@ -909,7 +909,7 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap text-[8px] leading-none">
                         <span className="font-black text-slate-900">{item.plate}</span>
-                        <span className="text-slate-500 text-[6px] ml-0.5">({item.driver})</span>
+                        <span className="text-slate-500 text-[8px] ml-0.5">({item.driver})</span>
                       </td>
                       <td className="px-1.5 py-1 font-black text-slate-800 text-right whitespace-nowrap">{formatTn(item.weightTn)}</td>
                       <td className="px-1.5 py-1 font-black text-emerald-700 text-right whitespace-nowrap">{formatCurrency(item.companyFreightTotal)}</td>

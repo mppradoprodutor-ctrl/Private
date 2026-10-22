@@ -7,7 +7,7 @@ import {
   Calendar, Search, Filter, Download, User, Truck, Building2, 
   MapPin, ClipboardList, TrendingUp, Award, LayoutGrid, FileText,
   Hash, Users, Activity, Target, Weight, Globe, Loader2, Navigation, FilterX,
-  Plus, Check, X, DollarSign, Scale, Percent, CheckSquare, Square, Layers, Route, ArrowRight
+  Plus, Check, X, DollarSign, Scale, Percent, CheckSquare, Square, Layers, Route, ArrowRight, Printer
 } from 'lucide-react';
 import { MapContainer, TileLayer, Circle, useMap, Tooltip as LeafletTooltip, Marker, Popup, Polyline } from 'react-leaflet';
 import L from 'leaflet';
@@ -763,6 +763,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ trips, drivers, onNavigateToT
         </div>
 
         <div className="flex flex-nowrap items-center gap-1 shrink-0 justify-end">
+          <button type="button" onClick={() => window.print()} className="flex items-center gap-1 rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[8px] font-black uppercase text-slate-500 hover:border-red-200 hover:bg-red-50 hover:text-red-600 cursor-pointer" title="Imprimir relatórios em PDF"><Printer size={11} /> PDF</button>
           {/* ANTT Filter */}
           <div className="relative w-[88px] sm:w-[98px]">
             <ClipboardList size={9} className="absolute left-1.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
