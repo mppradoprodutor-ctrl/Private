@@ -4,7 +4,7 @@ import {
   TrendingUp, Scale, ArrowRight, DollarSign, Filter,
   Columns, Table, ArrowUpRight, ArrowDownRight, Layers,
   PlusCircle, FileSpreadsheet, Edit2, Trash2, CheckCircle2,
-  Clock, RefreshCw, BarChart2, PieChart, Sparkles, Download
+  Clock, RefreshCw, BarChart2, PieChart, Sparkles, Download, Printer
 } from 'lucide-react';
 import { Shipment, Trip, Driver, Freight } from '../types';
 import ShipmentImportModal from './ShipmentImportModal';
@@ -512,13 +512,16 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
   };
 
   return (
-    <div className="h-[calc(100vh-4.2rem)] flex flex-col overflow-hidden bg-slate-100 text-slate-800 p-2 sm:p-2.5 space-y-2 rounded-2xl border border-slate-200 shadow-md">
+    <>
+      <style>{`@media print { @page { margin: 6mm; } body { background: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } body > * { visibility: hidden !important; } .shipments-print-area, .shipments-print-area * { visibility: visible !important; } .shipments-print-area { position: absolute !important; inset: 0 !important; width: 100% !important; height: auto !important; overflow: visible !important; margin: 0 !important; padding: 0 !important; } .shipments-print-area button, .shipments-print-area input, .shipments-print-area select { visibility: hidden !important; } }`}</style>
+    <div className="shipments-print-area h-[calc(100vh-4.2rem)] flex flex-col overflow-hidden bg-slate-100 text-slate-800 p-2 sm:p-2.5 space-y-2 rounded-2xl border border-slate-200 shadow-md">
       
       {/* 1. TOP CONTROL BAR - PERIOD FILTERS & QUICK ACTIONS */}
       <div className="shrink-0 bg-white border border-slate-200/90 rounded-xl p-2 flex flex-wrap items-center justify-between gap-2 shadow-xs">
         
         {/* Title & View Switcher */}
           <div className="flex items-center gap-2.5">
+          <button type="button" onClick={() => window.print()} title="Imprimir embarques em PDF" aria-label="Imprimir embarques em PDF" className="flex items-center gap-1 rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[8px] font-black uppercase text-slate-500 hover:border-red-200 hover:bg-red-50 hover:text-red-600 cursor-pointer"><Printer size={11} /> PDF</button>
           <button
             type="button"
             onClick={() => { setHiddenShipmentIds([]); setSelectedShipmentIds([]); onRefresh(); }}
@@ -909,7 +912,7 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap text-[8px] leading-none">
                         <span className="font-black text-slate-900">{item.plate}</span>
-                        <span className="text-slate-500 text-[6px] ml-0.5">({item.driver})</span>
+                        <span className="text-slate-500 text-[8px] ml-0.5">({item.driver})</span>
                       </td>
                       <td className="px-1.5 py-1 font-black text-slate-800 text-right whitespace-nowrap">{formatTn(item.weightTn)}</td>
                       <td className="px-1.5 py-1 font-black text-emerald-700 text-right whitespace-nowrap">{formatCurrency(item.companyFreightTotal)}</td>
@@ -938,6 +941,7 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
       </div>
 
     </div>
+  </>
   );
 };
 

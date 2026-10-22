@@ -7,7 +7,7 @@ import {
   Calendar, Search, Filter, Download, User, Truck, Building2, 
   MapPin, ClipboardList, TrendingUp, Award, LayoutGrid, FileText,
   Hash, Users, Activity, Target, Weight, Globe, Loader2, Navigation, FilterX,
-  Plus, Check, X, DollarSign, Scale, Percent, CheckSquare, Square, Layers, Route, ArrowRight
+  Plus, Check, X, DollarSign, Scale, Percent, CheckSquare, Square, Layers, Route, ArrowRight, Printer
 } from 'lucide-react';
 import { MapContainer, TileLayer, Circle, useMap, Tooltip as LeafletTooltip, Marker, Popup, Polyline } from 'react-leaflet';
 import L from 'leaflet';
@@ -744,7 +744,9 @@ const ReportsView: React.FC<ReportsViewProps> = ({ trips, drivers, onNavigateToT
   };
 
   return (
-    <div className="h-[calc(100vh-4.2rem)] flex flex-col overflow-hidden bg-slate-100 text-slate-800 p-2 sm:p-2.5 space-y-2 rounded-2xl border border-slate-200 shadow-md relative">
+    <>
+      <style>{`@media print { @page { size: auto; margin: 0; } html, body { margin: 0 !important; padding: 0 !important; background: #f1f5f9 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } body > * { visibility: hidden !important; } .reports-print-area, .reports-print-area * { visibility: visible !important; } .reports-print-area { position: absolute !important; top: 0 !important; left: 0 !important; width: 100vw !important; min-height: 100vh !important; height: auto !important; overflow: visible !important; margin: 0 !important; padding: 0.5rem !important; background: #f1f5f9 !important; transform: none !important; } .reports-print-area button, .reports-print-area input, .reports-print-area select { visibility: visible !important; } }`}</style>
+    <div className="reports-print-area h-[calc(100vh-4.2rem)] flex flex-col overflow-hidden bg-slate-100 text-slate-800 p-2 sm:p-2.5 space-y-2 rounded-2xl border border-slate-200 shadow-md relative">
       
       {/* 1. TOP CONTROL & FILTER BAR */}
       <div className="shrink-0 bg-white border border-slate-200/90 rounded-xl px-2 py-1.5 flex flex-nowrap items-center justify-between gap-1.5 shadow-xs overflow-x-auto custom-scrollbar">
@@ -763,6 +765,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ trips, drivers, onNavigateToT
         </div>
 
         <div className="flex flex-nowrap items-center gap-1 shrink-0 justify-end">
+          <button type="button" onClick={() => window.print()} className="flex items-center gap-1 rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[8px] font-black uppercase text-slate-500 hover:border-red-200 hover:bg-red-50 hover:text-red-600 cursor-pointer" title="Imprimir relatórios em PDF"><Printer size={11} /> PDF</button>
           {/* ANTT Filter */}
           <div className="relative w-[88px] sm:w-[98px]">
             <ClipboardList size={9} className="absolute left-1.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
@@ -1544,6 +1547,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ trips, drivers, onNavigateToT
       )}
 
     </div>
+  </>
   );
 };
 
