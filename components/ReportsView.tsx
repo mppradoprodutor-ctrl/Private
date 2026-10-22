@@ -745,7 +745,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ trips, drivers, onNavigateToT
 
   return (
     <>
-      <style>{`@media print { @page { size: auto; margin: 0; } html, body { margin: 0 !important; padding: 0 !important; background: #f1f5f9 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } body > * { visibility: hidden !important; } .reports-print-area, .reports-print-area * { visibility: visible !important; } .reports-print-area { position: absolute !important; top: 0 !important; left: 0 !important; width: 100vw !important; min-height: 100vh !important; height: auto !important; overflow: visible !important; margin: 0 !important; padding: 0.5rem !important; background: #f1f5f9 !important; transform: none !important; } .reports-print-area button, .reports-print-area input, .reports-print-area select { visibility: visible !important; } }`}</style>
+      <style>{`@media print { @page { size: A4 landscape; margin: 5mm; } html, body { margin: 0 !important; padding: 0 !important; background: #f1f5f9 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } body > * { visibility: hidden !important; } .reports-print-area, .reports-print-area * { visibility: visible !important; } .reports-print-area { position: absolute !important; top: 0 !important; left: 0 !important; box-sizing: border-box !important; width: 100% !important; max-width: 100% !important; min-height: 100vh !important; height: auto !important; overflow: visible !important; margin: 0 !important; padding: 0.5rem !important; background: #f1f5f9 !important; transform: none !important; } .reports-print-area button, .reports-print-area input, .reports-print-area select { visibility: visible !important; } .reports-print-grid { grid-template-columns: 4.5fr 3.5fr 4fr !important; grid-template-rows: 1fr !important; gap: 2mm !important; overflow: visible !important; } .reports-print-grid > .reports-drivers { grid-column: auto !important; padding: 1.5mm !important; } .reports-print-grid > .reports-map { grid-column: auto !important; } .reports-print-grid > .reports-locations { grid-column: auto !important; } .reports-locations { min-width: 0 !important; width: 100% !important; } .reports-locations * { min-width: 0 !important; max-width: 100% !important; } .reports-locations span, .reports-locations p { overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; } }`}</style>
     <div className="reports-print-area h-[calc(100vh-4.2rem)] flex flex-col overflow-hidden bg-slate-100 text-slate-800 p-2 sm:p-2.5 space-y-2 rounded-2xl border border-slate-200 shadow-md relative">
       
       {/* 1. TOP CONTROL & FILTER BAR */}
@@ -1013,10 +1013,10 @@ const ReportsView: React.FC<ReportsViewProps> = ({ trips, drivers, onNavigateToT
       </div>
 
       {/* 3. MAIN ANALYTICS DASHBOARD */}
-      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-2 overflow-hidden">
+      <div className="reports-print-grid flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-2 overflow-hidden">
         
         {/* COL 1: RANKING MOTORISTAS WITH R$/TON, FRETE EMPRESA & FRETE MOTORISTA */}
-        <div className="lg:col-span-5 h-full bg-white p-2.5 rounded-xl border border-slate-200 shadow-xs flex flex-col min-h-0 overflow-hidden">
+        <div className="reports-drivers lg:col-span-5 h-full bg-white p-2.5 rounded-xl border border-slate-200 shadow-xs flex flex-col min-h-0 overflow-hidden">
           <div className="flex items-center justify-between pb-2 mb-1.5 border-b border-slate-100 shrink-0">
             <div className="flex items-center gap-1.5">
               <div className="bg-slate-900 p-1 rounded-md text-white shadow-2xs"><Award size={12} /></div>
@@ -1045,7 +1045,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ trips, drivers, onNavigateToT
                     });
                   }
                 }}
-                className="h-[29px] px-2 py-1 bg-slate-50/90 rounded-md border border-slate-200/80 hover:bg-red-50/40 hover:border-red-400 transition-all flex items-center shadow-2xs cursor-pointer group select-none"
+                className="h-[25px] px-1.5 py-0.5 bg-slate-50/90 rounded-md border border-slate-200/80 hover:bg-red-50/40 hover:border-red-400 transition-all flex items-center shadow-2xs cursor-pointer group select-none"
                 title={`Clique para ver as viagens do motorista "${item.name}" no menu Lançar Viagens`}
               >
                 {/* Linha compacta: posição, motorista e viagens */}
@@ -1084,7 +1084,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ trips, drivers, onNavigateToT
         </div>
 
         {/* COL 2: EXPANDED MAP & FLOW CHART */}
-        <div className="lg:col-span-4 h-full flex flex-col space-y-2 min-h-0 overflow-hidden">
+        <div className="reports-map lg:col-span-4 h-full flex flex-col space-y-2 min-h-0 overflow-hidden">
           {/* MAPA EXPANDIDO NO SENTIDO VERTICAL */}
           <div className="flex-1 min-h-[330px] sm:min-h-[360px] bg-white p-2 rounded-xl border border-slate-200 shadow-xs flex flex-col relative overflow-hidden">
             <div className="w-full h-full rounded-lg overflow-hidden ring-1 ring-slate-100 relative">
@@ -1305,10 +1305,9 @@ const ReportsView: React.FC<ReportsViewProps> = ({ trips, drivers, onNavigateToT
         </div>
 
         {/* COL 3: TODAS AS ORIGENS & TODOS OS DESTINOS */}
-        <div className="lg:col-span-3 h-full flex flex-col space-y-2 min-h-0 overflow-hidden">
-          
+        <div className="reports-locations lg:col-span-3 h-full flex flex-col space-y-2 min-h-0 overflow-hidden">
           {/* TODAS AS ORIGENS */}
-          <div className="flex-1 min-h-0 bg-white p-2.5 rounded-xl border border-slate-200 shadow-xs flex flex-col overflow-hidden">
+          <div className="flex-1 min-h-0 bg-white p-2 rounded-xl border border-slate-200 shadow-xs flex flex-col overflow-hidden">
             <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-100 shrink-0">
               <div className="flex items-center gap-1.5">
                 <div className="bg-red-50 p-1 rounded-md text-red-600"><MapPin size={12} /></div>
@@ -1336,7 +1335,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ trips, drivers, onNavigateToT
                       });
                     }
                   }}
-                  className="flex items-center justify-between p-1.5 bg-slate-50 border border-slate-200/80 rounded-lg hover:border-red-400 hover:bg-red-50/40 hover:shadow-xs transition-all text-[8.5px] cursor-pointer group select-none"
+                  className="flex items-center justify-between p-1 bg-slate-50 border border-slate-200/80 rounded-lg hover:border-red-400 hover:bg-red-50/40 hover:shadow-xs transition-all text-[8.5px] cursor-pointer group select-none"
                   title={`Clique para ver as viagens com origem "${item.name}" no menu Lançar Viagens (respeitando os filtros ativos)`}
                 >
                   <div className="flex items-center gap-1.5 min-w-0 pr-1">
@@ -1362,7 +1361,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ trips, drivers, onNavigateToT
           </div>
 
           {/* TODOS OS DESTINOS */}
-          <div className="flex-1 min-h-0 bg-white p-2.5 rounded-xl border border-slate-200 shadow-xs flex flex-col overflow-hidden">
+          <div className="flex-1 min-h-0 bg-white p-2 rounded-xl border border-slate-200 shadow-xs flex flex-col overflow-hidden">
             <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-100 shrink-0">
               <div className="flex items-center gap-1.5">
                 <div className="bg-indigo-50 p-1 rounded-md text-indigo-600"><Target size={12} /></div>
@@ -1390,7 +1389,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ trips, drivers, onNavigateToT
                       });
                     }
                   }}
-                  className="flex items-center justify-between p-1.5 bg-slate-50 border border-slate-200/80 rounded-lg hover:border-indigo-400 hover:bg-indigo-50/40 hover:shadow-xs transition-all text-[8.5px] cursor-pointer group select-none"
+                  className="flex items-center justify-between p-1 bg-slate-50 border border-slate-200/80 rounded-lg hover:border-indigo-400 hover:bg-indigo-50/40 hover:shadow-xs transition-all text-[8.5px] cursor-pointer group select-none"
                   title={`Clique para ver as viagens com destino "${item.name}" no menu Lançar Viagens (respeitando os filtros ativos)`}
                 >
                   <div className="flex items-center gap-1.5 min-w-0 pr-1">
