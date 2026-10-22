@@ -744,7 +744,9 @@ const ReportsView: React.FC<ReportsViewProps> = ({ trips, drivers, onNavigateToT
   };
 
   return (
-    <div className="h-[calc(100vh-4.2rem)] flex flex-col overflow-hidden bg-slate-100 text-slate-800 p-2 sm:p-2.5 space-y-2 rounded-2xl border border-slate-200 shadow-md relative">
+    <>
+      <style>{`@media print { @page { margin: 6mm; } body { background: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } body > * { visibility: hidden !important; } .reports-print-area, .reports-print-area * { visibility: visible !important; } .reports-print-area { position: absolute !important; inset: 0 !important; width: 100% !important; height: auto !important; overflow: visible !important; margin: 0 !important; padding: 0 !important; } .reports-print-area button, .reports-print-area input, .reports-print-area select { visibility: hidden !important; } }`}</style>
+    <div className="reports-print-area h-[calc(100vh-4.2rem)] flex flex-col overflow-hidden bg-slate-100 text-slate-800 p-2 sm:p-2.5 space-y-2 rounded-2xl border border-slate-200 shadow-md relative">
       
       {/* 1. TOP CONTROL & FILTER BAR */}
       <div className="shrink-0 bg-white border border-slate-200/90 rounded-xl px-2 py-1.5 flex flex-nowrap items-center justify-between gap-1.5 shadow-xs overflow-x-auto custom-scrollbar">
@@ -1545,6 +1547,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ trips, drivers, onNavigateToT
       )}
 
     </div>
+  </>
   );
 };
 
