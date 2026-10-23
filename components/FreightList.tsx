@@ -1,6 +1,6 @@
 
 import React, { useMemo, useState, useRef } from 'react';
-import { Trash2, MapPin, Building2, ArrowRightLeft, TrendingUp, Package, Info, Download, FileText, Loader2, Eye, EyeOff, Maximize2, Minimize2, CopyX, Camera, MonitorPlay, Briefcase, DollarSign, Scale, Percent, X, RotateCcw, Columns, Layers, Table } from 'lucide-react';
+import { Trash2, MapPin, Building2, ArrowRightLeft, TrendingUp, Package, Info, Download, FileText, Loader2, Eye, EyeOff, CopyX, Camera, MonitorPlay, Briefcase, DollarSign, Scale, Percent, X, RotateCcw, Columns, Layers, Table } from 'lucide-react';
 import { toBlob } from 'html-to-image';
 import { saveAs } from 'file-saver';
 import { Freight } from '../types';
@@ -16,7 +16,7 @@ const FreightList: React.FC<FreightListProps> = ({ freights, onRemove, onEdit, o
   const [showCompanyFreight, setShowCompanyFreight] = useState(true);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  const [viewMode, setViewMode] = useState<'columns' | 'ultra' | 'table'>('columns');
+  const [viewMode, setViewMode] = useState<'columns' | 'ultra' | 'table'>('table');
   const expandedRef = useRef<HTMLDivElement>(null);
 
   const handleDownloadHDImage = async () => {
@@ -276,14 +276,6 @@ const FreightList: React.FC<FreightListProps> = ({ freights, onRemove, onEdit, o
             </div>
 
             <button 
-              onClick={() => setIsExpanded(true)}
-              className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-900 text-white hover:bg-black border border-slate-900 rounded-xl text-[9.5px] font-black uppercase tracking-wider hover:shadow-lg transition-all active:scale-95 cursor-pointer"
-              title="Expandir Visualização"
-            >
-              <Maximize2 size={11} />
-              Expandir
-            </button>
-            <button 
               onClick={() => setShowCompanyFreight(!showCompanyFreight)}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[9.5px] font-black uppercase tracking-wider transition-all border cursor-pointer ${
                 showCompanyFreight 
@@ -302,7 +294,7 @@ const FreightList: React.FC<FreightListProps> = ({ freights, onRemove, onEdit, o
       {viewMode === 'table' ? (
         /* TABLE VIEW OPTION (COMPACT LIGHT THEME) */
         <div className={`bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs ${isExpanded ? 'flex-1 min-h-0 flex flex-col' : ''}`}>
-          <div className={`overflow-y-auto custom-scrollbar ${isExpanded ? 'flex-1' : 'max-h-[70vh]'}`}>
+          <div className={`overflow-y-auto custom-scrollbar ${isExpanded ? 'flex-1' : 'max-h-[calc(100vh-18rem)]'}`}>
             <table className="w-full text-left border-collapse">
               <thead className="sticky top-0 bg-slate-100 border-b border-slate-200 z-10 text-slate-700">
                 <tr>

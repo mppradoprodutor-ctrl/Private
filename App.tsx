@@ -2840,7 +2840,7 @@ const matchesTaker = !dashTakerFilter || normalizeText(effectiveTaker) === norma
             )}
 
             {currentView === 'freights' && (
-              <div className="animate-in slide-in-from-bottom-2 fade-in duration-300 space-y-3">
+              <div className="animate-in slide-in-from-bottom-2 fade-in duration-300 space-y-2">
                  <div className="flex justify-between items-center">
                   <div className="flex items-center gap-2">
                     <h2 className="text-lg font-black text-slate-900 tracking-tight uppercase">Base de Fretes</h2>
