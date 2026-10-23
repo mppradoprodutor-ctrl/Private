@@ -602,18 +602,19 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
             />
           </div>
 
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
           {/* Search Box */}
           <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200 w-36 sm:w-44">
             <Filter size={12} className="text-slate-400 shrink-0" />
-            <input 
-              type="text" 
-              placeholder="Buscar viagem..." 
+            <input
+              type="text"
+              placeholder="Buscar viagem..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="bg-transparent text-[10px] font-semibold text-slate-900 placeholder:text-slate-400 outline-none w-full"
             />
           </div>
-
           {/* Product Filter Dropdown */}
           <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200">
             <Package size={12} className="text-red-600 shrink-0" />
@@ -628,7 +629,6 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
               ))}
             </select>
           </div>
-
         </div>
       </div>
 
@@ -888,13 +888,13 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
                 <thead className="sticky top-0 bg-slate-100 border-b border-slate-200 z-10 text-slate-700">
                   <tr>
                     <th className="w-[8%] px-1 py-1.5 text-[8px] font-black uppercase">Data</th>
-                    <th className="w-[7%] px-1 py-1.5 text-[8px] font-black uppercase">Produto</th>
+                    <th className="w-[7%] px-0.5 py-1 text-[8px] font-black uppercase">Produto</th>
                     <th className="w-[20%] px-1 py-1.5 text-[6.5px] font-black uppercase">Origem ➔ Destino</th>
                     <th className="w-[20%] px-1 py-1.5 text-[6.5px] font-black uppercase">Veículo / Motorista</th>
-                    <th className="w-[7%] px-1 py-1.5 text-[6.5px] font-black uppercase text-right">Peso (TN)</th>
-                    <th className="w-[11%] px-1 py-1.5 text-[6.5px] font-black text-emerald-700 uppercase text-right">Frete Empresa</th>
-                    <th className="w-[11%] px-1 py-1.5 text-[6.5px] font-black text-amber-700 uppercase text-right">Frete Motorista</th>
-                    <th className="w-[10%] px-1 py-1.5 text-[6.5px] font-black text-red-700 uppercase text-right">Saldo Líquido</th>
+                    <th className="w-[7%] px-0.5 py-1 text-[6.5px] font-black uppercase text-right">Peso (TN)</th>
+                    <th className="w-[11%] px-0.5 py-1 text-[6.5px] font-black text-emerald-700 uppercase text-right">Frete Empresa</th>
+                    <th className="w-[11%] px-0.5 py-1 text-[6.5px] font-black text-amber-700 uppercase text-right">Frete Motorista</th>
+                    <th className="w-[10%] px-0.5 py-1 text-[6.5px] font-black text-red-700 uppercase text-right">Saldo Líquido</th>
                     <th className="w-[5%] px-1 py-1.5 text-[8px] font-black uppercase text-center">Status</th>
                   </tr>
                 </thead>

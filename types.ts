@@ -173,4 +173,4 @@ export interface Note {
   updatedAt?: string;
 }
 
-export type ViewState = 'dashboard' | 'drivers' | 'freights' | 'thirdPartyFreights' | 'trips' | 'loadingOrder' | 'shipments' | 'reminders' | 'database' | 'market' | 'map' | 'reports' | 'notes';
+export type ViewState = 'dashboard' | 'drivers' | 'freights' | 'thirdPartyFreights' | 'trips' | 'loadingOrder' | 'shipments' | 'reminders' | 'database' | 'market' | 'map' | 'reports' | 'notes' | 'excel';

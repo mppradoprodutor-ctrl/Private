@@ -54,6 +54,7 @@ import ThirdPartyFreightList from './components/ThirdPartyFreightList';
 import ThirdPartyFreightFormModal from './components/ThirdPartyFreightFormModal';
 import ReportsView, { ReportsNavigateFilters } from './components/ReportsView';
 import NotesView from './components/NotesView';
+import ExcelView from './components/ExcelView';
 import NoteFormModal from './components/NoteFormModal';
 
 import MapView from './components/MapView';
@@ -1935,6 +1936,7 @@ const matchesTaker = !dashTakerFilter || normalizeText(effectiveTaker) === norma
     { id: 'map', label: 'Mapa', icon: Globe },
     { id: 'database', label: 'Banco de Dados', icon: Database },
     { id: 'notes', label: 'Notas', icon: StickyNote },
+  { id: 'excel', label: 'Excel', icon: FileSpreadsheet },
   ], [shouldFlashReminders]);
 
   // STABLE CALLBACKS FOR DRIVERS
@@ -3036,7 +3038,9 @@ const matchesTaker = !dashTakerFilter || normalizeText(effectiveTaker) === norma
               />
             )}
             
-            {currentView === 'trips' && (
+            {currentView === 'excel' && <ExcelView />}
+
+              {currentView === 'trips' && (
               <div className="animate-in slide-in-from-bottom-2 fade-in duration-300 space-y-5">
                 <div className="flex justify-between items-center">
                   <h2 className="text-xl font-black text-slate-900 tracking-tight uppercase">Lançar Viagens</h2>
@@ -3364,8 +3368,15 @@ const matchesTaker = !dashTakerFilter || normalizeText(effectiveTaker) === norma
                           placeholder={tripSelectedPlates.length > 0 ? `${tripSelectedPlates.length} PLACAS` : "Placa..."}
                           value={tripSelectedPlates.length > 0 ? (tripSelectedPlates.length === 1 ? tripSelectedPlates[0] : `${tripSelectedPlates.length} PLACAS`) : tripPlateFilter} 
                           onChange={e => {
-                            if (tripSelectedPlates.length > 0) setTripSelectedPlates([]);
-                            setTripPlateFilter(e.target.value);
+                            const rawValue = e.target.value.toUpperCase();
+                            const plates = rawValue.split(/[,;\n]+/).map(value => value.trim()).filter(Boolean);
+                            if (plates.length > 1) {
+                              setTripSelectedPlates(Array.from(new Set(plates)));
+                              setTripPlateFilter('');
+                            } else {
+                              setTripSelectedPlates([]);
+                              setTripPlateFilter(rawValue);
+                            }
                           }} 
                           className="w-full bg-slate-50 border border-slate-100 rounded-md pl-5 pr-1 py-0.5 text-[8.5px] font-bold uppercase outline-none focus:ring-1 focus:ring-red-100 placeholder:text-slate-300"
                         />
@@ -3673,7 +3684,7 @@ const matchesTaker = !dashTakerFilter || normalizeText(effectiveTaker) === norma
 
             <div className="bg-red-50/80 border border-red-200/80 rounded-xl p-3.5 text-xs text-red-800 leading-snug">
               <p className="font-bold flex items-center gap-1.5 text-red-900 mb-1">
-                <Trash2 size={13} className="text-red-600 shrink-0" /> Ação irreversível
+                <Trash2 size={13} className="text-red-600 shrink-0" /> Ação irrevers��vel
               </p>
               Esta operação removerá permanentemente todos os registros de motoristas do seu dispositivo e da nuvem.
             </div>
