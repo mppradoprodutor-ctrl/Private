@@ -54,6 +54,7 @@ import ThirdPartyFreightList from './components/ThirdPartyFreightList';
 import ThirdPartyFreightFormModal from './components/ThirdPartyFreightFormModal';
 import ReportsView, { ReportsNavigateFilters } from './components/ReportsView';
 import NotesView from './components/NotesView';
+import ExcelView from './components/ExcelView';
 import NoteFormModal from './components/NoteFormModal';
 
 import MapView from './components/MapView';
@@ -1935,6 +1936,7 @@ const matchesTaker = !dashTakerFilter || normalizeText(effectiveTaker) === norma
     { id: 'map', label: 'Mapa', icon: Globe },
     { id: 'database', label: 'Banco de Dados', icon: Database },
     { id: 'notes', label: 'Notas', icon: StickyNote },
+  { id: 'excel', label: 'Excel', icon: FileSpreadsheet },
   ], [shouldFlashReminders]);
 
   // STABLE CALLBACKS FOR DRIVERS
@@ -3036,7 +3038,9 @@ const matchesTaker = !dashTakerFilter || normalizeText(effectiveTaker) === norma
               />
             )}
             
-            {currentView === 'trips' && (
+            {currentView === 'excel' && <ExcelView />}
+
+              {currentView === 'trips' && (
               <div className="animate-in slide-in-from-bottom-2 fade-in duration-300 space-y-5">
                 <div className="flex justify-between items-center">
                   <h2 className="text-xl font-black text-slate-900 tracking-tight uppercase">Lançar Viagens</h2>
@@ -3358,19 +3362,47 @@ const matchesTaker = !dashTakerFilter || normalizeText(effectiveTaker) === norma
                     </div>
                     <div className="space-y-0.5">
                       <label className="block text-[7.5px] font-black text-slate-400 uppercase tracking-widest ml-1">Placa</label>
-                      <div className="relative">
-                        <input 
-                          type="text"
-                          placeholder={tripSelectedPlates.length > 0 ? `${tripSelectedPlates.length} PLACAS` : "Placa..."}
-                          value={tripSelectedPlates.length > 0 ? (tripSelectedPlates.length === 1 ? tripSelectedPlates[0] : `${tripSelectedPlates.length} PLACAS`) : tripPlateFilter} 
-                          onChange={e => {
-                            if (tripSelectedPlates.length > 0) setTripSelectedPlates([]);
-                            setTripPlateFilter(e.target.value);
-                          }} 
-                          className="w-full bg-slate-50 border border-slate-100 rounded-md pl-5 pr-1 py-0.5 text-[8.5px] font-bold uppercase outline-none focus:ring-1 focus:ring-red-100 placeholder:text-slate-300"
-                        />
-                        <Truck size={9} className="absolute left-1.5 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none" />
+                      <div className="flex items-center gap-1">
+                        <div className="relative flex-1">
+                          <input 
+                            type="text"
+                            placeholder={tripSelectedPlates.length > 0 ? `${tripSelectedPlates.length} PLACAS` : "Placa..."}
+                            value={tripPlateFilter}
+                            onChange={e => setTripPlateFilter(e.target.value.toUpperCase())}
+                            className="w-full bg-slate-50 border border-slate-100 rounded-md pl-5 pr-1 py-0.5 text-[8.5px] font-bold uppercase outline-none focus:ring-1 focus:ring-red-100 placeholder:text-slate-300"
+                          />
+                          <Truck size={9} className="absolute left-1.5 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none" />
+                        </div>
+                        <button
+                          type="button"
+                          title="Adicionar placa ao filtro"
+                          aria-label="Adicionar placa ao filtro"
+                          onClick={() => {
+                            const plate = tripPlateFilter.trim().toUpperCase();
+                            if (!plate) return;
+                            setTripSelectedPlates(current => Array.from(new Set([...current, plate])));
+                            setTripPlateFilter('');
+                          }}
+                          className="shrink-0 rounded-md border border-red-200 bg-red-50 px-1.5 py-0.5 text-red-700 hover:bg-red-100 transition-colors"
+                        >
+                          <PlusCircle size={10} />
+                        </button>
                       </div>
+                      {tripSelectedPlates.length > 0 && (
+                        <div className="flex flex-wrap gap-0.5 pt-0.5">
+                          {tripSelectedPlates.map(plate => (
+                            <button
+                              key={plate}
+                              type="button"
+                              title={`Remover ${plate}`}
+                              onClick={() => setTripSelectedPlates(current => current.filter(item => item !== plate))}
+                              className="rounded bg-red-50 px-1 text-[7px] font-black text-red-700 hover:bg-red-100"
+                            >
+                              {plate} ×
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <div className="space-y-0.5">
                       <label className="block text-[7.5px] font-black text-slate-400 uppercase tracking-widest ml-1">NF</label>
@@ -3673,7 +3705,7 @@ const matchesTaker = !dashTakerFilter || normalizeText(effectiveTaker) === norma
 
             <div className="bg-red-50/80 border border-red-200/80 rounded-xl p-3.5 text-xs text-red-800 leading-snug">
               <p className="font-bold flex items-center gap-1.5 text-red-900 mb-1">
-                <Trash2 size={13} className="text-red-600 shrink-0" /> Ação irreversível
+                <Trash2 size={13} className="text-red-600 shrink-0" /> Ação irrevers��vel
               </p>
               Esta operação removerá permanentemente todos os registros de motoristas do seu dispositivo e da nuvem.
             </div>
