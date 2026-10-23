@@ -1,6 +1,6 @@
 
 import React, { useMemo, useState, useRef } from 'react';
-import { Trash2, MapPin, Building2, ArrowRightLeft, TrendingUp, Package, Info, Download, FileText, Loader2, Eye, EyeOff, Maximize2, Minimize2, CopyX, Camera, MonitorPlay, Briefcase, DollarSign, Scale, Percent, X, RotateCcw, Columns, Layers, Table } from 'lucide-react';
+import { Trash2, MapPin, Building2, ArrowRightLeft, TrendingUp, Package, Info, Download, FileText, Loader2, Eye, EyeOff, CopyX, Camera, MonitorPlay, Briefcase, DollarSign, Scale, Percent, X, RotateCcw, Columns, Layers, Table } from 'lucide-react';
 import { toBlob } from 'html-to-image';
 import { saveAs } from 'file-saver';
 import { Freight } from '../types';
@@ -16,7 +16,7 @@ const FreightList: React.FC<FreightListProps> = ({ freights, onRemove, onEdit, o
   const [showCompanyFreight, setShowCompanyFreight] = useState(true);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  const [viewMode, setViewMode] = useState<'columns' | 'ultra' | 'table'>('columns');
+  const [viewMode, setViewMode] = useState<'columns' | 'ultra' | 'table'>('table');
   const expandedRef = useRef<HTMLDivElement>(null);
 
   const handleDownloadHDImage = async () => {
@@ -276,14 +276,6 @@ const FreightList: React.FC<FreightListProps> = ({ freights, onRemove, onEdit, o
             </div>
 
             <button 
-              onClick={() => setIsExpanded(true)}
-              className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-900 text-white hover:bg-black border border-slate-900 rounded-xl text-[9.5px] font-black uppercase tracking-wider hover:shadow-lg transition-all active:scale-95 cursor-pointer"
-              title="Expandir Visualização"
-            >
-              <Maximize2 size={11} />
-              Expandir
-            </button>
-            <button 
               onClick={() => setShowCompanyFreight(!showCompanyFreight)}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[9.5px] font-black uppercase tracking-wider transition-all border cursor-pointer ${
                 showCompanyFreight 
@@ -302,25 +294,25 @@ const FreightList: React.FC<FreightListProps> = ({ freights, onRemove, onEdit, o
       {viewMode === 'table' ? (
         /* TABLE VIEW OPTION (COMPACT LIGHT THEME) */
         <div className={`bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs ${isExpanded ? 'flex-1 min-h-0 flex flex-col' : ''}`}>
-          <div className={`overflow-y-auto custom-scrollbar ${isExpanded ? 'flex-1' : 'max-h-[70vh]'}`}>
+          <div className={`overflow-y-auto custom-scrollbar ${isExpanded ? 'flex-1' : 'max-h-[calc(100vh-18rem)]'}`}>
             <table className="w-full text-left border-collapse">
               <thead className="sticky top-0 bg-slate-100 border-b border-slate-200 z-10 text-slate-700">
                 <tr>
-                  <th className="px-3 py-2 text-[9.5px] font-black uppercase">Produto</th>
-                  <th className="px-3 py-2 text-[9.5px] font-black uppercase">Origem ➔ Destino</th>
-                  <th className="px-3 py-2 text-[9.5px] font-black uppercase">Tomador de Serviço</th>
-                  <th className="px-3 py-2 text-[9.5px] font-black uppercase">Restrições / Anotações</th>
-                  <th className="px-3 py-2 text-[9.5px] font-black text-emerald-700 uppercase text-right">Frete Motorista</th>
+                  <th className="px-1.5 py-1 text-[7px] font-black uppercase">Produto</th>
+                  <th className="px-1.5 py-1 text-[7px] font-black uppercase">Origem ➔ Destino</th>
+                  <th className="px-1.5 py-1 text-[7px] font-black uppercase">Tomador de Serviço</th>
+                  <th className="px-1.5 py-1 text-[7px] font-black uppercase">Restrições / Anotações</th>
+                  <th className="px-1.5 py-1 text-[7px] font-black text-emerald-700 uppercase text-right">Frete Motorista</th>
                   {showCompanyFreight && (
                     <>
-                      <th className="px-3 py-2 text-[9.5px] font-black text-slate-900 uppercase text-right">Frete Empresa</th>
-                      <th className="px-3 py-2 text-[9.5px] font-black text-red-700 uppercase text-right">Lucro / Margem</th>
+                      <th className="px-1.5 py-1 text-[7px] font-black text-slate-900 uppercase text-right">Frete Empresa</th>
+                      <th className="px-1.5 py-1 text-[7px] font-black text-red-700 uppercase text-right">Lucro / Margem</th>
                     </>
                   )}
-                  <th className="px-3 py-2 text-[9.5px] font-black uppercase text-center">Ações</th>
+                  <th className="px-1.5 py-1 text-[7px] font-black uppercase text-center">Ações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-xs">
+              <tbody className="divide-y divide-slate-100 text-[9px]">
                 {tableSortedFreights.map((freight) => {
                   const { profit, margin } = calculateFinancials(freight);
                   return (
@@ -331,52 +323,52 @@ const FreightList: React.FC<FreightListProps> = ({ freights, onRemove, onEdit, o
                         !freight.active ? 'opacity-40 grayscale' : ''
                       }`}
                     >
-                      <td className="px-3 py-2 font-black text-slate-900 uppercase whitespace-nowrap">
-                        <span className="bg-slate-100 px-2 py-0.5 rounded text-[10px] border border-slate-200 font-bold">
+                      <td className="px-1.5 py-1 font-black text-slate-900 uppercase whitespace-nowrap">
+                        <span className="bg-slate-100 px-2 py-0.5 rounded text-[8px] border border-slate-200 font-bold">
                           {freight.product || 'Sem Produto'}
                         </span>
                       </td>
-                      <td className="px-3 py-2 font-bold text-slate-800 whitespace-nowrap">
+                      <td className="px-1.5 py-1 font-bold text-slate-800 whitespace-nowrap">
                         <span className="font-bold text-slate-400 text-[9px] mr-1">[{freight.state || 'UF'}]</span>
                         {freight.location && (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8.5px] font-bold bg-blue-50 text-blue-700 border border-blue-100 mr-1">
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[7px] font-bold bg-blue-50 text-blue-700 border border-blue-100 mr-1">
                             {freight.location}
                           </span>
                         )}
                         {freight.origin || 'S/ Origem'} <span className="text-red-600 font-black mx-1">➔</span> {freight.destination || 'S/ Destino'}
                       </td>
-                      <td className="px-3 py-2 font-bold text-slate-600 whitespace-nowrap">
+                      <td className="px-1.5 py-1 font-bold text-slate-600 whitespace-nowrap">
                         {freight.serviceTaker || 'N/A'}
                       </td>
-                      <td className="px-3 py-2 text-[10px] whitespace-nowrap">
+                      <td className="px-1.5 py-1 text-[10px] whitespace-nowrap">
                         <div className="flex items-center gap-1">
                           {freight.restrictions && (
-                            <span className="px-1.5 py-0.5 rounded bg-amber-50 border border-amber-100 text-amber-700 font-bold truncate max-w-[140px]" title={freight.restrictions}>
+                            <span className="px-1.5 py-0.5 rounded bg-amber-50 border border-amber-100 text-amber-700 font-bold truncate max-w-[110px]" title={freight.restrictions}>
                               {freight.restrictions}
                             </span>
                           )}
                           {freight.notes && (
-                            <span className="px-1.5 py-0.5 rounded bg-blue-50 border border-blue-100 text-blue-700 font-bold truncate max-w-[140px]" title={freight.notes}>
+                            <span className="px-1.5 py-0.5 rounded bg-blue-50 border border-blue-100 text-blue-700 font-bold truncate max-w-[110px]" title={freight.notes}>
                               {freight.notes}
                             </span>
                           )}
                           {!freight.restrictions && !freight.notes && <span className="text-slate-300">-</span>}
                         </div>
                       </td>
-                      <td className="px-3 py-2 font-black text-emerald-700 text-right whitespace-nowrap">
+                      <td className="px-1.5 py-1 font-black text-emerald-700 text-right whitespace-nowrap">
                         {formatCurrency(freight.driverTariff)}
                       </td>
                       {showCompanyFreight && (
                         <>
-                          <td className="px-3 py-2 font-black text-slate-900 text-right whitespace-nowrap">
+                          <td className="px-1.5 py-1 font-black text-slate-900 text-right whitespace-nowrap">
                             {formatCurrency(freight.companyTariff)}
                           </td>
-                          <td className="px-3 py-2 font-black text-red-700 text-right whitespace-nowrap">
+                          <td className="px-1.5 py-1 font-black text-red-700 text-right whitespace-nowrap">
                             {formatCurrency(profit)} ({margin.toFixed(1)}%)
                           </td>
                         </>
                       )}
-                      <td className="px-3 py-2 text-center whitespace-nowrap">
+                      <td className="px-1.5 py-1 text-center whitespace-nowrap">
                         <div className="flex items-center justify-center gap-1" onClick={e => e.stopPropagation()}>
                           <button 
                             onClick={() => onDuplicate(freight)}
