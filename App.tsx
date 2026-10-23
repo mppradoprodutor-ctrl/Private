@@ -3367,7 +3367,7 @@ const matchesTaker = !dashTakerFilter || normalizeText(effectiveTaker) === norma
                           <input 
                             type="text"
                             placeholder={tripSelectedPlates.length > 0 ? `${tripSelectedPlates.length} PLACAS` : "Placa..."}
-                            value={tripSelectedPlates.length > 0 ? '' : tripPlateFilter}
+                            value={tripPlateFilter}
                             onChange={e => setTripPlateFilter(e.target.value.toUpperCase())}
                             className="w-full bg-slate-50 border border-slate-100 rounded-md pl-5 pr-1 py-0.5 text-[8.5px] font-bold uppercase outline-none focus:ring-1 focus:ring-red-100 placeholder:text-slate-300"
                           />

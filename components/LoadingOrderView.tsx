@@ -902,15 +902,15 @@ fileName: `${displayDriverName} - ${displayTruckPlate}.pdf`,
                     </div>
                     <div className="flex items-center gap-1 min-w-0 whitespace-nowrap">
                       <span className="text-[7px] font-black uppercase tracking-widest text-slate-400 shrink-0">CPF</span>
-                      <span className="text-[8px] font-bold font-mono leading-none text-slate-700 whitespace-nowrap">{displayCpf || 'Não informado'}</span>
+                      <span className="text-[9px] font-bold font-mono leading-none text-slate-700 whitespace-nowrap">{displayCpf || 'Não informado'}</span>
                     </div>
                     <div className="flex items-center gap-1 min-w-0 whitespace-nowrap">
                       <span className="text-[7px] font-black uppercase tracking-widest text-slate-400 shrink-0">Telefone</span>
-                      <span className="text-[8px] font-bold font-mono leading-none text-slate-700 whitespace-nowrap">{displayPhone || 'Não informado'}</span>
+                      <span className="text-[9px] font-bold font-mono leading-none text-slate-700 whitespace-nowrap">{displayPhone || 'Não informado'}</span>
                     </div>
                     <div className="flex items-center gap-1 min-w-0 whitespace-nowrap">
                       <span className="text-[7px] font-black uppercase tracking-widest text-slate-400 shrink-0">Carretas</span>
-                      <span className="text-[8px] font-bold font-mono leading-none text-slate-700 whitespace-nowrap">{[displayTrailer1, displayTrailer2, displayDolly].filter(Boolean).join(' • ') || 'Nenhuma cadastrada'}</span>
+                      <span className="text-[9px] font-bold font-mono leading-none text-slate-700 whitespace-nowrap">{[displayTrailer1, displayTrailer2, displayDolly].filter(Boolean).join(' • ') || 'Nenhuma cadastrada'}</span>
                     </div>
                   </div>
                 </div>
