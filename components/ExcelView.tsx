@@ -73,7 +73,26 @@ export default function ExcelView() {
           </tr></thead>
           <tbody>{rows.map((row, rowIndex) => <tr key={rowIndex} className="hover:bg-red-50/30">
             <th className="sticky left-0 z-10 border-b border-r border-slate-200 bg-slate-50 px-2 py-1 text-center text-[10px] font-black text-slate-500">{rowIndex + 1}</th>
-            {row.map((cell, columnIndex) => <td key={columnIndex} className="border-b border-r border-slate-200 p-0"><input ref={element => { cellRefs.current[`${rowIndex}-${columnIndex}`] = element; }} value={cell.value} onFocus={() => setSelectedCell({ row: rowIndex, column: columnIndex })} onChange={event => updateCell(rowIndex, columnIndex, { value: event.target.value })} onKeyDown={event => { if (event.key === 'Enter' && !event.nativeEvent.isComposing && event.keyCode !== 229) { event.preventDefault(); moveToNextRow(rowIndex, columnIndex); } }} className="w-full min-w-32 bg-transparent px-3 py-2 outline-none focus:bg-red-50/60 focus:ring-1 focus:ring-inset focus:ring-red-300" style={{ color: cell.color, backgroundColor: cell.background }} aria-label={`Linha ${rowIndex + 1}, coluna ${columnLabels[columnIndex]}`} /></td>)}
+            {row.map((cell, columnIndex) => <td key={columnIndex} className="border-b border-r border-slate-200 p-0"><input ref={element => { cellRefs.current[`${rowIndex}-${columnIndex}`] = element; }} value={cell.value} onFocus={() => setSelectedCell({ row: rowIndex, column: columnIndex })} onChange={event => updateCell(rowIndex, columnIndex, { value: event.target.value })} onKeyDown={event => {
+                if (event.nativeEvent.isComposing || event.keyCode === 229) return;
+                const directions: Record<string, { row: number; column: number }> = {
+                  ArrowUp: { row: rowIndex - 1, column: columnIndex },
+                  ArrowDown: { row: rowIndex + 1, column: columnIndex },
+                  ArrowLeft: { row: rowIndex, column: columnIndex - 1 },
+                  ArrowRight: { row: rowIndex, column: columnIndex + 1 },
+                };
+                const target = directions[event.key];
+                if (target && target.row >= 0 && target.row < rows.length && target.column >= 0 && target.column < row.length) {
+                  event.preventDefault();
+                  setSelectedCell(target);
+                  requestAnimationFrame(() => cellRefs.current[`${target.row}-${target.column}`]?.focus());
+                  return;
+                }
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  moveToNextRow(rowIndex, columnIndex);
+                }
+              }} className="w-full min-w-32 bg-transparent px-3 py-2 outline-none focus:bg-red-50/60 focus:ring-1 focus:ring-inset focus:ring-red-300" style={{ color: cell.color, backgroundColor: cell.background }} aria-label={`Linha ${rowIndex + 1}, coluna ${columnLabels[columnIndex]}`} /></td>)}
           </tr>)}</tbody>
         </table>
         </div>
