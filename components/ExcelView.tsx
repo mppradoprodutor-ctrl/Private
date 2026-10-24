@@ -31,13 +31,22 @@ export default function ExcelView() {
   const changeSelectedTextSize = (delta: number) => {
     const element = refs.current[`${activeCell.row}-${activeCell.column}`];
     const selection = window.getSelection();
-    if (!element || !selection || selection.rangeCount === 0 || !element.contains(selection.anchorNode) || selection.isCollapsed) return;
-    const range = selection.getRangeAt(0);
-    const span = document.createElement('span');
-    span.style.fontSize = `${Math.max(8, (getComputedStyle(element).fontSize ? parseFloat(getComputedStyle(element).fontSize) : 14) + delta)}px`;
-    span.appendChild(range.extractContents()); range.insertNode(span);
-    updateCell(activeCell.row, activeCell.column, { value: element.innerHTML });
-    selection.removeAllRanges(); selection.addRange(range);
+    const hasSelection = Boolean(element && selection && selection.rangeCount > 0 && !selection.isCollapsed && element.contains(selection.anchorNode));
+    if (hasSelection && selection) {
+      const range = selection.getRangeAt(0);
+      const span = document.createElement('span');
+      span.style.fontSize = `${Math.max(8, (parseFloat(getComputedStyle(element!).fontSize) || 14) + delta)}px`;
+      span.appendChild(range.extractContents());
+      range.insertNode(span);
+      updateCell(activeCell.row, activeCell.column, { value: element!.innerHTML });
+      selection.removeAllRanges();
+      selection.addRange(range);
+      return;
+    }
+    setSheets(current => current.map(workbook => workbook.id !== sheet?.id ? workbook : {
+      ...workbook,
+      rows: workbook.rows.map(line => line.map(cell => ({ ...cell, fontSize: Math.max(8, (cell.fontSize ?? 14) + delta) }))),
+    }));
   };
   const buttons = 'rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[9px] font-black uppercase text-slate-700 hover:border-red-300';
   return <section className="animate-in fade-in duration-300 space-y-4">
@@ -51,7 +60,7 @@ export default function ExcelView() {
       <button className={buttons} onClick={() => changeSelectedTextSize(-2)}><Minus data-icon="inline-start" /> Texto -</button><button className={buttons} onClick={() => changeSelectedTextSize(2)}><Plus data-icon="inline-start" /> Texto +</button><button className={buttons} onClick={() => window.print()}><Printer data-icon="inline-start" /> PDF</button>
     </div></div>
     {editingName && <input autoFocus defaultValue={sheet?.name} onBlur={e => { updateSheet(value => ({ ...value, name: e.target.value.trim() || value.name })); setEditingName(false); }} onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }} className="w-52 rounded-lg border border-red-200 px-2 py-1.5 text-[10px] font-bold outline-none" aria-label="Nome da página" />}
-    <div className="excel-print-area overflow-auto rounded-xl border border-slate-200 bg-white shadow-sm"><div style={{ zoom: zoom / 100 }}><table className="min-w-full border-collapse" style={{ fontFamily: 'Arial, sans-serif' }}><thead><tr className="bg-slate-100 text-slate-600"><th className="border p-2 text-[10px]">#</th>{labels.map(label => <th key={label} className="min-w-32 border p-2 text-left text-[10px]">{label}</th>)}</tr></thead><tbody>{rows.map((line, row) => <tr key={row}><th className="border bg-slate-50 p-1 text-[10px]">{row + 1}</th>{line.map((cell, column) => <td key={column} className="border p-0"><div ref={node => { refs.current[`${row}-${column}`] = node; }} contentEditable suppressContentEditableWarning onFocus={() => setActiveCell({ row, column })} onInput={e => updateCell(row, column, { value: e.currentTarget.innerHTML })} onKeyDown={e => { const key = e.key; if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(key)) { e.preventDefault(); const offsets: Record<string, [number, number]> = { ArrowUp: [-1,0], ArrowDown: [1,0], ArrowLeft: [0,-1], ArrowRight: [0,1] }; const [dr, dc] = offsets[key]; move(row + dr, column + dc); } if (key === 'Enter') { e.preventDefault(); move(row + 1, column); } }} dangerouslySetInnerHTML={{ __html: cell.value }} className="min-w-32 px-3 py-2 outline-none focus:bg-red-50/60" style={{ color: cell.color, backgroundColor: cell.background, fontSize: cell.fontSize }} /> </td>)}</tr>)}</tbody></table></div></div>
+    <div className="excel-print-area overflow-auto rounded-xl border border-slate-200 bg-white shadow-sm"><div style={{ zoom: zoom / 100 }}><table className="min-w-full border-collapse" style={{ fontFamily: 'Arial, sans-serif' }}><thead><tr className="bg-slate-100 text-slate-600"><th className="border p-2 text-[10px]">#</th>{labels.map(label => <th key={label} className="min-w-32 border p-2 text-left text-[10px]">{label}</th>)}</tr></thead><tbody>{rows.map((line, row) => <tr key={row}><th className="border bg-slate-50 p-1 text-[10px]">{row + 1}</th>{line.map((cell, column) => <td key={column} className="border p-0"><div ref={node => { refs.current[`${row}-${column}`] = node; }} contentEditable suppressContentEditableWarning onFocus={() => setActiveCell({ row, column })} onBlur={e => updateCell(row, column, { value: e.currentTarget.innerHTML })} onKeyDown={e => { const key = e.key; if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(key)) { e.preventDefault(); const offsets: Record<string, [number, number]> = { ArrowUp: [-1,0], ArrowDown: [1,0], ArrowLeft: [0,-1], ArrowRight: [0,1] }; const [dr, dc] = offsets[key]; move(row + dr, column + dc); } if (key === 'Enter') { e.preventDefault(); move(row + 1, column); } }} dangerouslySetInnerHTML={{ __html: cell.value }} className="min-w-32 px-3 py-2 outline-none focus:bg-red-50/60" style={{ color: cell.color, backgroundColor: cell.background, fontSize: cell.fontSize }} /> </td>)}</tr>)}</tbody></table></div></div>
     <style>{`@media print { @page { margin: 0; } body > * { visibility: hidden !important; } .excel-print-area, .excel-print-area * { visibility: visible !important; } .excel-print-area { position: absolute !important; inset: 0 !important; border: 0 !important; box-shadow: none !important; } }`}</style>
   </section>;
 }
