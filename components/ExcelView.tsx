@@ -16,6 +16,7 @@ export default function ExcelView() {
   const [zoom, setZoom] = useState(100);
   const [activeCell, setActiveCell] = useState({ row: 0, column: 0 });
   const [editingName, setEditingName] = useState(false);
+  const [draggingRow, setDraggingRow] = useState<number | null>(null);
   const refs = useRef<Record<string, HTMLDivElement | null>>({});
   const sheet = sheets.find(item => item.id === activeId) ?? sheets[0];
   const rows = sheet?.rows ?? createRows();
@@ -25,6 +26,12 @@ export default function ExcelView() {
   const renameColumn = (column: number, name: string) => updateSheet(value => ({ ...value, columnNames: value.columnNames.map((current, index) => index === column ? name : current) }));
   const updateSheet = (fn: (value: Sheet) => Sheet) => setSheets(current => current.map(item => item.id === sheet?.id ? fn(item) : item));
   const updateCell = (row: number, column: number, patch: Partial<Cell>) => updateSheet(value => ({ ...value, rows: value.rows.map((line, r) => r === row ? line.map((cell, c) => c === column ? { ...cell, ...patch } : cell) : line) }));
+  const reorderRows = (from: number, to: number) => updateSheet(value => {
+    const nextRows = [...value.rows];
+    const [movedRow] = nextRows.splice(from, 1);
+    nextRows.splice(to, 0, movedRow);
+    return { ...value, rows: nextRows };
+  });
   const focusCell = (row: number, column: number) => { setActiveCell({ row, column }); requestAnimationFrame(() => refs.current[`${row}-${column}`]?.focus()); };
   const move = (row: number, column: number) => { if (row >= 0 && row < rows.length && column >= 0 && column < rows[0].length) focusCell(row, column); };
   const addRow = () => updateSheet(value => ({ ...value, rows: [...value.rows, Array.from({ length: value.rows[0].length }, createCell)] }));
@@ -65,7 +72,34 @@ export default function ExcelView() {
       <button className={buttons} onClick={() => changeSelectedTextSize(-2)}><Minus data-icon="inline-start" /> Texto -</button><button className={buttons} onClick={() => changeSelectedTextSize(2)}><Plus data-icon="inline-start" /> Texto +</button><button className={buttons} onClick={() => window.print()}><Printer data-icon="inline-start" /> PDF</button>
     </div></div>
     {editingName && <input autoFocus defaultValue={sheet?.name} onBlur={e => { updateSheet(value => ({ ...value, name: e.target.value.trim() || value.name })); setEditingName(false); }} onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }} className="w-52 rounded-lg border border-red-200 px-2 py-1.5 text-[10px] font-bold outline-none" aria-label="Nome da página" />}
-    <div className="excel-print-area overflow-auto rounded-xl border border-slate-200 bg-white shadow-sm"><div style={{ zoom: zoom / 100 }}><table className="min-w-full border-collapse" style={{ fontFamily: 'Arial, sans-serif' }}><thead><tr className="bg-slate-100 text-slate-600"><th className="relative border p-2 text-[10px]" style={{ width: sheet.rowHeaderWidth, minWidth: sheet.rowHeaderWidth }}>#<span role="separator" aria-label="Redimensionar coluna numérica" onMouseDown={event => { const startX = event.clientX; const startWidth = sheet.rowHeaderWidth; const move = (moveEvent: MouseEvent) => resizeRowHeader(startWidth + moveEvent.clientX - startX); const stop = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', stop); }; window.addEventListener('mousemove', move); window.addEventListener('mouseup', stop); }} className="absolute inset-y-0 right-0 w-2 cursor-col-resize hover:bg-red-300" /></th>{labels.map((label, columnIndex) => <th key={label} className="relative border p-2 text-left text-[10px]" style={{ width: sheet.columnWidths[columnIndex], minWidth: sheet.columnWidths[columnIndex] }}><input value={label} onChange={event => renameColumn(columnIndex, event.target.value)} aria-label={`Nome da coluna ${label}`} className="w-full min-w-0 bg-transparent font-bold uppercase outline-none" placeholder="Nome" /><span role="separator" aria-label={`Redimensionar coluna ${label}`} onMouseDown={event => { const startX = event.clientX; const startWidth = sheet.columnWidths[columnIndex]; const move = (moveEvent: MouseEvent) => resizeColumn(columnIndex, startWidth + moveEvent.clientX - startX); const stop = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', stop); }; window.addEventListener('mousemove', move); window.addEventListener('mouseup', stop); }} className="absolute inset-y-0 right-0 w-2 cursor-col-resize hover:bg-red-300" /></th>)}</tr></thead><tbody>{rows.map((line, row) => <tr key={row}><th className="border bg-slate-50 p-1 text-[10px]" style={{ width: sheet.rowHeaderWidth, minWidth: sheet.rowHeaderWidth }}>{row + 1}</th>{line.map((cell, column) => <td key={column} className="border p-0"><div ref={node => { refs.current[`${row}-${column}`] = node; }} contentEditable suppressContentEditableWarning onFocus={() => setActiveCell({ row, column })} onBlur={e => updateCell(row, column, { value: e.currentTarget.innerHTML })} onKeyDown={e => { const key = e.key; if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(key)) { e.preventDefault(); const offsets: Record<string, [number, number]> = { ArrowUp: [-1,0], ArrowDown: [1,0], ArrowLeft: [0,-1], ArrowRight: [0,1] }; const [dr, dc] = offsets[key]; move(row + dr, column + dc); } if (key === 'Enter') { e.preventDefault(); move(row + 1, column); } }} dangerouslySetInnerHTML={{ __html: cell.value }} className="min-w-0 px-3 py-2 outline-none focus:bg-red-50/60" style={{ color: cell.color, backgroundColor: cell.background, fontSize: cell.fontSize, width: sheet.columnWidths[column] }} /> </td>)}</tr>)}</tbody></table></div></div>
+    <div className="excel-print-area overflow-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div style={{ zoom: zoom / 100 }}>
+        <table className="min-w-full border-collapse" style={{ fontFamily: 'Arial, sans-serif' }}>
+          <thead>
+            <tr className="bg-slate-100 text-slate-600">
+              <th className="relative border p-2 text-[10px]" style={{ width: sheet.rowHeaderWidth, minWidth: sheet.rowHeaderWidth }}>
+                #
+                <span role="separator" aria-label="Redimensionar coluna numérica" onMouseDown={event => { const startX = event.clientX; const startWidth = sheet.rowHeaderWidth; const move = (moveEvent: MouseEvent) => resizeRowHeader(startWidth + moveEvent.clientX - startX); const stop = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', stop); }; window.addEventListener('mousemove', move); window.addEventListener('mouseup', stop); }} className="absolute inset-y-0 right-0 w-2 cursor-col-resize hover:bg-red-300" />
+              </th>
+              {labels.map((label, columnIndex) => <th key={columnIndex} className="relative border p-2 text-left text-[10px]" style={{ width: sheet.columnWidths[columnIndex], minWidth: sheet.columnWidths[columnIndex] }}>
+                <input value={label} onChange={event => renameColumn(columnIndex, event.target.value)} aria-label={`Nome da coluna ${label}`} className="w-full min-w-0 bg-transparent font-bold outline-none" placeholder="Nome" />
+                <span role="separator" aria-label={`Redimensionar coluna ${label}`} onMouseDown={event => { const startX = event.clientX; const startWidth = sheet.columnWidths[columnIndex]; const move = (moveEvent: MouseEvent) => resizeColumn(columnIndex, startWidth + moveEvent.clientX - startX); const stop = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', stop); }; window.addEventListener('mousemove', move); window.addEventListener('mouseup', stop); }} className="absolute inset-y-0 right-0 w-2 cursor-col-resize hover:bg-red-300" />
+              </th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((line, row) => <tr key={row} onDragOver={event => { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; }} onDrop={event => { event.preventDefault(); if (draggingRow !== null) reorderRows(draggingRow, row); setDraggingRow(null); }}>
+              <th className={`border bg-slate-50 p-1 text-[10px] ${draggingRow === row ? 'opacity-40' : ''}`} style={{ width: sheet.rowHeaderWidth, minWidth: sheet.rowHeaderWidth }}>
+                <button type="button" draggable onDragStart={event => { setDraggingRow(row); event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', String(row)); }} onDragEnd={() => setDraggingRow(null)} className="w-full cursor-grab select-none active:cursor-grabbing" aria-label={`Arrastar linha ${row + 1}`} title="Arraste para mover a linha">{row + 1}</button>
+              </th>
+              {line.map((cell, column) => <td key={column} className="border p-0">
+                <div ref={node => { refs.current[`${row}-${column}`] = node; }} contentEditable suppressContentEditableWarning onFocus={() => setActiveCell({ row, column })} onBlur={e => updateCell(row, column, { value: e.currentTarget.innerHTML })} onKeyDown={e => { const key = e.key; if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(key)) { e.preventDefault(); const offsets: Record<string, [number, number]> = { ArrowUp: [-1,0], ArrowDown: [1,0], ArrowLeft: [0,-1], ArrowRight: [0,1] }; const [dr, dc] = offsets[key]; move(row + dr, column + dc); } if (key === 'Enter') { e.preventDefault(); move(row + 1, column); } }} dangerouslySetInnerHTML={{ __html: cell.value }} className="min-w-0 px-3 py-2 outline-none focus:bg-red-50/60" style={{ color: cell.color, backgroundColor: cell.background, fontSize: cell.fontSize, width: sheet.columnWidths[column] }} />
+              </td>)}
+            </tr>)}
+          </tbody>
+        </table>
+      </div>
+    </div>
     <style>{`@media print { @page { margin: 0; } body > * { visibility: hidden !important; } .excel-print-area, .excel-print-area * { visibility: visible !important; } .excel-print-area { position: absolute !important; inset: 0 !important; border: 0 !important; box-shadow: none !important; } }`}</style>
   </section>;
 }
