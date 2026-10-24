@@ -28,6 +28,8 @@ export default function ExcelView() {
   const move = (row: number, column: number) => { if (row >= 0 && row < rows.length && column >= 0 && column < rows[0].length) focusCell(row, column); };
   const addRow = () => updateSheet(value => ({ ...value, rows: [...value.rows, Array.from({ length: value.rows[0].length }, createCell)] }));
   const addColumn = () => updateSheet(value => ({ ...value, rows: value.rows.map(line => [...line, createCell()]) }));
+  const deleteRow = () => updateSheet(value => value.rows.length <= 1 ? value : ({ ...value, rows: value.rows.filter((_, index) => index !== activeCell.row) }));
+  const deleteColumn = () => updateSheet(value => value.rows[0].length <= 1 ? value : ({ ...value, rows: value.rows.map(line => line.filter((_, index) => index !== activeCell.column)) }));
   const changeSelectedTextSize = (delta: number) => {
     const element = refs.current[`${activeCell.row}-${activeCell.column}`];
     const selection = window.getSelection();
@@ -55,7 +57,7 @@ export default function ExcelView() {
       <button className={buttons} onClick={() => { const next = createSheet(`Planilha ${sheets.length + 1}`); setSheets(value => [...value, next]); setActiveId(next.id); }}><Plus data-icon="inline-start" /> Nova página</button>
       <button className={buttons} disabled={sheets.length < 2} onClick={() => { const next = sheets.filter(item => item.id !== sheet.id); setSheets(next); setActiveId(next[0].id); }}><X data-icon="inline-start" /> Remover</button>
       <button className={buttons} onClick={() => setEditingName(value => !value)}><Pencil data-icon="inline-start" /> Nomear</button>
-      <button className={buttons} onClick={() => updateSheet(value => ({ ...value, rows: [...value.rows, Array.from({ length: value.rows[0].length }, createCell)] }))}>Nova linha</button><button className={buttons} onClick={addColumn}>Nova coluna</button>
+      <span className="flex flex-col gap-0.5"><button className={buttons} onClick={() => updateSheet(value => ({ ...value, rows: [...value.rows, Array.from({ length: value.rows[0].length }, createCell)] }))}>Nova linha</button><button className={`${buttons} border-red-100 text-red-700`} onClick={deleteRow}>Excluir linha</button></span><span className="flex flex-col gap-0.5"><button className={buttons} onClick={addColumn}>Nova coluna</button><button className={`${buttons} border-red-100 text-red-700`} onClick={deleteColumn}>Excluir coluna</button></span>
       <button className={buttons} onClick={() => setZoom(value => Math.max(60, value - 10))}><Minus data-icon="inline-start" /> Zoom -</button><button className={buttons} onClick={() => setZoom(value => Math.min(150, value + 10))}><Plus data-icon="inline-start" /> Zoom +</button>
       <button className={buttons} onClick={() => changeSelectedTextSize(-2)}><Minus data-icon="inline-start" /> Texto -</button><button className={buttons} onClick={() => changeSelectedTextSize(2)}><Plus data-icon="inline-start" /> Texto +</button><button className={buttons} onClick={() => window.print()}><Printer data-icon="inline-start" /> PDF</button>
     </div></div>
