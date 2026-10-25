@@ -24,6 +24,7 @@ export default function ExcelView() {
   const [editingName, setEditingName] = useState(false);
   const [draggingRow, setDraggingRow] = useState<number | null>(null);
   const refs = useRef<Record<string, HTMLDivElement | null>>({});
+  const htmlPropsCache = useRef<Record<string, { value: string; props: { __html: string } }>>({});
   const sheet = sheets.find(item => item.id === activeId) ?? sheets[0];
   const rows = sheet?.rows ?? createRows();
   useEffect(() => { if (!activeId && sheets[0]) setActiveId(sheets[0].id); }, [activeId, sheets]);
@@ -47,6 +48,14 @@ export default function ExcelView() {
   });
   const focusCell = (row: number, column: number) => { setActiveCell({ row, column }); requestAnimationFrame(() => refs.current[`${row}-${column}`]?.focus()); };
   const move = (row: number, column: number) => { if (row >= 0 && row < rows.length && column >= 0 && column < rows[0].length) focusCell(row, column); };
+  const getCellHtmlProps = (row: number, column: number, value: string) => {
+    const key = `${sheet?.id}:${row}:${column}`;
+    const cached = htmlPropsCache.current[key];
+    if (cached?.value === value) return cached.props;
+    const props = { __html: value };
+    htmlPropsCache.current[key] = { value, props };
+    return props;
+  };
   const selectCellByMouse = (row: number, column: number) => {
     if (!selectingCellsRef.current) return;
     const anchor = selectionAnchorRef.current;
@@ -140,7 +149,7 @@ export default function ExcelView() {
                 <button type="button" draggable onDragStart={event => { setDraggingRow(row); event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', String(row)); }} onDragEnd={() => setDraggingRow(null)} className="w-full cursor-grab select-none active:cursor-grabbing" aria-label={`Arrastar linha ${row + 1}`} title="Arraste para mover a linha">{row + 1}</button>
               </th>
               {line.map((cell, column) => <td key={column} className="border p-0">
-                <div ref={node => { refs.current[`${row}-${column}`] = node; }} contentEditable suppressContentEditableWarning onMouseDown={event => { if (event.button !== 0) return; const point = { row, column }; if (event.shiftKey) { event.preventDefault(); setCellSelection(createCellSelection(selectionAnchorRef.current, point)); setActiveCell(point); window.getSelection()?.removeAllRanges(); focusCell(row, column); return; } selectionAnchorRef.current = point; selectingCellsRef.current = true; setCellSelection(createCellSelection(point, point)); setActiveCell(point); }} onMouseEnter={() => selectCellByMouse(row, column)} onDragStart={event => event.preventDefault()} onFocus={() => setActiveCell({ row, column })} onBlur={e => updateCell(row, column, { value: e.currentTarget.innerHTML })} onKeyDown={e => { const key = e.key; if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(key)) { e.preventDefault(); const offsets: Record<string, [number, number]> = { ArrowUp: [-1,0], ArrowDown: [1,0], ArrowLeft: [0,-1], ArrowRight: [0,1] }; const [dr, dc] = offsets[key]; const nextRow = row + dr; const nextColumn = column + dc; if (nextRow >= 0 && nextRow < rows.length && nextColumn >= 0 && nextColumn < rows[0].length) selectCellByKeyboard(nextRow, nextColumn, e.shiftKey); return; } if (key === 'Enter') { e.preventDefault(); if (row + 1 < rows.length) selectCellByKeyboard(row + 1, column, false); } }} dangerouslySetInnerHTML={{ __html: cell.value }} className={`min-w-0 px-3 py-2 outline-none focus:bg-red-50/60 ${isCellSelected(row, column) ? 'ring-1 ring-inset ring-blue-500' : ''}`} style={{ color: cell.color, backgroundColor: cell.background, fontSize: cell.fontSize, width: sheet.columnWidths[column], textAlign: cell.align ?? 'left' }} />
+                <div ref={node => { refs.current[`${row}-${column}`] = node; }} contentEditable suppressContentEditableWarning onMouseDown={event => { if (event.button !== 0) return; const point = { row, column }; if (event.shiftKey) { event.preventDefault(); setCellSelection(createCellSelection(selectionAnchorRef.current, point)); setActiveCell(point); window.getSelection()?.removeAllRanges(); focusCell(row, column); return; } selectionAnchorRef.current = point; selectingCellsRef.current = true; setCellSelection(createCellSelection(point, point)); setActiveCell(point); }} onMouseEnter={() => selectCellByMouse(row, column)} onDragStart={event => event.preventDefault()} onFocus={() => setActiveCell({ row, column })} onBlur={e => updateCell(row, column, { value: e.currentTarget.innerHTML })} onKeyDown={e => { const key = e.key; if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(key)) { e.preventDefault(); const offsets: Record<string, [number, number]> = { ArrowUp: [-1,0], ArrowDown: [1,0], ArrowLeft: [0,-1], ArrowRight: [0,1] }; const [dr, dc] = offsets[key]; const nextRow = row + dr; const nextColumn = column + dc; if (nextRow >= 0 && nextRow < rows.length && nextColumn >= 0 && nextColumn < rows[0].length) selectCellByKeyboard(nextRow, nextColumn, e.shiftKey); return; } if (key === 'Enter') { e.preventDefault(); updateCell(row, column, { value: e.currentTarget.innerHTML }); if (row + 1 < rows.length) selectCellByKeyboard(row + 1, column, false); } }} dangerouslySetInnerHTML={getCellHtmlProps(row, column, cell.value)} className={`min-w-0 px-3 py-2 outline-none focus:bg-red-50/60 ${isCellSelected(row, column) ? 'ring-1 ring-inset ring-blue-500' : ''}`} style={{ color: cell.color, backgroundColor: cell.background, fontSize: cell.fontSize, width: sheet.columnWidths[column], textAlign: cell.align ?? 'left' }} />
               </td>)}
             </tr>)}
           </tbody>
