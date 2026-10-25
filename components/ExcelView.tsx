@@ -38,6 +38,7 @@ export default function ExcelView() {
   const renameColumn = (column: number, name: string) => updateSheet(value => ({ ...value, columnNames: value.columnNames.map((current, index) => index === column ? name : current) }));
   const updateSheet = (fn: (value: Sheet) => Sheet) => setSheets(current => current.map(item => item.id === sheet?.id ? fn(item) : item));
   const updateCell = (row: number, column: number, patch: Partial<Cell>) => updateSheet(value => ({ ...value, rows: value.rows.map((line, r) => r === row ? line.map((cell, c) => c === column ? { ...cell, ...patch } : cell) : line) }));
+  const hasMultipleCellsSelected = cellSelection.startRow !== cellSelection.endRow || cellSelection.startColumn !== cellSelection.endColumn;
   const isCellSelected = (row: number, column: number) => row >= cellSelection.startRow && row <= cellSelection.endRow && column >= cellSelection.startColumn && column <= cellSelection.endColumn;
   const updateSelectedCells = (patch: Partial<Cell>) => updateSheet(value => ({ ...value, rows: value.rows.map((line, row) => line.map((cell, column) => isCellSelected(row, column) ? { ...cell, ...patch } : cell)) }));
   const clearSelectedCellContents = () => {
@@ -90,7 +91,7 @@ export default function ExcelView() {
   const changeSelectedTextSize = (delta: number) => {
     const element = refs.current[`${activeCell.row}-${activeCell.column}`];
     const selection = window.getSelection();
-    const hasTextSelection = Boolean(element && selection && selection.rangeCount > 0 && !selection.isCollapsed && element.contains(selection.anchorNode));
+    const hasTextSelection = Boolean(!hasMultipleCellsSelected && element && selection && selection.rangeCount > 0 && !selection.isCollapsed && element.contains(selection.anchorNode) && element.contains(selection.focusNode));
     if (hasTextSelection && selection) {
       const range = selection.getRangeAt(0);
       const span = document.createElement('span');
@@ -107,7 +108,7 @@ export default function ExcelView() {
   const applyTextColor = (color: string) => {
     const element = refs.current[`${activeCell.row}-${activeCell.column}`];
     const selection = window.getSelection();
-    const hasTextSelection = Boolean(element && selection && selection.rangeCount > 0 && !selection.isCollapsed && element.contains(selection.anchorNode));
+    const hasTextSelection = Boolean(!hasMultipleCellsSelected && element && selection && selection.rangeCount > 0 && !selection.isCollapsed && element.contains(selection.anchorNode) && element.contains(selection.focusNode));
     if (hasTextSelection && selection) {
       const range = selection.getRangeAt(0);
       const span = document.createElement('span');
