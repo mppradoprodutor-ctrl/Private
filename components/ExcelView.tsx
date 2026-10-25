@@ -40,6 +40,14 @@ export default function ExcelView() {
   const updateCell = (row: number, column: number, patch: Partial<Cell>) => updateSheet(value => ({ ...value, rows: value.rows.map((line, r) => r === row ? line.map((cell, c) => c === column ? { ...cell, ...patch } : cell) : line) }));
   const isCellSelected = (row: number, column: number) => row >= cellSelection.startRow && row <= cellSelection.endRow && column >= cellSelection.startColumn && column <= cellSelection.endColumn;
   const updateSelectedCells = (patch: Partial<Cell>) => updateSheet(value => ({ ...value, rows: value.rows.map((line, row) => line.map((cell, column) => isCellSelected(row, column) ? { ...cell, ...patch } : cell)) }));
+  const clearSelectedCellContents = () => {
+    for (let row = cellSelection.startRow; row <= cellSelection.endRow; row += 1) {
+      for (let column = cellSelection.startColumn; column <= cellSelection.endColumn; column += 1) {
+        refs.current[`${row}-${column}`]?.replaceChildren();
+      }
+    }
+    updateSelectedCells({ value: '' });
+  };
   const reorderRows = (from: number, to: number) => updateSheet(value => {
     const nextRows = [...value.rows];
     const [movedRow] = nextRows.splice(from, 1);
@@ -63,6 +71,7 @@ export default function ExcelView() {
     if (anchor.row !== row || anchor.column !== column) window.getSelection()?.removeAllRanges();
   };
   const selectCellByKeyboard = (row: number, column: number, extend: boolean) => {
+    window.getSelection()?.removeAllRanges();
     const target = { row, column };
     if (extend) {
       setCellSelection(createCellSelection(selectionAnchorRef.current, target));
@@ -149,7 +158,7 @@ export default function ExcelView() {
                 <button type="button" draggable onDragStart={event => { setDraggingRow(row); event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', String(row)); }} onDragEnd={() => setDraggingRow(null)} className="w-full cursor-grab select-none active:cursor-grabbing" aria-label={`Arrastar linha ${row + 1}`} title="Arraste para mover a linha">{row + 1}</button>
               </th>
               {line.map((cell, column) => <td key={column} className="border p-0">
-                <div ref={node => { refs.current[`${row}-${column}`] = node; }} contentEditable suppressContentEditableWarning onMouseDown={event => { if (event.button !== 0) return; const point = { row, column }; if (event.shiftKey) { event.preventDefault(); setCellSelection(createCellSelection(selectionAnchorRef.current, point)); setActiveCell(point); window.getSelection()?.removeAllRanges(); focusCell(row, column); return; } selectionAnchorRef.current = point; selectingCellsRef.current = true; setCellSelection(createCellSelection(point, point)); setActiveCell(point); }} onMouseEnter={() => selectCellByMouse(row, column)} onDragStart={event => event.preventDefault()} onFocus={() => setActiveCell({ row, column })} onBlur={e => updateCell(row, column, { value: e.currentTarget.innerHTML })} onKeyDown={e => { const key = e.key; if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(key)) { e.preventDefault(); const offsets: Record<string, [number, number]> = { ArrowUp: [-1,0], ArrowDown: [1,0], ArrowLeft: [0,-1], ArrowRight: [0,1] }; const [dr, dc] = offsets[key]; const nextRow = row + dr; const nextColumn = column + dc; if (nextRow >= 0 && nextRow < rows.length && nextColumn >= 0 && nextColumn < rows[0].length) selectCellByKeyboard(nextRow, nextColumn, e.shiftKey); return; } if (key === 'Enter') { e.preventDefault(); updateCell(row, column, { value: e.currentTarget.innerHTML }); if (row + 1 < rows.length) selectCellByKeyboard(row + 1, column, false); } }} dangerouslySetInnerHTML={getCellHtmlProps(row, column, cell.value)} className={`min-w-0 px-3 py-2 outline-none focus:bg-red-50/60 ${isCellSelected(row, column) ? 'ring-1 ring-inset ring-blue-500' : ''}`} style={{ color: cell.color, backgroundColor: cell.background, fontSize: cell.fontSize, width: sheet.columnWidths[column], textAlign: cell.align ?? 'left' }} />
+                <div ref={node => { refs.current[`${row}-${column}`] = node; }} contentEditable suppressContentEditableWarning onMouseDown={event => { if (event.button !== 0) return; const point = { row, column }; if (event.shiftKey) { event.preventDefault(); setCellSelection(createCellSelection(selectionAnchorRef.current, point)); setActiveCell(point); window.getSelection()?.removeAllRanges(); focusCell(row, column); return; } selectionAnchorRef.current = point; selectingCellsRef.current = true; setCellSelection(createCellSelection(point, point)); setActiveCell(point); }} onMouseEnter={() => selectCellByMouse(row, column)} onDragStart={event => event.preventDefault()} onFocus={() => setActiveCell({ row, column })} onBlur={e => updateCell(row, column, { value: e.currentTarget.innerHTML })} onKeyDown={e => { const key = e.key; if (key === 'Delete' || key === 'Backspace') { const textSelection = window.getSelection(); const hasSelectedText = Boolean(textSelection && !textSelection.isCollapsed && e.currentTarget.contains(textSelection.anchorNode) && e.currentTarget.contains(textSelection.focusNode)); if (!hasSelectedText) { e.preventDefault(); clearSelectedCellContents(); } return; } if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(key)) { e.preventDefault(); const offsets: Record<string, [number, number]> = { ArrowUp: [-1,0], ArrowDown: [1,0], ArrowLeft: [0,-1], ArrowRight: [0,1] }; const [dr, dc] = offsets[key]; const nextRow = row + dr; const nextColumn = column + dc; if (nextRow >= 0 && nextRow < rows.length && nextColumn >= 0 && nextColumn < rows[0].length) selectCellByKeyboard(nextRow, nextColumn, e.shiftKey); return; } if (key === 'Enter') { e.preventDefault(); updateCell(row, column, { value: e.currentTarget.innerHTML }); if (row + 1 < rows.length) selectCellByKeyboard(row + 1, column, false); } }} dangerouslySetInnerHTML={getCellHtmlProps(row, column, cell.value)} className={`min-w-0 px-3 py-2 outline-none focus:bg-red-50/60 ${isCellSelected(row, column) ? 'ring-1 ring-inset ring-blue-500' : ''}`} style={{ color: cell.color, backgroundColor: cell.background, fontSize: cell.fontSize, width: sheet.columnWidths[column], textAlign: cell.align ?? 'left' }} />
               </td>)}
             </tr>)}
           </tbody>
