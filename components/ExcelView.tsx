@@ -37,6 +37,13 @@ export default function ExcelView() {
   const sheet = sheets.find(item => item.id === activeId) ?? sheets[0];
   const rows = sheet?.rows ?? createRows();
   useEffect(() => { if (!activeId && sheets[0]) setActiveId(sheets[0].id); }, [activeId, sheets]);
+  useEffect(() => {
+    const initialCell = { row: 0, column: 0 };
+    setActiveCell(initialCell);
+    setCellSelection(createCellSelection(initialCell, initialCell));
+    selectionAnchorRef.current = initialCell;
+    selectingCellsRef.current = false;
+  }, [sheet?.id]);
   useEffect(() => { localStorage.setItem(storageKey, JSON.stringify(sheets)); }, [sheets]);
   useEffect(() => {
     const stopCellSelection = () => { selectingCellsRef.current = false; };
