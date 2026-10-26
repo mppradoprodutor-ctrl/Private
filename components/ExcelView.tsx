@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { AlignCenter, AlignLeft, Minus, Palette, Plus, Printer, Trash2, X, Pencil } from 'lucide-react';
 
 type Cell = { value: string; color: string; background: string; fontSize?: number; align?: 'left' | 'center' | 'right'; bold?: boolean; italic?: boolean; border?: boolean };
@@ -9,7 +9,7 @@ const createCellSelection = (start: { row: number; column: number }, end: { row:
 const basicColors = ['#111827', '#ffffff', '#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6'];
 type Sheet = { id: string; name: string; rows: Cell[][]; columnWidths: number[]; columnNames: string[]; rowHeaderWidth: number };
 const storageKey = 'gera-excel-workbook-v1';
-const createCell = (): Cell => ({ value: '', color: '#1e293b', background: '#fff', fontSize: 14, align: 'left', bold: false, italic: false, border: true });
+const createCell = (): Cell => ({ value: '', color: '#1e293b', background: '#fff', fontSize: 12, align: 'left', bold: false, italic: false, border: true });
 const createRows = () => Array.from({ length: 12 }, () => Array.from({ length: 8 }, createCell));
 const createSheet = (name: string): Sheet => ({ id: crypto.randomUUID(), name, rows: createRows(), columnWidths: Array(8).fill(128), columnNames: Array.from({ length: 8 }, (_, index) => String.fromCharCode(65 + index)), rowHeaderWidth: 42 });
 
@@ -19,15 +19,7 @@ export default function ExcelView() {
   const [zoom, setZoom] = useState(100);
   const [activeCell, setActiveCell] = useState({ row: 0, column: 0 });
   const [cellSelection, setCellSelection] = useState<CellSelection>(createCellSelection({ row: 0, column: 0 }, { row: 0, column: 0 }));
-  const selectedCells = useMemo(() => {
-    const cells: Array<{ id: string; row: number; column: number }> = [];
-    for (let row = cellSelection.startRow; row <= cellSelection.endRow; row += 1) {
-      for (let column = cellSelection.startColumn; column <= cellSelection.endColumn; column += 1) {
-        cells.push({ id: `${row}-${column}`, row, column });
-      }
-    }
-    return cells;
-  }, [cellSelection]);
+  const [selectedCells, setSelectedCells] = useState<Array<{ id: string; row: number; column: number }>>([{ id: '0-0', row: 0, column: 0 }]);
   const selectionAnchorRef = useRef({ row: 0, column: 0 });
   const selectingCellsRef = useRef(false);
   const [editingName, setEditingName] = useState(false);
@@ -41,6 +33,7 @@ export default function ExcelView() {
     const initialCell = { row: 0, column: 0 };
     setActiveCell(initialCell);
     setCellSelection(createCellSelection(initialCell, initialCell));
+    setSelectedCells([{ id: '0-0', ...initialCell }]);
     selectionAnchorRef.current = initialCell;
     selectingCellsRef.current = false;
   }, [sheet?.id]);
@@ -55,7 +48,18 @@ export default function ExcelView() {
   const updateSheet = (fn: (value: Sheet) => Sheet) => setSheets(current => current.map(item => item.id === sheet?.id ? fn(item) : item));
   const updateCell = (row: number, column: number, patch: Partial<Cell>) => updateSheet(value => ({ ...value, rows: value.rows.map((line, r) => r === row ? line.map((cell, c) => c === column ? { ...cell, ...patch } : cell) : line) }));
   const hasMultipleCellsSelected = selectedCells.length > 1;
-  const isCellSelected = (row: number, column: number) => row >= cellSelection.startRow && row <= cellSelection.endRow && column >= cellSelection.startColumn && column <= cellSelection.endColumn;
+  const isCellSelected = (row: number, column: number) => selectedCells.some(cell => cell.row === row && cell.column === column);
+  const setCellRange = (start: { row: number; column: number }, end: { row: number; column: number }) => {
+    const selection = createCellSelection(start, end);
+    const cells: Array<{ id: string; row: number; column: number }> = [];
+    for (let row = selection.startRow; row <= selection.endRow; row += 1) {
+      for (let column = selection.startColumn; column <= selection.endColumn; column += 1) {
+        cells.push({ id: `${row}-${column}`, row, column });
+      }
+    }
+    setCellSelection(selection);
+    setSelectedCells(cells);
+  };
   const getSelectedCellTargets = () => {
     const alvos = selectedCells && selectedCells.length > 1 ? selectedCells : [activeCell];
     return alvos;
@@ -89,7 +93,7 @@ export default function ExcelView() {
     selectionAnchorRef.current = firstCell;
     selectingCellsRef.current = false;
     window.getSelection()?.removeAllRanges();
-    setCellSelection(createCellSelection(firstCell, lastCell));
+    setCellRange(firstCell, lastCell);
     focusCell(firstCell.row, firstCell.column);
   };
   const move = (row: number, column: number) => { if (row >= 0 && row < rows.length && column >= 0 && column < rows[0].length) focusCell(row, column); };
@@ -104,17 +108,17 @@ export default function ExcelView() {
   const selectCellByMouse = (row: number, column: number) => {
     if (!selectingCellsRef.current) return;
     const anchor = selectionAnchorRef.current;
-    setCellSelection(createCellSelection(anchor, { row, column }));
+    setCellRange(anchor, { row, column });
     if (anchor.row !== row || anchor.column !== column) window.getSelection()?.removeAllRanges();
   };
   const selectCellByKeyboard = (row: number, column: number, extend: boolean) => {
     window.getSelection()?.removeAllRanges();
     const target = { row, column };
     if (extend) {
-      setCellSelection(createCellSelection(selectionAnchorRef.current, target));
+      setCellRange(selectionAnchorRef.current, target);
     } else {
       selectionAnchorRef.current = target;
-      setCellSelection(createCellSelection(target, target));
+      setCellRange(target, target);
     }
     move(row, column);
   };
@@ -124,22 +128,16 @@ export default function ExcelView() {
   const addColumn = () => updateSheet(value => ({ ...value, rows: value.rows.map(line => [...line, createCell()]), columnWidths: [...value.columnWidths, 128], columnNames: [...value.columnNames, String.fromCharCode(65 + value.columnNames.length)] }));
   const deleteRow = () => updateSheet(value => value.rows.length <= 1 ? value : ({ ...value, rows: value.rows.filter((_, index) => index !== activeCell.row) }));
   const deleteColumn = () => updateSheet(value => value.rows[0].length <= 1 ? value : ({ ...value, rows: value.rows.map(line => line.filter((_, index) => index !== activeCell.column)), columnWidths: value.columnWidths.filter((_, index) => index !== activeCell.column), columnNames: value.columnNames.filter((_, index) => index !== activeCell.column) }));
-  const changeSelectedTextSize = (delta: number) => {
-    const element = refs.current[`${activeCell.row}-${activeCell.column}`];
-    const selection = window.getSelection();
-    const hasTextSelection = Boolean(!hasMultipleCellsSelected && element && selection && selection.rangeCount > 0 && !selection.isCollapsed && element.contains(selection.anchorNode) && element.contains(selection.focusNode));
-    if (hasTextSelection && selection) {
-      const range = selection.getRangeAt(0);
-      const span = document.createElement('span');
-      span.style.fontSize = `${Math.max(8, (parseFloat(getComputedStyle(element!).fontSize) || 14) + delta)}px`;
-      span.appendChild(range.extractContents());
-      range.insertNode(span);
-      updateCell(activeCell.row, activeCell.column, { value: element!.innerHTML });
-      selection.removeAllRanges();
-      selection.addRange(range);
-      return;
-    }
-    updateSheet(value => ({ ...value, rows: value.rows.map((line, row) => line.map((cell, column) => isCellSelected(row, column) ? { ...cell, fontSize: Math.max(8, (cell.fontSize ?? 14) + delta) } : cell)) }));
+  const applySelectedFontSize = (fontSize: number) => {
+    if (!selectedCells.length) return;
+    updateSheet(value => {
+      const nextRows = value.rows.map(line => line.slice());
+      selectedCells.forEach(({ row, column }) => {
+        const cell = nextRows[row]?.[column];
+        if (cell) nextRows[row][column] = { ...cell, fontSize };
+      });
+      return { ...value, rows: nextRows };
+    });
   };
   const applyTextColor = (color: string) => {
     const element = refs.current[`${activeCell.row}-${activeCell.column}`];
@@ -230,7 +228,9 @@ export default function ExcelView() {
       <button className={buttons} onClick={() => setEditingName(value => !value)}><Pencil data-icon="inline-start" /> Nomear</button>
       <span className="flex flex-col gap-0.5"><button className={buttons} onClick={() => updateSheet(value => ({ ...value, rows: [...value.rows, Array.from({ length: value.rows[0].length }, createCell)] }))}>Nova linha</button><button className={`${buttons} border-red-100 text-red-700`} onClick={deleteRow}>Excluir linha</button></span><span className="flex flex-col gap-0.5"><button className={buttons} onClick={addColumn}>Nova coluna</button><button className={`${buttons} border-red-100 text-red-700`} onClick={deleteColumn}>Excluir coluna</button></span>
       <button className={buttons} onClick={() => setZoom(value => Math.max(60, value - 10))}><Minus data-icon="inline-start" /> Zoom -</button><button className={buttons} onClick={() => setZoom(value => Math.min(150, value + 10))}><Plus data-icon="inline-start" /> Zoom +</button>
-      <button className={buttons} onMouseDown={event => event.preventDefault()} onClick={() => changeSelectedTextSize(-2)}><Minus data-icon="inline-start" /> Texto -</button><button className={buttons} onMouseDown={event => event.preventDefault()} onClick={() => changeSelectedTextSize(2)}><Plus data-icon="inline-start" /> Texto +</button>
+      <select className={buttons} value={String(activeCellData?.fontSize ?? 12)} disabled={selectedCells.length === 0} onMouseDown={event => event.stopPropagation()} onChange={event => applySelectedFontSize(Number(event.target.value))} aria-label="Tamanho do texto">
+        {[9, 10, 11, 12, 13, 14].map(size => <option key={size} value={size}>{size}</option>)}
+      </select>
       <button className={buttons} onMouseDown={event => event.preventDefault()} onClick={() => updateSelectedCells({ bold: !Boolean(activeCellData?.bold) })} aria-pressed={Boolean(activeCellData?.bold)} title="Alternar negrito"><strong aria-hidden="true">B</strong> Negrito</button><button className={buttons} onMouseDown={event => event.preventDefault()} onClick={() => updateSelectedCells({ italic: !Boolean(activeCellData?.italic) })} aria-pressed={Boolean(activeCellData?.italic)} title="Alternar itálico"><em aria-hidden="true">I</em> Itálico</button>
       <button className={buttons} onMouseDown={event => event.preventDefault()} onClick={() => updateSelectedCells({ align: 'left' })} aria-pressed={!activeCellData?.align || activeCellData.align === 'left'}><AlignLeft data-icon="inline-start" /> Esquerda</button><button className={buttons} onMouseDown={event => event.preventDefault()} onClick={() => updateSelectedCells({ align: 'center' })} aria-pressed={activeCellData?.align === 'center'}><AlignCenter data-icon="inline-start" /> Centro</button><button className={buttons} onMouseDown={event => event.preventDefault()} onClick={() => updateSelectedCells({ align: 'right' })} aria-pressed={activeCellData?.align === 'right'}>Direita</button>
       <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1" aria-label="Cores do texto"><Palette size={12} className="text-slate-500" />{basicColors.map(color => <button key={`text-${color}`} onMouseDown={event => event.preventDefault()} onClick={() => applyTextColor(color)} title={`Cor do texto ${color}`} aria-label={`Cor do texto ${color}`} className="size-3 rounded-full border border-slate-300" style={{ backgroundColor: color }} />)}</div>
@@ -261,7 +261,7 @@ export default function ExcelView() {
                 <button type="button" draggable onDragStart={event => { setDraggingRow(row); event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', String(row)); }} onDragEnd={() => setDraggingRow(null)} className="w-full cursor-grab select-none active:cursor-grabbing" aria-label={`Arrastar linha ${row + 1}`} title="Arraste para mover a linha">{row + 1}</button>
               </th>
               {line.map((cell, column) => <td key={column} className={`${cell.border === false ? 'border-0' : 'border'} p-0 ${cell.bold ? 'font-bold' : ''} ${cell.italic ? 'italic' : ''}`}>
-                <div ref={node => { refs.current[`${row}-${column}`] = node; }} contentEditable suppressContentEditableWarning onMouseDown={event => { if (event.button !== 0) return; const point = { row, column }; if (event.shiftKey) { event.preventDefault(); setCellSelection(createCellSelection(selectionAnchorRef.current, point)); setActiveCell(point); window.getSelection()?.removeAllRanges(); focusCell(row, column); return; } selectionAnchorRef.current = point; selectingCellsRef.current = true; setCellSelection(createCellSelection(point, point)); setActiveCell(point); }} onMouseEnter={() => selectCellByMouse(row, column)} onDragStart={event => event.preventDefault()} onFocus={() => setActiveCell({ row, column })} onBlur={e => updateCell(row, column, { value: e.currentTarget.innerHTML })} onKeyDown={e => { const key = e.key; if ((e.ctrlKey || e.metaKey) && key.toLowerCase() === 'a') { e.preventDefault(); selectAllCells(); return; } if (key === 'Delete' || key === 'Backspace') { const textSelection = window.getSelection(); const hasSelectedText = Boolean(textSelection && !textSelection.isCollapsed && e.currentTarget.contains(textSelection.anchorNode) && e.currentTarget.contains(textSelection.focusNode)); if (!hasSelectedText) { e.preventDefault(); clearSelectedCellContents(); } return; } if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(key)) { e.preventDefault(); const offsets: Record<string, [number, number]> = { ArrowUp: [-1,0], ArrowDown: [1,0], ArrowLeft: [0,-1], ArrowRight: [0,1] }; const [dr, dc] = offsets[key]; const nextRow = row + dr; const nextColumn = column + dc; if (nextRow >= 0 && nextRow < rows.length && nextColumn >= 0 && nextColumn < rows[0].length) selectCellByKeyboard(nextRow, nextColumn, e.shiftKey); return; } if (key === 'Enter') { e.preventDefault(); updateCell(row, column, { value: e.currentTarget.innerHTML }); if (row + 1 < rows.length) selectCellByKeyboard(row + 1, column, false); } }} dangerouslySetInnerHTML={getCellHtmlProps(row, column, cell.value)} className={`min-w-0 px-3 py-2 outline-none focus:bg-red-50/60 ${isCellSelected(row, column) ? 'ring-1 ring-inset ring-blue-500' : ''}`} style={{ color: cell.color, backgroundColor: cell.background, fontSize: cell.fontSize, width: sheet.columnWidths[column], textAlign: cell.align ?? 'left' }} />
+                <div ref={node => { refs.current[`${row}-${column}`] = node; }} contentEditable suppressContentEditableWarning onMouseDown={event => { if (event.button !== 0) return; const point = { row, column }; if (event.shiftKey) { event.preventDefault(); setCellRange(selectionAnchorRef.current, point); setActiveCell(point); window.getSelection()?.removeAllRanges(); focusCell(row, column); return; } if (event.ctrlKey || event.metaKey) { event.preventDefault(); selectingCellsRef.current = false; selectionAnchorRef.current = point; setCellSelection(createCellSelection(point, point)); setSelectedCells(current => current.some(cell => cell.row === row && cell.column === column) ? current.filter(cell => cell.row !== row || cell.column !== column) : [...current, { id: `${row}-${column}`, row, column }]); setActiveCell(point); window.getSelection()?.removeAllRanges(); focusCell(row, column); return; } selectionAnchorRef.current = point; selectingCellsRef.current = true; setCellRange(point, point); setActiveCell(point); }} onMouseEnter={() => selectCellByMouse(row, column)} onDragStart={event => event.preventDefault()} onFocus={() => setActiveCell({ row, column })} onBlur={e => updateCell(row, column, { value: e.currentTarget.innerHTML })} onKeyDown={e => { const key = e.key; if ((e.ctrlKey || e.metaKey) && key.toLowerCase() === 'a') { e.preventDefault(); selectAllCells(); return; } if (key === 'Delete' || key === 'Backspace') { const textSelection = window.getSelection(); const hasSelectedText = Boolean(textSelection && !textSelection.isCollapsed && e.currentTarget.contains(textSelection.anchorNode) && e.currentTarget.contains(textSelection.focusNode)); if (!hasSelectedText) { e.preventDefault(); clearSelectedCellContents(); } return; } if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(key)) { e.preventDefault(); const offsets: Record<string, [number, number]> = { ArrowUp: [-1,0], ArrowDown: [1,0], ArrowLeft: [0,-1], ArrowRight: [0,1] }; const [dr, dc] = offsets[key]; const nextRow = row + dr; const nextColumn = column + dc; if (nextRow >= 0 && nextRow < rows.length && nextColumn >= 0 && nextColumn < rows[0].length) selectCellByKeyboard(nextRow, nextColumn, e.shiftKey); return; } if (key === 'Enter') { e.preventDefault(); updateCell(row, column, { value: e.currentTarget.innerHTML }); if (row + 1 < rows.length) selectCellByKeyboard(row + 1, column, false); } }} dangerouslySetInnerHTML={getCellHtmlProps(row, column, cell.value)} className={`min-w-0 px-3 py-2 outline-none focus:bg-red-50/60 ${isCellSelected(row, column) ? 'ring-1 ring-inset ring-blue-500' : ''}`} style={{ color: cell.color, backgroundColor: isCellSelected(row, column) ? '#dbeafe' : cell.background, fontSize: cell.fontSize ?? 12, width: sheet.columnWidths[column], textAlign: cell.align ?? 'left' }} />
               </td>)}
             </tr>)}
           </tbody>
