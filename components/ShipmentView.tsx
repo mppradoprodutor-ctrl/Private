@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Package, Calendar, MapPin, Truck, Activity, Building2,
   TrendingUp, Scale, ArrowRight, DollarSign, Filter,
@@ -42,6 +42,11 @@ interface ShipmentViewProps {
     setOriginFilter: (v: string) => void;
   };
 }
+
+type ShipmentPeriod = 'HOJE' | 'SEMANA' | 'MÊS' | 'ANO' | 'TUDO';
+
+const isShipmentPeriod = (value: unknown): value is ShipmentPeriod =>
+  value === 'HOJE' || value === 'SEMANA' || value === 'MÊS' || value === 'ANO' || value === 'TUDO';
 
 // Product Detection Engine
 const detectProduct = (rawProduct?: string, notes?: string, terminal?: string, taker?: string, obs?: string): string => {
@@ -163,14 +168,75 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [editingShipment, setEditingShipment] = useState<Shipment | null>(null);
   const [viewMode, setViewMode] = useState<'columns' | 'ultra' | 'table'>('columns');
+  const [periodFilter, setPeriodFilter] = useState<ShipmentPeriod>('TUDO');
   const [selectedShipmentIds, setSelectedShipmentIds] = useState<string[]>([]);
   const [hiddenShipmentIds, setHiddenShipmentIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [takerFilter, setTakerFilter] = useState('');
+  const [isPanelStateRestored, setIsPanelStateRestored] = useState(false);
   const [notesFilter, setNotesFilter] = useState('');
   const normalizedNotesFilter = normalizeStr(notesFilter);
 
+  useEffect(() => {
+    try {
+      const storedState = window.localStorage.getItem('painel_embarques_estado');
+      if (storedState) {
+        const parsedState: unknown = JSON.parse(storedState);
+        if (parsedState && typeof parsedState === 'object') {
+          const state = parsedState as Record<string, unknown>;
+
+          if (state.viewMode === 'COMPACTO') setViewMode('columns');
+          if (state.viewMode === 'SUPER COMPACTO') setViewMode('ultra');
+          if (state.viewMode === 'TABELA') setViewMode('table');
+          if (isShipmentPeriod(state.periodFilter)) setPeriodFilter(state.periodFilter);
+          if (typeof state.startDate === 'string') setStartDate(state.startDate);
+          if (typeof state.endDate === 'string') setEndDate(state.endDate);
+          if (typeof state.productFilter === 'string') setProductFilter(state.productFilter);
+          if (typeof state.takerFilter === 'string') setTakerFilter(state.takerFilter);
+          if (typeof state.searchQuery === 'string') setSearchQuery(state.searchQuery);
+        }
+      }
+    } catch (error) {
+      console.error('Não foi possível restaurar o estado do Painel de Embarques.', error);
+    } finally {
+      setIsPanelStateRestored(true);
+    }
+  }, [setEndDate, setProductFilter, setStartDate]);
+
+  useEffect(() => {
+    if (!isPanelStateRestored) return;
+
+    const persistedViewMode = viewMode === 'columns'
+      ? 'COMPACTO'
+      : viewMode === 'ultra'
+        ? 'SUPER COMPACTO'
+        : 'TABELA';
+
+    try {
+      window.localStorage.setItem('painel_embarques_estado', JSON.stringify({
+        viewMode: persistedViewMode,
+        periodFilter,
+        startDate,
+        endDate,
+        productFilter,
+        takerFilter,
+        searchQuery
+      }));
+    } catch (error) {
+      console.error('Não foi possível salvar o estado do Painel de Embarques.', error);
+    }
+  }, [isPanelStateRestored, viewMode, periodFilter, startDate, endDate, productFilter, takerFilter, searchQuery]);
+
   // Period Presets
   const handleSetPeriod = (period: 'today' | 'week' | 'month' | 'year' | 'all') => {
+    const periodLabels: Record<typeof period, ShipmentPeriod> = {
+      today: 'HOJE',
+      week: 'SEMANA',
+      month: 'MÊS',
+      year: 'ANO',
+      all: 'TUDO'
+    };
+    setPeriodFilter(periodLabels[period]);
     const now = new Date();
     if (period === 'all') {
       setStartDate('');
@@ -379,6 +445,7 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
       // Date filter
       if (startDate && item.date < startDate) return false;
       if (endDate && item.date > endDate) return false;
+      if (takerFilter && (item.serviceTaker || '').trim().toLowerCase() !== takerFilter.toLowerCase()) return false;
 
       // Status filter
       if (statusFilter === 'loaded' && !item.status.toLowerCase().includes('carregado')) return false;
@@ -406,7 +473,7 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
 
       return true;
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [processedItems, hiddenShipmentIds, startDate, endDate, statusFilter, searchQuery, productFilter, destinationFilter, normalizedNotesFilter]);
+  }, [processedItems, hiddenShipmentIds, startDate, endDate, statusFilter, searchQuery, productFilter, destinationFilter, takerFilter, normalizedNotesFilter]);
 
   // Financial KPIs
   const kpis = useMemo(() => {
@@ -487,6 +554,11 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
     });
     return Array.from(set).sort();
   }, [processedItems]);
+
+  const availableTakers = useMemo(() => Array.from(new Set([
+    ...processedItems.map(item => item.serviceTaker),
+    ...freights.map(freight => freight.serviceTaker)
+  ].map(taker => (taker || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b)), [processedItems, freights]);
 
   const formatCurrency = (val: number) => 
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
@@ -582,75 +654,65 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
           </div>
           
           {/* Quick Presets */}
-          <div className="flex bg-slate-100 p-0.5 rounded-md border border-slate-200">
-            <button 
-              onClick={() => handleSetPeriod('today')} 
-              className="px-1.5 py-0.5 text-[8px] font-black uppercase rounded text-slate-600 hover:text-slate-900 hover:bg-white transition-all cursor-pointer"
-            >
-              Hoje
-            </button>
-            <button 
-              onClick={() => handleSetPeriod('week')} 
-              className="px-1.5 py-0.5 text-[8px] font-black uppercase rounded text-slate-600 hover:text-slate-900 hover:bg-white transition-all cursor-pointer"
-            >
-              Semana
-            </button>
-            <button 
-              onClick={() => handleSetPeriod('month')} 
-              className="px-1.5 py-0.5 text-[8px] font-black uppercase rounded text-slate-600 hover:text-slate-900 hover:bg-white transition-all cursor-pointer"
-            >
-              Mês
-            </button>
-            <button 
-              onClick={() => handleSetPeriod('year')} 
-              className="px-1.5 py-0.5 text-[8px] font-black uppercase rounded text-slate-600 hover:text-slate-900 hover:bg-white transition-all cursor-pointer"
-            >
-              Ano
-            </button>
-            <button 
-              onClick={() => handleSetPeriod('all')} 
-              className="px-1.5 py-0.5 text-[8px] font-black uppercase rounded text-slate-600 hover:text-slate-900 hover:bg-white transition-all cursor-pointer"
-            >
-              Tudo
-            </button>
+          <div className="flex flex-col items-start gap-1">
+            <div className="flex bg-slate-100 p-0.5 rounded-md border border-slate-200">
+              <button
+                onClick={() => handleSetPeriod('today')}
+                className="px-1.5 py-0.5 text-[8px] font-black uppercase rounded text-slate-600 hover:text-slate-900 hover:bg-white transition-all cursor-pointer"
+              >
+                Hoje
+              </button>
+              <button
+                onClick={() => handleSetPeriod('week')}
+                className="px-1.5 py-0.5 text-[8px] font-black uppercase rounded text-slate-600 hover:text-slate-900 hover:bg-white transition-all cursor-pointer"
+              >
+                Semana
+              </button>
+              <button
+                onClick={() => handleSetPeriod('month')}
+                className="px-1.5 py-0.5 text-[8px] font-black uppercase rounded text-slate-600 hover:text-slate-900 hover:bg-white transition-all cursor-pointer"
+              >
+                Mês
+              </button>
+              <button
+                onClick={() => handleSetPeriod('year')}
+                className="px-1.5 py-0.5 text-[8px] font-black uppercase rounded text-slate-600 hover:text-slate-900 hover:bg-white transition-all cursor-pointer"
+              >
+                Ano
+              </button>
+              <button
+                onClick={() => handleSetPeriod('all')}
+                className="px-1.5 py-0.5 text-[8px] font-black uppercase rounded text-slate-600 hover:text-slate-900 hover:bg-white transition-all cursor-pointer"
+              >
+                Tudo
+              </button>
+            </div>
+
+            {/* Date Inputs */}
+            <div className="flex items-center gap-1 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200 text-[10px]">
+              <Calendar size={12} className="text-red-600 shrink-0" />
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="bg-transparent text-slate-900 font-bold outline-none cursor-pointer"
+              />
+              <span className="text-slate-400 font-bold text-[9px]">até</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="bg-transparent text-slate-900 font-bold outline-none cursor-pointer"
+              />
+            </div>
           </div>
           <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-md border border-slate-200 self-start">
             <button onClick={() => setViewMode('columns')} className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase flex items-center gap-0.5 transition-all cursor-pointer ${viewMode === 'columns' ? 'bg-red-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'}`} title="Cards Compactos"><Columns size={11} /> Compacto</button>
             <button onClick={() => setViewMode('ultra')} className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase flex items-center gap-0.5 transition-all cursor-pointer ${viewMode === 'ultra' ? 'bg-red-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'}`} title="Lista Resumida de Alta Densidade"><Layers size={11} /> Super Compacto</button>
             <button onClick={() => setViewMode('table')} className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase flex items-center gap-0.5 transition-all cursor-pointer ${viewMode === 'table' ? 'bg-red-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'}`} title="Visão em Tabela Completa"><Table size={11} /> Tabela</button>
           </div>
-
-          {/* Date Inputs */}
-          <div className="flex items-center gap-1 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200 text-[10px]">
-            <Calendar size={12} className="text-red-600 shrink-0" />
-            <input 
-              type="date" 
-              value={startDate} 
-              onChange={(e) => setStartDate(e.target.value)}
-              className="bg-transparent text-slate-900 font-bold outline-none cursor-pointer"
-            />
-            <span className="text-slate-400 font-bold text-[9px]">até</span>
-            <input 
-              type="date" 
-              value={endDate} 
-              onChange={(e) => setEndDate(e.target.value)}
-              className="bg-transparent text-slate-900 font-bold outline-none cursor-pointer"
-            />
-          </div>
-
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
-          {/* Search Box */}
-          <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200 w-36 sm:w-44">
-            <Filter size={12} className="text-slate-400 shrink-0" />
-            <input
-              type="text"
-              placeholder="Buscar viagem..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-transparent text-[10px] font-semibold text-slate-900 placeholder:text-slate-400 outline-none w-full"
-            />
-          </div>
           {/* Product Filter Dropdown */}
           <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200">
             <Package size={12} className="text-red-600 shrink-0" />
@@ -664,6 +726,32 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
                 <option key={p} value={p} className="bg-white text-slate-900">{p}</option>
               ))}
             </select>
+          </div>
+          {/* Service Taker Filter Dropdown */}
+          <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200">
+            <Building2 size={12} className="text-red-600 shrink-0" />
+            <select
+              value={takerFilter}
+              onChange={(e) => setTakerFilter(e.target.value)}
+              className="bg-transparent text-slate-900 font-black text-[10px] outline-none cursor-pointer uppercase max-w-[160px]"
+              aria-label="Filtrar por tomador"
+            >
+              <option value="" className="bg-white text-slate-900">TODOS OS TOMADORES</option>
+              {availableTakers.map(taker => (
+                <option key={taker} value={taker} className="bg-white text-slate-900">{taker}</option>
+              ))}
+            </select>
+          </div>
+          {/* Search Box */}
+          <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200 w-36 sm:w-44">
+            <Filter size={12} className="text-slate-400 shrink-0" />
+            <input
+              type="text"
+              placeholder="Buscar viagem..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="bg-transparent text-[10px] font-semibold text-slate-900 placeholder:text-slate-400 outline-none w-full"
+            />
           </div>
         </div>
       </div>
