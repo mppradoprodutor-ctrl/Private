@@ -3038,7 +3038,7 @@ const matchesTaker = !dashTakerFilter || normalizeText(effectiveTaker) === norma
               />
             )}
             
-            {currentView === 'excel' && <ExcelView />}
+            {currentView === 'excel' && <ExcelView onSaveToCloud={user ? workbook => saveUserDocument(user.uid, 'excel', workbook) : undefined} />}
 
               {currentView === 'trips' && (
               <div className="animate-in slide-in-from-bottom-2 fade-in duration-300 space-y-5">

@@ -5,6 +5,7 @@ import { AlignCenter, AlignLeft, Minus, Palette, Plus, Printer, Trash2, X, Penci
 
 type Cell = { value: string; color: string; background: string; fontSize?: number; align?: 'left' | 'center' | 'right'; bold?: boolean; italic?: boolean; border?: boolean };
 type CellSelection = { startRow: number; startColumn: number; endRow: number; endColumn: number };
+type ExcelViewProps = { onSaveToCloud?: (workbook: { id: string; sheets: Sheet[] }) => Promise<void> };
 const createCellSelection = (start: { row: number; column: number }, end: { row: number; column: number }): CellSelection => ({ startRow: Math.min(start.row, end.row), startColumn: Math.min(start.column, end.column), endRow: Math.max(start.row, end.row), endColumn: Math.max(start.column, end.column) });
 const basicColors = ['#111827', '#ffffff', '#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6'];
 type Sheet = { id: string; name: string; rows: Cell[][]; columnWidths: number[]; columnNames: string[]; rowHeaderWidth: number };
@@ -13,7 +14,7 @@ const createCell = (): Cell => ({ value: '', color: '#1e293b', background: '#fff
 const createRows = () => Array.from({ length: 12 }, () => Array.from({ length: 8 }, createCell));
 const createSheet = (name: string): Sheet => ({ id: crypto.randomUUID(), name, rows: createRows(), columnWidths: Array(8).fill(128), columnNames: Array.from({ length: 8 }, (_, index) => String.fromCharCode(65 + index)), rowHeaderWidth: 42 });
 
-export default function ExcelView() {
+export default function ExcelView({ onSaveToCloud }: ExcelViewProps) {
   const [sheets, setSheets] = useState<Sheet[]>(() => { try { const saved = localStorage.getItem(storageKey); const parsed = saved ? JSON.parse(saved) as Partial<Sheet>[] : []; return parsed.length ? parsed.map(item => ({ ...item, columnWidths: item.columnWidths?.length ? item.columnWidths : Array(item.rows?.[0]?.length ?? 8).fill(128), columnNames: item.columnNames?.length ? item.columnNames : Array.from({ length: item.rows?.[0]?.length ?? 8 }, (_, index) => String.fromCharCode(65 + index)), rowHeaderWidth: item.rowHeaderWidth ?? 42 } as Sheet)) : [createSheet('Planilha 1')]; } catch { return [createSheet('Planilha 1')]; } });
   const [activeId, setActiveId] = useState('');
   const [zoom, setZoom] = useState(100);
@@ -74,6 +75,60 @@ export default function ExcelView() {
       });
       return { ...value, rows: nextRows };
     });
+  };
+  const savePastedValues = (values: Array<{ row: number; column: number; value: string; fontSize: number }>) => {
+    const nextSheets = sheets.map(item => {
+      if (item.id !== sheet?.id) return item;
+      const nextRows = item.rows.map(line => line.slice());
+      values.forEach(({ row, column, value, fontSize }) => {
+        const cell = nextRows[row]?.[column];
+        if (cell) nextRows[row][column] = { ...cell, value, fontSize };
+      });
+      return { ...item, rows: nextRows };
+    });
+    setSheets(nextSheets);
+    if (onSaveToCloud) {
+      void onSaveToCloud({ id: 'workbook', sheets: nextSheets }).catch(error => console.error('Error saving Excel workbook:', error));
+    }
+  };
+  const handlePaste = (event: React.ClipboardEvent<HTMLTableSectionElement>) => {
+    event.preventDefault();
+    if (!(event.target instanceof HTMLDivElement)) return;
+    const element = event.target;
+    const cellRef = Object.entries(refs.current).find(([, node]) => node === element);
+    if (!cellRef) return;
+    const [row, column] = cellRef[0].split('-').map(Number);
+    const pastedText = event.clipboardData.getData('text/plain');
+    if (!pastedText) return;
+    const fontSize = selectedCells.length > 1
+      ? rows[activeCell.row]?.[activeCell.column]?.fontSize ?? 12
+      : rows[row]?.[column]?.fontSize ?? 12;
+
+    const pastedFragment = document.createDocumentFragment();
+    pastedText.split(/\r\n|\n|\r/).forEach((line, index) => {
+      if (index > 0) pastedFragment.append(document.createElement('br'));
+      pastedFragment.append(document.createTextNode(line));
+    });
+    const pastedContent = document.createElement('div');
+    pastedContent.append(pastedFragment.cloneNode(true));
+
+    if (selectedCells.length > 1) {
+      savePastedValues(selectedCells.map(cell => ({ ...cell, value: pastedContent.innerHTML, fontSize })));
+      return;
+    }
+
+    const selection = window.getSelection();
+    if (selection?.rangeCount && element.contains(selection.anchorNode) && element.contains(selection.focusNode)) {
+      const range = selection.getRangeAt(0);
+      range.deleteContents();
+      range.insertNode(pastedFragment);
+      range.collapse(false);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    } else {
+      element.replaceChildren(pastedFragment);
+    }
+    savePastedValues([{ row, column, value: element.innerHTML, fontSize }]);
   };
   const clearSelectedCellContents = () => {
     const alvos = getSelectedCellTargets();
@@ -255,7 +310,7 @@ export default function ExcelView() {
               </th>)}
             </tr>
           </thead>
-          <tbody>
+          <tbody onPaste={handlePaste}>
             {rows.map((line, row) => <tr key={row} onDragOver={event => { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; }} onDrop={event => { event.preventDefault(); if (draggingRow !== null) reorderRows(draggingRow, row); setDraggingRow(null); }}>
               <th className={`border bg-slate-50 p-1 text-[10px] ${draggingRow === row ? 'opacity-40' : ''}`} style={{ width: sheet.rowHeaderWidth, minWidth: sheet.rowHeaderWidth }}>
                 <button type="button" draggable onDragStart={event => { setDraggingRow(row); event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', String(row)); }} onDragEnd={() => setDraggingRow(null)} className="w-full cursor-grab select-none active:cursor-grabbing" aria-label={`Arrastar linha ${row + 1}`} title="Arraste para mover a linha">{row + 1}</button>
@@ -268,6 +323,6 @@ export default function ExcelView() {
         </table>
       </div>
     </div>
-    <style>{`@media print { @page { margin: 0; } body > * { visibility: hidden !important; } .excel-print-area, .excel-print-area * { visibility: visible !important; } .excel-print-area { position: absolute !important; inset: 0 !important; border: 0 !important; box-shadow: none !important; } }`}</style>
+    <style>{`.excel-print-area [contenteditable="true"] * { font-size: inherit !important; } @media print { @page { margin: 0; } body > * { visibility: hidden !important; } .excel-print-area, .excel-print-area * { visibility: visible !important; } .excel-print-area { position: absolute !important; inset: 0 !important; border: 0 !important; box-shadow: none !important; } }`}</style>
   </section>;
 }
