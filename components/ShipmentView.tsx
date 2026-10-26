@@ -4,7 +4,7 @@ import {
   TrendingUp, Scale, ArrowRight, DollarSign, Filter,
   Columns, Table, ArrowUpRight, ArrowDownRight, Layers,
   PlusCircle, FileSpreadsheet, Edit2, Trash2, CheckCircle2,
-  Clock, RefreshCw, BarChart2, PieChart, Sparkles, Download, Printer
+  Clock, RefreshCw, BarChart2, PieChart, Sparkles, Download, Printer, FileText, X
 } from 'lucide-react';
 import { Shipment, Trip, Driver, Freight } from '../types';
 import ShipmentImportModal from './ShipmentImportModal';
@@ -166,6 +166,8 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
   const [selectedShipmentIds, setSelectedShipmentIds] = useState<string[]>([]);
   const [hiddenShipmentIds, setHiddenShipmentIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [notesFilter, setNotesFilter] = useState('');
+  const normalizedNotesFilter = normalizeStr(notesFilter);
 
   // Period Presets
   const handleSetPeriod = (period: 'today' | 'week' | 'month' | 'year' | 'all') => {
@@ -372,6 +374,8 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
   const filteredItems = useMemo(() => {
     return processedItems.filter(item => {
       if (hiddenShipmentIds.includes(item.id)) return false;
+      if (normalizedNotesFilter && (!item.isTrip || !normalizeStr(item.notes).includes(normalizedNotesFilter))) return false;
+
       // Date filter
       if (startDate && item.date < startDate) return false;
       if (endDate && item.date > endDate) return false;
@@ -402,7 +406,7 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
 
       return true;
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [processedItems, hiddenShipmentIds, startDate, endDate, statusFilter, searchQuery, productFilter, destinationFilter]);
+  }, [processedItems, hiddenShipmentIds, startDate, endDate, statusFilter, searchQuery, productFilter, destinationFilter, normalizedNotesFilter]);
 
   // Financial KPIs
   const kpis = useMemo(() => {
@@ -522,16 +526,48 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
         {/* Title & View Switcher */}
           <div className="flex items-center gap-2.5">
           <button type="button" onClick={() => window.print()} title="Imprimir embarques em PDF" aria-label="Imprimir embarques em PDF" className="flex items-center gap-1 rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[8px] font-black uppercase text-slate-500 hover:border-red-200 hover:bg-red-50 hover:text-red-600 cursor-pointer"><Printer size={11} /> PDF</button>
-          <button
-            type="button"
-            onClick={() => { setHiddenShipmentIds([]); setSelectedShipmentIds([]); onRefresh(); }}
-            title="Resetar menu e buscar novamente os dados do sistema"
-            aria-label="Resetar menu e atualizar dados"
-            className="order-first flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-1.5 py-1 text-[8px] font-black uppercase tracking-wide text-slate-500 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600 cursor-pointer"
-          >
-            <RefreshCw size={11} />
-            <span className="hidden sm:inline">Atualizar</span>
-          </button>
+          <div className="order-first flex flex-col items-start gap-1">
+            <button
+              type="button"
+              onClick={() => { setHiddenShipmentIds([]); setSelectedShipmentIds([]); onRefresh(); }}
+              title="Resetar menu e buscar novamente os dados do sistema"
+              aria-label="Resetar menu e atualizar dados"
+              className="flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-1.5 py-1 text-[8px] font-black uppercase tracking-wide text-slate-500 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600 cursor-pointer"
+            >
+              <RefreshCw size={11} />
+              <span className="hidden sm:inline">Atualizar</span>
+            </button>
+            <div className="w-36">
+              <label htmlFor="shipment-notes-filter" className="mb-0.5 block pl-0.5 text-[7.5px] font-black uppercase tracking-wider text-slate-400">
+                Anotações
+              </label>
+              <div className={`relative flex items-center gap-1.5 rounded-md border px-2 py-1 transition-colors ${notesFilter ? 'border-red-300 bg-red-50/50 ring-1 ring-red-200' : 'border-slate-200 bg-slate-50 hover:border-slate-300'}`}>
+                <FileText size={10} className="shrink-0 text-red-600" />
+                <input
+                  id="shipment-notes-filter"
+                  type="text"
+                  value={notesFilter}
+                  onChange={e => setNotesFilter(e.target.value)}
+                  placeholder="Filtrar viagens..."
+                  title="Filtrar viagens pelo campo Anotações de Lançar Viagens"
+                  aria-label="Filtrar embarques pelo campo Anotações de Lançar Viagens"
+                  autoComplete="off"
+                  className="w-full min-w-0 bg-transparent text-[8.5px] font-bold text-slate-900 placeholder:text-slate-400 outline-none"
+                />
+                {notesFilter && (
+                  <button
+                    type="button"
+                    onClick={() => setNotesFilter('')}
+                    title="Limpar filtro de anotações"
+                    aria-label="Limpar filtro de anotações"
+                    className="shrink-0 cursor-pointer text-slate-400 hover:text-red-500"
+                  >
+                    <X size={10} />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
           <button type="button" onClick={() => setSelectedShipmentIds(allSelected ? [] : selectableIds)} className="rounded-md border border-slate-200 bg-slate-50 px-1.5 py-1 text-[8px] font-black uppercase text-slate-500 hover:bg-slate-100 cursor-pointer" title="Selecionar todos os cards filtrados">{allSelected ? 'Desmarcar' : 'Selecionar todos'}</button>
           {selectedShipmentIds.length > 0 && <button type="button" onClick={deleteSelected} className="flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-1.5 py-1 text-[8px] font-black uppercase text-red-600 hover:bg-red-100 cursor-pointer" title="Excluir cards selecionados"><Trash2 size={10} /> Excluir ({selectedShipmentIds.length})</button>}
           <div className="bg-gradient-to-br from-red-600 to-red-700 p-1.5 rounded-lg text-white shadow-sm shadow-red-200">
@@ -705,14 +741,18 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
               <Package size={36} />
             </div>
             <div>
-              <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">Nenhuma viagem encontrada no período</h3>
-              <p className="text-xs text-slate-500 mt-1">Ajuste as datas no topo ou limpe os filtros de busca para visualizar os embarques.</p>
+              <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
+                {normalizedNotesFilter ? 'Nenhuma viagem encontrada nas anotações' : 'Nenhuma viagem encontrada no período'}
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">
+                {normalizedNotesFilter ? 'Tente outro termo ou limpe o filtro de anotações.' : 'Ajuste as datas no topo ou limpe os filtros de busca para visualizar os embarques.'}
+              </p>
             </div>
             <button 
-              onClick={() => handleSetPeriod('all')} 
+              onClick={() => normalizedNotesFilter ? setNotesFilter('') : handleSetPeriod('all')}
               className="bg-red-600 text-white px-4 py-2 rounded-xl text-xs font-black uppercase hover:bg-red-700 transition-all shadow-sm cursor-pointer"
             >
-              Exibir Todas as Datas
+              {normalizedNotesFilter ? 'Limpar filtro de anotações' : 'Exibir Todas as Datas'}
             </button>
           </div>
         ) : viewMode === 'columns' || viewMode === 'ultra' ? (
