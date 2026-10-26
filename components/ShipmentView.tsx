@@ -48,6 +48,32 @@ type ShipmentPeriod = 'HOJE' | 'SEMANA' | 'MÊS' | 'ANO' | 'TUDO';
 const isShipmentPeriod = (value: unknown): value is ShipmentPeriod =>
   value === 'HOJE' || value === 'SEMANA' || value === 'MÊS' || value === 'ANO' || value === 'TUDO';
 
+const saoPauloDateFormatter = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'America/Sao_Paulo',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit'
+});
+
+const getSaoPauloDateKey = (date: Date): string => {
+  const parts = saoPauloDateFormatter.formatToParts(date);
+  const year = parts.find(part => part.type === 'year')?.value;
+  const month = parts.find(part => part.type === 'month')?.value;
+  const day = parts.find(part => part.type === 'day')?.value;
+  return `${year}-${month}-${day}`;
+};
+
+const getShipmentDateKey = (value: string): string => {
+  const dateMatch = /^(\d{4}-\d{2}-\d{2})(?:$|[T ])/.exec(value);
+  if (!dateMatch) return value;
+
+  const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(value);
+  if (value.length === 10 || !hasTimezone) return dateMatch[1];
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? dateMatch[1] : getSaoPauloDateKey(date);
+};
+
 // Product Detection Engine
 const detectProduct = (rawProduct?: string, notes?: string, terminal?: string, taker?: string, obs?: string): string => {
   const raw = (rawProduct || '').toUpperCase().trim();
@@ -243,33 +269,30 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
       setEndDate('');
       return;
     }
+    const todayStr = getSaoPauloDateKey(now);
+    const [year, month, day] = todayStr.split('-').map(Number);
     if (period === 'today') {
-      const todayStr = now.toISOString().split('T')[0];
       setStartDate(todayStr);
       setEndDate(todayStr);
       return;
     }
     if (period === 'week') {
-      const first = now.getDate() - now.getDay();
-      const firstDay = new Date(now.setDate(first)).toISOString().split('T')[0];
-      const lastDay = new Date().toISOString().split('T')[0];
+      const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+      const firstDay = new Date(Date.UTC(year, month - 1, day - weekday)).toISOString().split('T')[0];
       setStartDate(firstDay);
-      setEndDate(lastDay);
+      setEndDate(todayStr);
       return;
     }
     if (period === 'month') {
-      const y = now.getFullYear();
-      const m = now.getMonth();
-      const firstDay = new Date(y, m, 1).toISOString().split('T')[0];
-      const lastDay = new Date(y, m + 1, 0).toISOString().split('T')[0];
+      const firstDay = `${year}-${String(month).padStart(2, '0')}-01`;
+      const lastDay = new Date(Date.UTC(year, month, 0)).toISOString().split('T')[0];
       setStartDate(firstDay);
       setEndDate(lastDay);
       return;
     }
     if (period === 'year') {
-      const y = now.getFullYear();
-      setStartDate(`${y}-01-01`);
-      setEndDate(`${y}-12-31`);
+      setStartDate(`${year}-01-01`);
+      setEndDate(`${year}-12-31`);
       return;
     }
   };
@@ -443,8 +466,9 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
       if (normalizedNotesFilter && (!item.isTrip || !normalizeStr(item.notes).includes(normalizedNotesFilter))) return false;
 
       // Date filter
-      if (startDate && item.date < startDate) return false;
-      if (endDate && item.date > endDate) return false;
+      const itemDate = getShipmentDateKey(item.date);
+      if (startDate && itemDate < startDate) return false;
+      if (endDate && itemDate > endDate) return false;
       if (takerFilter && (item.serviceTaker || '').trim().toLowerCase() !== takerFilter.toLowerCase()) return false;
 
       // Status filter
@@ -589,7 +613,7 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
 
   return (
     <>
-      <style>{`@media print { @page { margin: 6mm; } body { background: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } body > * { visibility: hidden !important; } .shipments-print-area, .shipments-print-area * { visibility: visible !important; } .shipments-print-area { position: absolute !important; inset: 0 !important; width: 100% !important; height: auto !important; overflow: visible !important; margin: 0 !important; padding: 0 !important; } .shipments-print-area button, .shipments-print-area input, .shipments-print-area select { visibility: hidden !important; } }`}</style>
+      <style>{`@media print { @page { margin: 6mm; } body { background: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } body > * { visibility: hidden !important; } .shipments-print-area, .shipments-print-area * { visibility: visible !important; } .shipments-print-area { position: absolute !important; inset: 0 !important; width: 100% !important; height: auto !important; overflow: visible !important; margin: 0 !important; padding: 0 !important; } .shipment-dashboard-body, .shipment-table-container, .shipment-table-scroll { flex: none !important; min-height: 0 !important; height: auto !important; overflow: visible !important; } .shipment-table-scroll thead { position: static !important; } .shipments-print-area button, .shipments-print-area input, .shipments-print-area select { visibility: hidden !important; } }`}</style>
     <div className="shipments-print-area h-[calc(100vh-4.2rem)] flex flex-col overflow-hidden bg-slate-100 text-slate-800 p-2 sm:p-2.5 space-y-2 rounded-2xl border border-slate-200 shadow-md">
       
       {/* 1. TOP CONTROL BAR - PERIOD FILTERS & QUICK ACTIONS */}
@@ -821,7 +845,7 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
       </div>
 
       {/* 3. MAIN DASHBOARD BODY (FIT TO SCREEN) */}
-      <div className="flex-1 min-h-0 relative overflow-hidden">
+      <div className="shipment-dashboard-body flex-1 min-h-0 relative overflow-hidden">
         
         {filteredItems.length === 0 ? (
           <div className="h-full bg-white border border-slate-200 rounded-2xl flex flex-col items-center justify-center p-8 text-center space-y-3 shadow-xs">
@@ -1010,8 +1034,8 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
         ) : (
 
           /* TABLE VIEW OPTION (COMPACT LIGHT THEME) */
-          <div className="h-full bg-white border border-slate-200 rounded-xl overflow-hidden flex flex-col shadow-xs">
-            <div className="flex-1 overflow-hidden">
+          <div className="shipment-table-container h-full bg-white border border-slate-200 rounded-xl overflow-hidden flex flex-col shadow-xs">
+            <div className="shipment-table-scroll min-h-0 flex-1 overflow-auto custom-scrollbar">
               <table className="w-full table-fixed text-left border-collapse text-[9px] leading-tight">
                 <thead className="sticky top-0 bg-slate-100 border-b border-slate-200 z-10 text-slate-700">
                   <tr>
