@@ -12,6 +12,7 @@ export default defineConfig(({ mode }) => {
       plugins: [react()],
       envPrefix: ['VITE_', 'NEXT_PUBLIC_'],
       define: {
+        __VERCEL_URL__: JSON.stringify(process.env.VERCEL_URL ?? env.VERCEL_URL ?? ''),
         'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
         'process.env.NEXT_PUBLIC_FIREBASE_API_KEY': JSON.stringify(env.NEXT_PUBLIC_FIREBASE_API_KEY),
         'process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN': JSON.stringify(env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN),
