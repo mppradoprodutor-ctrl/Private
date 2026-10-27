@@ -64,6 +64,7 @@ export default function ExcelView({ onSaveToCloud, cloudWorkbook, cloudReady = t
   cloudReadyRef.current = cloudReady;
   const [activeId, setActiveId] = useState('');
   const [zoom, setZoom] = useState(100);
+  const [columnOneFilter, setColumnOneFilter] = useState('');
   const [activeCell, setActiveCell] = useState({ row: 0, column: 0 });
   const [cellSelection, setCellSelection] = useState<CellSelection>(createCellSelection({ row: 0, column: 0 }, { row: 0, column: 0 }));
   const [selectedCells, setSelectedCells] = useState<Array<{ id: string; row: number; column: number }>>([{ id: '0-0', row: 0, column: 0 }]);
@@ -81,6 +82,9 @@ export default function ExcelView({ onSaveToCloud, cloudWorkbook, cloudReady = t
   const activeSheetIdRef = useRef(sheet?.id);
   activeSheetIdRef.current = sheet?.id;
   const rows = sheet?.rows ?? createRows();
+  const filteredRows = rows
+    .map((line, row) => ({ line, row }))
+    .filter(({ line }) => line[0]?.value.replace(/<[^>]*>/g, '').toLocaleLowerCase().includes(columnOneFilter.trim().toLocaleLowerCase()));
   const persistVisibleCells = () => {
     try {
       const currentSheets = latestSheetsRef.current.map(item => item.id === activeSheetIdRef.current
@@ -404,6 +408,7 @@ export default function ExcelView({ onSaveToCloud, cloudWorkbook, cloudReady = t
       <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1" aria-label="Cores do fundo"><span className="text-[9px] font-black text-slate-500">Fundo</span>{basicColors.map(color => <button key={`fill-${color}`} onMouseDown={event => event.preventDefault()} onClick={() => updateSelectedCells({ background: color })} title={`Cor do fundo ${color}`} aria-label={`Cor do fundo ${color}`} className="size-3 rounded-full border border-slate-300" style={{ backgroundColor: color }} />)}</div>
       <button className={buttons} onMouseDown={event => event.preventDefault()} onClick={() => updateSelectedCells({ border: activeCellData?.border === false })} aria-pressed={activeCellData?.border !== false} title="Alternar borda nas células selecionadas">Borda</button><button className={`${buttons} border-red-100 text-red-700`} onMouseDown={event => event.preventDefault()} onClick={clearSelectedCellContents} title="Limpar conteúdo das células selecionadas"><Trash2 data-icon="inline-start" /> Limpar</button>
       <button className={buttons} onClick={() => window.print()}><Printer data-icon="inline-start" /> PDF</button>
+      <input type="search" value={columnOneFilter} onChange={event => setColumnOneFilter(event.target.value)} placeholder="Filtrar coluna 1" aria-label="Filtrar pela coluna 1" className="w-36 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[10px] font-bold text-slate-700 outline-none placeholder:text-slate-400 focus:border-red-300" />
     </div></div>
     {editingName && <input autoFocus defaultValue={sheet?.name} onBlur={e => { updateSheet(value => ({ ...value, name: e.target.value.trim() || value.name })); setEditingName(false); }} onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }} className="w-52 rounded-lg border border-red-200 px-2 py-1.5 text-[10px] font-bold outline-none" aria-label="Nome da página" />}
     <div ref={tableContainerRef} className="excel-wrapper excel-print-area rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -425,7 +430,7 @@ export default function ExcelView({ onSaveToCloud, cloudWorkbook, cloudReady = t
             </tr>
           </thead>
           <tbody>
-            {rows.map((line, row) => <tr key={row} onDragOver={event => { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; }} onDrop={event => { event.preventDefault(); if (draggingRow !== null) reorderRows(draggingRow, row); setDraggingRow(null); }}>
+            {filteredRows.map(({ line, row }) => <tr key={row} onDragOver={event => { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; }} onDrop={event => { event.preventDefault(); if (draggingRow !== null) reorderRows(draggingRow, row); setDraggingRow(null); }}>
               <th className={`border bg-slate-50 p-1 text-[10px] ${draggingRow === row ? 'opacity-40' : ''}`} style={{ width: sheet.rowHeaderWidth, minWidth: sheet.rowHeaderWidth }}>
                 <button type="button" draggable onClick={() => selectRow(row)} onDragStart={event => { setDraggingRow(row); event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', String(row)); }} onDragEnd={() => setDraggingRow(null)} className="w-full cursor-grab select-none active:cursor-grabbing" aria-label={`Selecionar linha ${row + 1}`} title="Clique para selecionar a linha ou arraste para movê-la">{row + 1}</button>
               </th>
