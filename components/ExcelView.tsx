@@ -185,7 +185,9 @@ export default function ExcelView({ onSaveToCloud, cloudWorkbook, cloudReady = t
     });
   };
   const handleCopy = (event: ClipboardEvent) => {
-    if (!tableContainerRef.current?.contains(event.target as Node)) return;
+    if (!(event.target instanceof Element)) return;
+    const targetCell = event.target.closest<HTMLElement>('[data-excel-row][data-excel-column]');
+    if (!targetCell || !tableContainerRef.current?.contains(targetCell)) return;
     const isSingleCell = cellSelection.startRow === cellSelection.endRow &&
       cellSelection.startColumn === cellSelection.endColumn;
     const copiedRows = Array.from(
@@ -198,6 +200,13 @@ export default function ExcelView({ onSaveToCloud, cloudWorkbook, cloudReady = t
       ),
     );
     event.preventDefault();
+    if (isSingleCell) {
+      const targetRow = Number(targetCell.dataset.excelRow);
+      const targetColumn = Number(targetCell.dataset.excelColumn);
+      const cell = refs.current[`${targetRow}-${targetColumn}`];
+      event.clipboardData.setData('text/plain', cell?.innerText ?? cell?.textContent ?? copiedRows[0]?.[0] ?? '');
+      return;
+    }
     event.clipboardData.setData('text/plain', toTSV(copiedRows));
   };
   const pasteText = (pastedText: string, startRow: number, startColumn: number) => {
@@ -238,17 +247,21 @@ export default function ExcelView({ onSaveToCloud, cloudWorkbook, cloudReady = t
     setCellRange({ row: startRow, column: startColumn }, end);
   };
   const handlePaste = (event: ClipboardEvent) => {
-    if (!tableContainerRef.current?.contains(event.target as Node)) return;
+    if (!(event.target instanceof Element) || !tableContainerRef.current?.contains(event.target)) return;
+    const targetCell = event.target.closest<HTMLElement>('[data-excel-row][data-excel-column]');
+    const startRow = targetCell ? Number(targetCell.dataset.excelRow) : activeCell.row;
+    const startColumn = targetCell ? Number(targetCell.dataset.excelColumn) : activeCell.column;
+    if (!Number.isInteger(startRow) || !Number.isInteger(startColumn)) return;
     event.preventDefault();
     const pastedText = event.clipboardData.getData('text/plain');
-    pasteText(pastedText, activeCell.row, activeCell.column);
+    pasteText(pastedText, startRow, startColumn);
   };
   useEffect(() => {
-    window.addEventListener('copy', handleCopy);
-    window.addEventListener('paste', handlePaste);
+    window.addEventListener('copy', handleCopy, true);
+    window.addEventListener('paste', handlePaste, true);
     return () => {
-      window.removeEventListener('copy', handleCopy);
-      window.removeEventListener('paste', handlePaste);
+      window.removeEventListener('copy', handleCopy, true);
+      window.removeEventListener('paste', handlePaste, true);
     };
   }, [handleCopy, handlePaste]);
   const clearSelectedCellContents = () => {
@@ -276,7 +289,7 @@ export default function ExcelView({ onSaveToCloud, cloudWorkbook, cloudReady = t
   const getCellHtmlProps = (row: number, column: number, value: string) => {
     const key = `${sheet?.id}:${row}:${column}`;
     const cached = htmlPropsCache.current[key];
-    if (cached?.value === value || document.activeElement === refs.current[`${row}-${column}`]) {
+    if (cached?.value === value) {
       return cached?.props ?? { __html: value };
     }
     const props = { __html: value };
@@ -376,7 +389,7 @@ export default function ExcelView({ onSaveToCloud, cloudWorkbook, cloudReady = t
                 <button type="button" draggable onClick={() => { const first = { row, column: 0 }; const last = { row, column: Math.max(0, line.length - 1) }; selectionAnchorRef.current = first; selectingCellsRef.current = false; setActiveCell(first); setCellRange(first, last); }} onDragStart={event => { setDraggingRow(row); event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', String(row)); }} onDragEnd={() => setDraggingRow(null)} className="w-full cursor-grab select-none active:cursor-grabbing" aria-label={`Selecionar linha ${row + 1}`} title="Clique para selecionar a linha ou arraste para movê-la">{row + 1}</button>
               </th>
               {line.map((cell, column) => <td key={column} className={`${cell.border === false ? 'border-0' : 'border'} p-0 ${cell.bold ? 'font-bold' : ''} ${cell.italic ? 'italic' : ''}`}>
-                <div ref={node => { refs.current[`${row}-${column}`] = node; }} contentEditable suppressContentEditableWarning onMouseDown={event => { if (event.button !== 0) return; const point = { row, column }; if (event.shiftKey) { event.preventDefault(); setCellRange(selectionAnchorRef.current, point); setActiveCell(point); window.getSelection()?.removeAllRanges(); focusCell(row, column); return; } if (event.ctrlKey || event.metaKey) { event.preventDefault(); selectingCellsRef.current = false; selectionAnchorRef.current = point; setCellSelection(createCellSelection(point, point)); setSelectedCells(current => current.some(cell => cell.row === row && cell.column === column) ? current.filter(cell => cell.row !== row || cell.column !== column) : [...current, { id: `${row}-${column}`, row, column }]); setActiveCell(point); window.getSelection()?.removeAllRanges(); focusCell(row, column); return; } selectionAnchorRef.current = point; selectingCellsRef.current = true; setCellRange(point, point); setActiveCell(point); }} onMouseEnter={() => selectCellByMouse(row, column)} onDragStart={event => event.preventDefault()} onFocus={() => { setActiveCell({ row, column }); if (!selectingCellsRef.current) { selectionAnchorRef.current = { row, column }; setCellRange({ row, column }, { row, column }); } }} onBlur={e => updateCell(row, column, { value: e.currentTarget.innerHTML })} onKeyDown={e => { const key = e.key; if ((e.ctrlKey || e.metaKey) && key.toLowerCase() === 'a') { e.preventDefault(); selectAllCells(); return; } if (key === 'Delete' || key === 'Backspace') { const textSelection = window.getSelection(); const hasSelectedText = Boolean(textSelection && !textSelection.isCollapsed && e.currentTarget.contains(textSelection.anchorNode) && e.currentTarget.contains(textSelection.focusNode)); if (!hasSelectedText) { e.preventDefault(); clearSelectedCellContents(); } return; } if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(key)) { e.preventDefault(); const offsets: Record<string, [number, number]> = { ArrowUp: [-1,0], ArrowDown: [1,0], ArrowLeft: [0,-1], ArrowRight: [0,1] }; const [dr, dc] = offsets[key]; const nextRow = row + dr; const nextColumn = column + dc; if (nextRow >= 0 && nextRow < rows.length && nextColumn >= 0 && nextColumn < rows[0].length) selectCellByKeyboard(nextRow, nextColumn, e.shiftKey); return; } if (key === 'Enter') { e.preventDefault(); updateCell(row, column, { value: e.currentTarget.innerHTML }); if (row + 1 < rows.length) selectCellByKeyboard(row + 1, column, false); } }} dangerouslySetInnerHTML={getCellHtmlProps(row, column, cell.value)} className={`min-w-0 px-3 py-2 outline-none focus:bg-red-50/60 ${isCellSelected(row, column) ? 'ring-1 ring-inset ring-blue-500' : ''}`} style={{ color: cell.color, backgroundColor: isCellSelected(row, column) ? '#dbeafe' : cell.background, fontSize: cell.fontSize ?? 12, width: sheet.columnWidths[column], textAlign: cell.align ?? 'left' }} />
+                <div data-excel-row={row} data-excel-column={column} ref={node => { refs.current[`${row}-${column}`] = node; }} contentEditable suppressContentEditableWarning onMouseDown={event => { if (event.button !== 0) return; const point = { row, column }; if (event.shiftKey) { event.preventDefault(); setCellRange(selectionAnchorRef.current, point); setActiveCell(point); window.getSelection()?.removeAllRanges(); focusCell(row, column); return; } if (event.ctrlKey || event.metaKey) { event.preventDefault(); selectingCellsRef.current = false; selectionAnchorRef.current = point; setCellSelection(createCellSelection(point, point)); setSelectedCells(current => current.some(cell => cell.row === row && cell.column === column) ? current.filter(cell => cell.row !== row || cell.column !== column) : [...current, { id: `${row}-${column}`, row, column }]); setActiveCell(point); window.getSelection()?.removeAllRanges(); focusCell(row, column); return; } selectionAnchorRef.current = point; selectingCellsRef.current = true; setCellRange(point, point); setActiveCell(point); }} onMouseEnter={() => selectCellByMouse(row, column)} onDragStart={event => event.preventDefault()} onFocus={() => { setActiveCell({ row, column }); if (!selectingCellsRef.current) { selectionAnchorRef.current = { row, column }; setCellRange({ row, column }, { row, column }); } }} onBlur={e => updateCell(row, column, { value: e.currentTarget.innerHTML })} onKeyDown={e => { const key = e.key; if ((e.ctrlKey || e.metaKey) && key.toLowerCase() === 'a') { e.preventDefault(); selectAllCells(); return; } if (key === 'Delete' || key === 'Backspace') { const textSelection = window.getSelection(); const hasSelectedText = Boolean(textSelection && !textSelection.isCollapsed && e.currentTarget.contains(textSelection.anchorNode) && e.currentTarget.contains(textSelection.focusNode)); if (!hasSelectedText) { e.preventDefault(); clearSelectedCellContents(); } return; } if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(key)) { e.preventDefault(); const offsets: Record<string, [number, number]> = { ArrowUp: [-1,0], ArrowDown: [1,0], ArrowLeft: [0,-1], ArrowRight: [0,1] }; const [dr, dc] = offsets[key]; const nextRow = row + dr; const nextColumn = column + dc; if (nextRow >= 0 && nextRow < rows.length && nextColumn >= 0 && nextColumn < rows[0].length) selectCellByKeyboard(nextRow, nextColumn, e.shiftKey); return; } if (key === 'Enter') { e.preventDefault(); updateCell(row, column, { value: e.currentTarget.innerHTML }); if (row + 1 < rows.length) selectCellByKeyboard(row + 1, column, false); } }} dangerouslySetInnerHTML={getCellHtmlProps(row, column, cell.value)} className={`min-w-0 px-3 py-2 outline-none focus:bg-red-50/60 ${isCellSelected(row, column) ? 'ring-1 ring-inset ring-blue-500' : ''}`} style={{ color: cell.color, backgroundColor: isCellSelected(row, column) ? '#dbeafe' : cell.background, fontSize: cell.fontSize ?? 12, width: sheet.columnWidths[column], textAlign: cell.align ?? 'left' }} />
               </td>)}
             </tr>)}
           </tbody>
