@@ -193,6 +193,22 @@ export default function ExcelView({ onSaveToCloud, cloudWorkbook, cloudReady = t
     }
     return result;
   };
+  const getCellText = (row: number, column: number) => {
+    const cell = refs.current[`${row}-${column}`];
+    if (cell) return cell.innerText || cell.textContent || '';
+    const content = document.createElement('div');
+    content.innerHTML = rows[row]?.[column]?.value ?? '';
+    return content.innerText || content.textContent || '';
+  };
+  const escapeTsvCell = (value: string) => /[\t\n\r"]/.test(value)
+    ? `"${value.replace(/"/g, '""')}"`
+    : value;
+  const escapeHtml = (value: string) => value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
   const handleCopy = (event: React.ClipboardEvent<HTMLDivElement>) => {
     const selection = window.getSelection();
     const hasSelectedText = Boolean(selection && !selection.isCollapsed &&
@@ -210,22 +226,25 @@ export default function ExcelView({ onSaveToCloud, cloudWorkbook, cloudReady = t
     const endRow = Math.max(...selectedRows);
     const startColumn = Math.min(...selectedColumns);
     const endColumn = Math.max(...selectedColumns);
-    const copiedText = Array.from({ length: endRow - startRow + 1 }, (_, rowOffset) =>
+    const copiedRows = Array.from({ length: endRow - startRow + 1 }, (_, rowOffset) =>
       Array.from({ length: endColumn - startColumn + 1 }, (_, columnOffset) => {
         const row = startRow + rowOffset;
         const column = startColumn + columnOffset;
         if (!selectedCells.some(cell => cell.row === row && cell.column === column) &&
             selectedCells.length > 1) return '';
-        const cell = refs.current[`${row}-${column}`];
-        if (cell) return cell.innerText || cell.textContent || '';
-        const content = document.createElement('div');
-        content.innerHTML = rows[row]?.[column]?.value ?? '';
-        return content.innerText || content.textContent || '';
-      }).join('\t'),
-    ).join('\n');
+        return getCellText(row, column);
+      }),
+    );
+    const copiedText = copiedRows
+      .map(line => line.map(escapeTsvCell).join('\t'))
+      .join('\n');
+    const copiedHtml = `<table><tbody>${copiedRows
+      .map(line => `<tr>${line.map(value => `<td>${escapeHtml(value)}</td>`).join('')}</tr>`)
+      .join('')}</tbody></table>`;
 
     event.preventDefault();
     event.clipboardData.setData('text/plain', copiedText);
+    event.clipboardData.setData('text/html', copiedHtml);
   };
   const handlePaste = (event: React.ClipboardEvent<HTMLDivElement>, startRow: number, startColumn: number) => {
     event.preventDefault();
