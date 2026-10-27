@@ -185,11 +185,16 @@ export default function ExcelView({ onSaveToCloud, cloudWorkbook, cloudReady = t
     });
   };
   const handleCopy = (event: ClipboardEvent) => {
+    if (!tableContainerRef.current?.contains(event.target as Node)) return;
+    const isSingleCell = cellSelection.startRow === cellSelection.endRow &&
+      cellSelection.startColumn === cellSelection.endColumn;
     const copiedRows = Array.from(
       { length: cellSelection.endRow - cellSelection.startRow + 1 },
       (_, rowOffset) => Array.from(
         { length: cellSelection.endColumn - cellSelection.startColumn + 1 },
-        (_, columnOffset) => rows[cellSelection.startRow + rowOffset]?.[cellSelection.startColumn + columnOffset]?.value ?? '',
+        (_, columnOffset) => isSingleCell
+          ? rows[cellSelection.startRow]?.[cellSelection.startColumn]?.value ?? ''
+          : rows[cellSelection.startRow + rowOffset]?.[cellSelection.startColumn + columnOffset]?.value ?? '',
       ),
     );
     event.preventDefault();
@@ -233,17 +238,17 @@ export default function ExcelView({ onSaveToCloud, cloudWorkbook, cloudReady = t
     setCellRange({ row: startRow, column: startColumn }, end);
   };
   const handlePaste = (event: ClipboardEvent) => {
+    if (!tableContainerRef.current?.contains(event.target as Node)) return;
     event.preventDefault();
-    pasteText(event.clipboardData.getData('text/plain'), cellSelection.startRow, cellSelection.startColumn);
+    const pastedText = event.clipboardData.getData('text/plain');
+    pasteText(pastedText, activeCell.row, activeCell.column);
   };
   useEffect(() => {
-    const container = tableContainerRef.current;
-    if (!container) return;
-    container.addEventListener('copy', handleCopy);
-    container.addEventListener('paste', handlePaste);
+    window.addEventListener('copy', handleCopy);
+    window.addEventListener('paste', handlePaste);
     return () => {
-      container.removeEventListener('copy', handleCopy);
-      container.removeEventListener('paste', handlePaste);
+      window.removeEventListener('copy', handleCopy);
+      window.removeEventListener('paste', handlePaste);
     };
   }, [handleCopy, handlePaste]);
   const clearSelectedCellContents = () => {
@@ -371,21 +376,7 @@ export default function ExcelView({ onSaveToCloud, cloudWorkbook, cloudReady = t
                 <button type="button" draggable onClick={() => { const first = { row, column: 0 }; const last = { row, column: Math.max(0, line.length - 1) }; selectionAnchorRef.current = first; selectingCellsRef.current = false; setActiveCell(first); setCellRange(first, last); }} onDragStart={event => { setDraggingRow(row); event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', String(row)); }} onDragEnd={() => setDraggingRow(null)} className="w-full cursor-grab select-none active:cursor-grabbing" aria-label={`Selecionar linha ${row + 1}`} title="Clique para selecionar a linha ou arraste para movê-la">{row + 1}</button>
               </th>
               {line.map((cell, column) => <td key={column} className={`${cell.border === false ? 'border-0' : 'border'} p-0 ${cell.bold ? 'font-bold' : ''} ${cell.italic ? 'italic' : ''}`}>
-                <div ref={node => { refs.current[`${row}-${column}`] = node; }} contentEditable suppressContentEditableWarning onCopy={event => {
-                  if (cellSelection.startRow !== cellSelection.endRow || cellSelection.startColumn !== cellSelection.endColumn) return;
-                  event.preventDefault();
-                  event.stopPropagation();
-                  event.clipboardData.setData('text/plain', rows[cellSelection.startRow]?.[cellSelection.startColumn]?.value ?? '');
-                }} onPaste={event => {
-                  const text = event.clipboardData.getData('text/plain');
-                  if (!/[\t\n\r]/.test(text)) {
-                    event.stopPropagation();
-                    return;
-                  }
-                  event.preventDefault();
-                  event.stopPropagation();
-                  pasteText(text, row, column);
-                }} onMouseDown={event => { if (event.button !== 0) return; const point = { row, column }; if (event.shiftKey) { event.preventDefault(); setCellRange(selectionAnchorRef.current, point); setActiveCell(point); window.getSelection()?.removeAllRanges(); focusCell(row, column); return; } if (event.ctrlKey || event.metaKey) { event.preventDefault(); selectingCellsRef.current = false; selectionAnchorRef.current = point; setCellSelection(createCellSelection(point, point)); setSelectedCells(current => current.some(cell => cell.row === row && cell.column === column) ? current.filter(cell => cell.row !== row || cell.column !== column) : [...current, { id: `${row}-${column}`, row, column }]); setActiveCell(point); window.getSelection()?.removeAllRanges(); focusCell(row, column); return; } selectionAnchorRef.current = point; selectingCellsRef.current = true; setCellRange(point, point); setActiveCell(point); }} onMouseEnter={() => selectCellByMouse(row, column)} onDragStart={event => event.preventDefault()} onFocus={() => { setActiveCell({ row, column }); if (!selectingCellsRef.current) { selectionAnchorRef.current = { row, column }; setCellRange({ row, column }, { row, column }); } }} onBlur={e => updateCell(row, column, { value: e.currentTarget.innerHTML })} onKeyDown={e => { const key = e.key; if ((e.ctrlKey || e.metaKey) && key.toLowerCase() === 'a') { e.preventDefault(); selectAllCells(); return; } if (key === 'Delete' || key === 'Backspace') { const textSelection = window.getSelection(); const hasSelectedText = Boolean(textSelection && !textSelection.isCollapsed && e.currentTarget.contains(textSelection.anchorNode) && e.currentTarget.contains(textSelection.focusNode)); if (!hasSelectedText) { e.preventDefault(); clearSelectedCellContents(); } return; } if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(key)) { e.preventDefault(); const offsets: Record<string, [number, number]> = { ArrowUp: [-1,0], ArrowDown: [1,0], ArrowLeft: [0,-1], ArrowRight: [0,1] }; const [dr, dc] = offsets[key]; const nextRow = row + dr; const nextColumn = column + dc; if (nextRow >= 0 && nextRow < rows.length && nextColumn >= 0 && nextColumn < rows[0].length) selectCellByKeyboard(nextRow, nextColumn, e.shiftKey); return; } if (key === 'Enter') { e.preventDefault(); updateCell(row, column, { value: e.currentTarget.innerHTML }); if (row + 1 < rows.length) selectCellByKeyboard(row + 1, column, false); } }} dangerouslySetInnerHTML={getCellHtmlProps(row, column, cell.value)} className={`min-w-0 px-3 py-2 outline-none focus:bg-red-50/60 ${isCellSelected(row, column) ? 'ring-1 ring-inset ring-blue-500' : ''}`} style={{ color: cell.color, backgroundColor: isCellSelected(row, column) ? '#dbeafe' : cell.background, fontSize: cell.fontSize ?? 12, width: sheet.columnWidths[column], textAlign: cell.align ?? 'left' }} />
+                <div ref={node => { refs.current[`${row}-${column}`] = node; }} contentEditable suppressContentEditableWarning onMouseDown={event => { if (event.button !== 0) return; const point = { row, column }; if (event.shiftKey) { event.preventDefault(); setCellRange(selectionAnchorRef.current, point); setActiveCell(point); window.getSelection()?.removeAllRanges(); focusCell(row, column); return; } if (event.ctrlKey || event.metaKey) { event.preventDefault(); selectingCellsRef.current = false; selectionAnchorRef.current = point; setCellSelection(createCellSelection(point, point)); setSelectedCells(current => current.some(cell => cell.row === row && cell.column === column) ? current.filter(cell => cell.row !== row || cell.column !== column) : [...current, { id: `${row}-${column}`, row, column }]); setActiveCell(point); window.getSelection()?.removeAllRanges(); focusCell(row, column); return; } selectionAnchorRef.current = point; selectingCellsRef.current = true; setCellRange(point, point); setActiveCell(point); }} onMouseEnter={() => selectCellByMouse(row, column)} onDragStart={event => event.preventDefault()} onFocus={() => { setActiveCell({ row, column }); if (!selectingCellsRef.current) { selectionAnchorRef.current = { row, column }; setCellRange({ row, column }, { row, column }); } }} onBlur={e => updateCell(row, column, { value: e.currentTarget.innerHTML })} onKeyDown={e => { const key = e.key; if ((e.ctrlKey || e.metaKey) && key.toLowerCase() === 'a') { e.preventDefault(); selectAllCells(); return; } if (key === 'Delete' || key === 'Backspace') { const textSelection = window.getSelection(); const hasSelectedText = Boolean(textSelection && !textSelection.isCollapsed && e.currentTarget.contains(textSelection.anchorNode) && e.currentTarget.contains(textSelection.focusNode)); if (!hasSelectedText) { e.preventDefault(); clearSelectedCellContents(); } return; } if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(key)) { e.preventDefault(); const offsets: Record<string, [number, number]> = { ArrowUp: [-1,0], ArrowDown: [1,0], ArrowLeft: [0,-1], ArrowRight: [0,1] }; const [dr, dc] = offsets[key]; const nextRow = row + dr; const nextColumn = column + dc; if (nextRow >= 0 && nextRow < rows.length && nextColumn >= 0 && nextColumn < rows[0].length) selectCellByKeyboard(nextRow, nextColumn, e.shiftKey); return; } if (key === 'Enter') { e.preventDefault(); updateCell(row, column, { value: e.currentTarget.innerHTML }); if (row + 1 < rows.length) selectCellByKeyboard(row + 1, column, false); } }} dangerouslySetInnerHTML={getCellHtmlProps(row, column, cell.value)} className={`min-w-0 px-3 py-2 outline-none focus:bg-red-50/60 ${isCellSelected(row, column) ? 'ring-1 ring-inset ring-blue-500' : ''}`} style={{ color: cell.color, backgroundColor: isCellSelected(row, column) ? '#dbeafe' : cell.background, fontSize: cell.fontSize ?? 12, width: sheet.columnWidths[column], textAlign: cell.align ?? 'left' }} />
               </td>)}
             </tr>)}
           </tbody>
