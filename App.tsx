@@ -1264,7 +1264,7 @@ const App: React.FC = () => {
                 setCloudExcelWorkbook(localWorkbook);
               } else if (hasExcelWorkbookData(cloudWorkbook)) {
                 try {
-                  localStorage.setItem(EXCEL_STORAGE_KEY, JSON.stringify(cloudWorkbook.sheets));
+                  localStorage.setItem(EXCEL_STORAGE_KEY, JSON.stringify({ id: 'excel-root', sheets: cloudWorkbook.sheets }));
                   setExcelWorkbook(cloudWorkbook);
                   setCloudExcelWorkbook(cloudWorkbook);
                 } catch (error) {
@@ -1278,7 +1278,7 @@ const App: React.FC = () => {
 
             if (hasExcelWorkbookData(cloudWorkbook)) {
               try {
-                localStorage.setItem(EXCEL_STORAGE_KEY, JSON.stringify(cloudWorkbook.sheets));
+                localStorage.setItem(EXCEL_STORAGE_KEY, JSON.stringify({ id: 'excel-root', sheets: cloudWorkbook.sheets }));
                 setExcelWorkbook(cloudWorkbook);
                 setCloudExcelWorkbook(cloudWorkbook);
               } catch (error) {
@@ -1368,7 +1368,7 @@ const App: React.FC = () => {
         if (json.operationalUnits) saveOperationalUnits(json.operationalUnits);
         const backupWorkbook = parseExcelWorkbook(json.excel) ?? parseExcelWorkbook(json.planilhas);
         if (hasExcelWorkbookData(backupWorkbook)) {
-          localStorage.setItem(EXCEL_STORAGE_KEY, JSON.stringify(backupWorkbook.sheets));
+          localStorage.setItem(EXCEL_STORAGE_KEY, JSON.stringify({ id: 'excel-root', sheets: backupWorkbook.sheets }));
           setExcelWorkbook(backupWorkbook);
           setCloudExcelWorkbook(backupWorkbook);
           if (user) {

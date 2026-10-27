@@ -26,7 +26,8 @@ export type ExcelWorkbook = {
   companyCnpj?: string;
 };
 
-export const EXCEL_STORAGE_KEY = 'my_system_excel_planilha1_v2';
+export const EXCEL_STORAGE_KEY = 'MY_SYSTEM_EXCEL_v3';
+export const PREVIOUS_EXCEL_STORAGE_KEY = 'my_system_excel_planilha1_v2';
 export const LEGACY_EXCEL_STORAGE_KEY = 'gera-excel-workbook-v1';
 export const EXCEL_COMPANY_CNPJ = '33.777.479/0001-26';
 export const EXCEL_WORKBOOK_DOCUMENT_ID = 'workbook_33777479000126';
@@ -53,7 +54,7 @@ export const getColumnName = (column: number) => {
   return name;
 };
 
-export const createRows = () => Array.from({ length: 12 }, () => Array.from({ length: 8 }, createCell));
+export const createRows = () => Array.from({ length: 30 }, () => Array.from({ length: 8 }, createCell));
 export const createSheet = (name: string): Sheet => ({
   id: crypto.randomUUID(),
   name,
@@ -76,13 +77,25 @@ export function parseExcelWorkbook(value: unknown): ExcelWorkbook | null {
       item && typeof item === 'object' &&
       typeof (item as Partial<Sheet>).id === 'string' &&
       typeof (item as Partial<Sheet>).name === 'string' &&
-      Array.isArray((item as Partial<Sheet>).rows) &&
-      (item as Partial<Sheet>).rows!.every(Array.isArray)
+      (Array.isArray((item as Partial<Sheet>).rows) || Array.isArray((item as { data?: unknown }).data)) &&
+      ((item as Partial<Sheet>).rows ?? (item as { data: unknown[] }).data).every(Array.isArray)
     ))
     .map(item => {
-      const columnCount = item.rows?.[0]?.length ?? 8;
+      const sourceRows = item.rows ?? (item as unknown as { data: unknown[][] }).data;
+      const columnCount = sourceRows[0]?.length ?? 8;
+      const rows = sourceRows.map(line => line.map(rawCell => {
+        const cell = rawCell && typeof rawCell === 'object'
+          ? rawCell as Partial<Cell>
+          : { value: String(rawCell ?? '') };
+        return {
+          ...createCell(),
+          ...cell,
+          value: typeof cell.value === 'string' ? cell.value : String(cell.value ?? ''),
+        };
+      }));
       return {
         ...item,
+        rows,
         columnWidths: item.columnWidths?.length ? item.columnWidths : Array(columnCount).fill(128),
         columnNames: item.columnNames?.length ? item.columnNames : Array.from({ length: columnCount }, (_, index) => getColumnName(index)),
         rowHeaderWidth: item.rowHeaderWidth ?? 42,
@@ -101,7 +114,7 @@ export function hasExcelWorkbookData(workbook: ExcelWorkbook | null): workbook i
   if (!workbook?.sheets.length) return false;
   if (workbook.sheets.length !== 1) return true;
   const sheet = workbook.sheets[0];
-  if (sheet.name !== 'Planilha 1' || sheet.rows.length !== 12 || sheet.rows.some(row => row.length !== 8)) return true;
+  if (sheet.name !== 'Planilha 1' || sheet.rows.length !== 30 || sheet.rows.some(row => row.length !== 8)) return true;
   if (sheet.rowHeaderWidth !== 42 ||
       sheet.columnWidths.some(width => width !== 128) ||
       sheet.columnWidths.length !== 8 ||
@@ -122,9 +135,13 @@ export function hasExcelWorkbookData(workbook: ExcelWorkbook | null): workbook i
 
 export function readStoredExcelWorkbook(): ExcelWorkbook | null {
   try {
-    const saved = window.localStorage.getItem(EXCEL_STORAGE_KEY)
-      ?? window.localStorage.getItem(LEGACY_EXCEL_STORAGE_KEY);
-    return saved ? parseExcelWorkbook(JSON.parse(saved)) : null;
+    for (const key of [EXCEL_STORAGE_KEY, PREVIOUS_EXCEL_STORAGE_KEY, LEGACY_EXCEL_STORAGE_KEY]) {
+      const saved = window.localStorage.getItem(key);
+      if (!saved) continue;
+      const workbook = parseExcelWorkbook(JSON.parse(saved));
+      if (workbook) return workbook;
+    }
+    return null;
   } catch (error) {
     console.error('Error loading Excel workbook from localStorage:', error);
     return null;
@@ -148,7 +165,7 @@ export function ExcelProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       try {
-        window.localStorage.setItem(EXCEL_STORAGE_KEY, JSON.stringify(workbook.sheets));
+        window.localStorage.setItem(EXCEL_STORAGE_KEY, JSON.stringify({ id: 'excel-root', sheets: workbook.sheets }));
       } catch (error) {
         console.error('Error saving Excel workbook to localStorage:', error);
       }
@@ -159,13 +176,17 @@ export function ExcelProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const persistLatestWorkbook = () => {
       try {
-        window.localStorage.setItem(EXCEL_STORAGE_KEY, JSON.stringify(latestWorkbookRef.current.sheets));
+        window.localStorage.setItem(EXCEL_STORAGE_KEY, JSON.stringify({ id: 'excel-root', sheets: latestWorkbookRef.current.sheets }));
       } catch (error) {
         console.error('Error saving Excel workbook to localStorage:', error);
       }
     };
-    window.addEventListener('pagehide', persistLatestWorkbook);
-    return () => window.removeEventListener('pagehide', persistLatestWorkbook);
+    window.addEventListener('beforeunload', persistLatestWorkbook);
+    document.addEventListener('visibilitychange', persistLatestWorkbook);
+    return () => {
+      window.removeEventListener('beforeunload', persistLatestWorkbook);
+      document.removeEventListener('visibilitychange', persistLatestWorkbook);
+    };
   }, []);
 
   return <ExcelContext.Provider value={{ workbook, setWorkbook }}>{children}</ExcelContext.Provider>;

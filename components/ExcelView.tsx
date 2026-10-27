@@ -18,6 +18,26 @@ import {
   useExcelWorkbook,
 } from '../contexts/ExcelContext';
 
+function parseTSV(text: string): string[][] {
+  const rows: string[][] = []; let row: string[] = []; let cell = ""; let inQuotes = false;
+  const t = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  for(let i=0; i<t.length; i++){
+    const c=t[i]; const n=t[i+1];
+    if(c === '"'){ if(inQuotes && n === '"'){ cell+='"'; i++; } else inQuotes=!inQuotes; }
+    else if(c === '\t' && !inQuotes){ row.push(cell); cell=""; }
+    else if(c === '\n' && !inQuotes){ row.push(cell); rows.push(row); row=[]; cell=""; }
+    else cell+=c;
+  }
+  if(cell || row.length){ row.push(cell); rows.push(row); }
+  return rows;
+}
+function toTSV(data: string[][]): string {
+  return data.map(r => r.map(c => {
+    if(c.includes('\t') || c.includes('\n') || c.includes('"')) return `"${c.replace(/"/g,'""')}"`;
+    return c;
+  }).join('\t')).join('\n');
+}
+
 type CellSelection = { startRow: number; startColumn: number; endRow: number; endColumn: number };
 type ExcelViewProps = {
   onSaveToCloud?: (workbook: ExcelWorkbook) => Promise<void>;
@@ -52,6 +72,7 @@ export default function ExcelView({ onSaveToCloud, cloudWorkbook, cloudReady = t
   const [editingName, setEditingName] = useState(false);
   const [draggingRow, setDraggingRow] = useState<number | null>(null);
   const refs = useRef<Record<string, HTMLDivElement | null>>({});
+  const tableContainerRef = useRef<HTMLDivElement>(null);
   const htmlPropsCache = useRef<Record<string, { value: string; props: { __html: string } }>>({});
   const sheet = sheets.find(item => item.id === activeId) ?? sheets[0];
   const activeSheetIdRef = useRef(sheet?.id);
@@ -68,15 +89,29 @@ export default function ExcelView({ onSaveToCloud, cloudWorkbook, cloudReady = t
             })),
           }
         : item);
-      window.localStorage.setItem(EXCEL_STORAGE_KEY, JSON.stringify(currentSheets));
+      window.localStorage.setItem(EXCEL_STORAGE_KEY, JSON.stringify({ id: 'excel-root', sheets: currentSheets }));
     } catch (error) {
       console.error('Error saving Excel workbook to localStorage:', error);
     }
   };
   useEffect(() => {
-    window.addEventListener('pagehide', persistVisibleCells);
-    return () => window.removeEventListener('pagehide', persistVisibleCells);
+    window.addEventListener('beforeunload', persistVisibleCells);
+    document.addEventListener('visibilitychange', persistVisibleCells);
+    return () => {
+      window.removeEventListener('beforeunload', persistVisibleCells);
+      document.removeEventListener('visibilitychange', persistVisibleCells);
+    };
   }, []);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      try {
+        window.localStorage.setItem(EXCEL_STORAGE_KEY, JSON.stringify({ id: 'excel-root', sheets }));
+      } catch (error) {
+        console.error('Error saving Excel workbook to localStorage:', error);
+      }
+    }, 500);
+    return () => window.clearTimeout(timer);
+  }, [sheets]);
   useEffect(() => { if (!activeId && sheets[0]) setActiveId(sheets[0].id); }, [activeId, sheets]);
   useEffect(() => {
     const initialCell = { row: 0, column: 0 };
@@ -149,110 +184,26 @@ export default function ExcelView({ onSaveToCloud, cloudWorkbook, cloudReady = t
       return { ...value, rows: nextRows };
     });
   };
-  const parsePastedRows = (text: string) => {
-    const result: string[][] = [];
-    let row: string[] = [];
-    let value = '';
-    let quoted = false;
-    let endedWithNewline = false;
-
-    for (let index = 0; index < text.length; index += 1) {
-      const character = text[index];
-      if (character === '"') {
-        if (quoted && text[index + 1] === '"') {
-          value += '"';
-          index += 1;
-        } else if (quoted) {
-          quoted = false;
-        } else if (!value) {
-          quoted = true;
-        } else {
-          value += character;
-        }
-        endedWithNewline = false;
-      } else if (!quoted && character === '\t') {
-        row.push(value);
-        value = '';
-        endedWithNewline = false;
-      } else if (!quoted && (character === '\n' || character === '\r')) {
-        row.push(value);
-        result.push(row);
-        row = [];
-        value = '';
-        if (character === '\r' && text[index + 1] === '\n') index += 1;
-        endedWithNewline = true;
-      } else {
-        value += character;
-        endedWithNewline = false;
-      }
-    }
-
-    if (!endedWithNewline) {
-      row.push(value);
-      result.push(row);
-    }
-    return result;
-  };
-  const getCellText = (row: number, column: number) => {
-    const cell = refs.current[`${row}-${column}`];
-    if (cell) return cell.innerText || cell.textContent || '';
-    const content = document.createElement('div');
-    content.innerHTML = rows[row]?.[column]?.value ?? '';
-    return content.innerText || content.textContent || '';
-  };
-  const escapeTsvCell = (value: string) => /[\t\n\r"]/.test(value)
-    ? `"${value.replace(/"/g, '""')}"`
-    : value;
-  const escapeHtml = (value: string) => value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-  const handleCopy = (event: React.ClipboardEvent<HTMLDivElement>) => {
-    const selection = window.getSelection();
-    const hasSelectedText = Boolean(selection && !selection.isCollapsed &&
-      event.currentTarget.contains(selection.anchorNode) &&
-      event.currentTarget.contains(selection.focusNode));
-    if (hasSelectedText) return;
-
-    const selectedRows = selectedCells.length > 1
-      ? selectedCells.map(cell => cell.row)
-      : [activeCell.row];
-    const selectedColumns = selectedCells.length > 1
-      ? selectedCells.map(cell => cell.column)
-      : [activeCell.column];
-    const startRow = Math.min(...selectedRows);
-    const endRow = Math.max(...selectedRows);
-    const startColumn = Math.min(...selectedColumns);
-    const endColumn = Math.max(...selectedColumns);
-    const copiedRows = Array.from({ length: endRow - startRow + 1 }, (_, rowOffset) =>
-      Array.from({ length: endColumn - startColumn + 1 }, (_, columnOffset) => {
-        const row = startRow + rowOffset;
-        const column = startColumn + columnOffset;
-        if (!selectedCells.some(cell => cell.row === row && cell.column === column) &&
-            selectedCells.length > 1) return '';
-        return getCellText(row, column);
-      }),
+  const handleCopy = (event: ClipboardEvent) => {
+    const copiedRows = Array.from(
+      { length: cellSelection.endRow - cellSelection.startRow + 1 },
+      (_, rowOffset) => Array.from(
+        { length: cellSelection.endColumn - cellSelection.startColumn + 1 },
+        (_, columnOffset) => rows[cellSelection.startRow + rowOffset]?.[cellSelection.startColumn + columnOffset]?.value ?? '',
+      ),
     );
-    const copiedText = copiedRows
-      .map(line => line.map(escapeTsvCell).join('\t'))
-      .join('\n');
-    const copiedHtml = `<table><tbody>${copiedRows
-      .map(line => `<tr>${line.map(value => `<td>${escapeHtml(value)}</td>`).join('')}</tr>`)
-      .join('')}</tbody></table>`;
-
     event.preventDefault();
-    event.clipboardData.setData('text/plain', copiedText);
-    event.clipboardData.setData('text/html', copiedHtml);
+    event.clipboardData.setData('text/plain', toTSV(copiedRows));
   };
-  const handlePaste = (event: React.ClipboardEvent<HTMLDivElement>, startRow: number, startColumn: number) => {
+  const handlePaste = (event: ClipboardEvent) => {
     event.preventDefault();
     const pastedText = event.clipboardData.getData('text/plain');
     if (!pastedText) return;
-    const pastedRows = parsePastedRows(pastedText);
+    const pastedRows = parseTSV(pastedText);
     if (!pastedRows.length) return;
     const pastedColumnCount = Math.max(...pastedRows.map(line => line.length));
+    const startRow = cellSelection.startRow;
+    const startColumn = cellSelection.startColumn;
 
     updateSheet(value => {
       const requiredColumnCount = Math.max(value.rows[0]?.length ?? 0, startColumn + pastedColumnCount);
@@ -285,6 +236,16 @@ export default function ExcelView({ onSaveToCloud, cloudWorkbook, cloudReady = t
     setActiveCell({ row: startRow, column: startColumn });
     setCellRange({ row: startRow, column: startColumn }, end);
   };
+  useEffect(() => {
+    const container = tableContainerRef.current;
+    if (!container) return;
+    container.addEventListener('copy', handleCopy);
+    container.addEventListener('paste', handlePaste);
+    return () => {
+      container.removeEventListener('copy', handleCopy);
+      container.removeEventListener('paste', handlePaste);
+    };
+  }, [handleCopy, handlePaste]);
   const clearSelectedCellContents = () => {
     const alvos = getSelectedCellTargets();
     alvos.forEach(({ row, column }) => refs.current[`${row}-${column}`]?.replaceChildren());
@@ -389,7 +350,7 @@ export default function ExcelView({ onSaveToCloud, cloudWorkbook, cloudReady = t
       <button className={buttons} onClick={() => window.print()}><Printer data-icon="inline-start" /> PDF</button>
     </div></div>
     {editingName && <input autoFocus defaultValue={sheet?.name} onBlur={e => { updateSheet(value => ({ ...value, name: e.target.value.trim() || value.name })); setEditingName(false); }} onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }} className="w-52 rounded-lg border border-red-200 px-2 py-1.5 text-[10px] font-bold outline-none" aria-label="Nome da página" />}
-    <div className="excel-wrapper excel-print-area rounded-xl border border-slate-200 bg-white shadow-sm">
+    <div ref={tableContainerRef} className="excel-wrapper excel-print-area rounded-xl border border-slate-200 bg-white shadow-sm">
       <div style={{ zoom: zoom / 100 }}>
         <table className="min-w-full border-collapse" style={{ fontFamily: 'Arial, sans-serif' }}>
           <thead>
@@ -407,10 +368,10 @@ export default function ExcelView({ onSaveToCloud, cloudWorkbook, cloudReady = t
           <tbody>
             {rows.map((line, row) => <tr key={row} onDragOver={event => { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; }} onDrop={event => { event.preventDefault(); if (draggingRow !== null) reorderRows(draggingRow, row); setDraggingRow(null); }}>
               <th className={`border bg-slate-50 p-1 text-[10px] ${draggingRow === row ? 'opacity-40' : ''}`} style={{ width: sheet.rowHeaderWidth, minWidth: sheet.rowHeaderWidth }}>
-                <button type="button" draggable onClick={() => { const first = { row, column: 0 }; const last = { row, column: Math.max(0, line.length - 1) }; selectionAnchorRef.current = first; selectingCellsRef.current = false; setCellRange(first, last); focusCell(row, 0); }} onDragStart={event => { setDraggingRow(row); event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', String(row)); }} onDragEnd={() => setDraggingRow(null)} className="w-full cursor-grab select-none active:cursor-grabbing" aria-label={`Selecionar linha ${row + 1}`} title="Clique para selecionar a linha ou arraste para movê-la">{row + 1}</button>
+                <button type="button" draggable onClick={() => { const first = { row, column: 0 }; const last = { row, column: Math.max(0, line.length - 1) }; selectionAnchorRef.current = first; selectingCellsRef.current = false; setActiveCell(first); setCellRange(first, last); }} onDragStart={event => { setDraggingRow(row); event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', String(row)); }} onDragEnd={() => setDraggingRow(null)} className="w-full cursor-grab select-none active:cursor-grabbing" aria-label={`Selecionar linha ${row + 1}`} title="Clique para selecionar a linha ou arraste para movê-la">{row + 1}</button>
               </th>
               {line.map((cell, column) => <td key={column} className={`${cell.border === false ? 'border-0' : 'border'} p-0 ${cell.bold ? 'font-bold' : ''} ${cell.italic ? 'italic' : ''}`}>
-                <div ref={node => { refs.current[`${row}-${column}`] = node; }} contentEditable suppressContentEditableWarning onCopy={handleCopy} onPaste={event => handlePaste(event, row, column)} onMouseDown={event => { if (event.button !== 0) return; const point = { row, column }; if (event.shiftKey) { event.preventDefault(); setCellRange(selectionAnchorRef.current, point); setActiveCell(point); window.getSelection()?.removeAllRanges(); focusCell(row, column); return; } if (event.ctrlKey || event.metaKey) { event.preventDefault(); selectingCellsRef.current = false; selectionAnchorRef.current = point; setCellSelection(createCellSelection(point, point)); setSelectedCells(current => current.some(cell => cell.row === row && cell.column === column) ? current.filter(cell => cell.row !== row || cell.column !== column) : [...current, { id: `${row}-${column}`, row, column }]); setActiveCell(point); window.getSelection()?.removeAllRanges(); focusCell(row, column); return; } selectionAnchorRef.current = point; selectingCellsRef.current = true; setCellRange(point, point); setActiveCell(point); }} onMouseEnter={() => selectCellByMouse(row, column)} onDragStart={event => event.preventDefault()} onFocus={() => setActiveCell({ row, column })} onBlur={e => updateCell(row, column, { value: e.currentTarget.innerHTML })} onKeyDown={e => { const key = e.key; if ((e.ctrlKey || e.metaKey) && key.toLowerCase() === 'a') { e.preventDefault(); selectAllCells(); return; } if (key === 'Delete' || key === 'Backspace') { const textSelection = window.getSelection(); const hasSelectedText = Boolean(textSelection && !textSelection.isCollapsed && e.currentTarget.contains(textSelection.anchorNode) && e.currentTarget.contains(textSelection.focusNode)); if (!hasSelectedText) { e.preventDefault(); clearSelectedCellContents(); } return; } if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(key)) { e.preventDefault(); const offsets: Record<string, [number, number]> = { ArrowUp: [-1,0], ArrowDown: [1,0], ArrowLeft: [0,-1], ArrowRight: [0,1] }; const [dr, dc] = offsets[key]; const nextRow = row + dr; const nextColumn = column + dc; if (nextRow >= 0 && nextRow < rows.length && nextColumn >= 0 && nextColumn < rows[0].length) selectCellByKeyboard(nextRow, nextColumn, e.shiftKey); return; } if (key === 'Enter') { e.preventDefault(); updateCell(row, column, { value: e.currentTarget.innerHTML }); if (row + 1 < rows.length) selectCellByKeyboard(row + 1, column, false); } }} dangerouslySetInnerHTML={getCellHtmlProps(row, column, cell.value)} className={`min-w-0 px-3 py-2 outline-none focus:bg-red-50/60 ${isCellSelected(row, column) ? 'ring-1 ring-inset ring-blue-500' : ''}`} style={{ color: cell.color, backgroundColor: isCellSelected(row, column) ? '#dbeafe' : cell.background, fontSize: cell.fontSize ?? 12, width: sheet.columnWidths[column], textAlign: cell.align ?? 'left' }} />
+                <div ref={node => { refs.current[`${row}-${column}`] = node; }} contentEditable suppressContentEditableWarning onMouseDown={event => { if (event.button !== 0) return; const point = { row, column }; if (event.shiftKey) { event.preventDefault(); setCellRange(selectionAnchorRef.current, point); setActiveCell(point); window.getSelection()?.removeAllRanges(); focusCell(row, column); return; } if (event.ctrlKey || event.metaKey) { event.preventDefault(); selectingCellsRef.current = false; selectionAnchorRef.current = point; setCellSelection(createCellSelection(point, point)); setSelectedCells(current => current.some(cell => cell.row === row && cell.column === column) ? current.filter(cell => cell.row !== row || cell.column !== column) : [...current, { id: `${row}-${column}`, row, column }]); setActiveCell(point); window.getSelection()?.removeAllRanges(); focusCell(row, column); return; } selectionAnchorRef.current = point; selectingCellsRef.current = true; setCellRange(point, point); setActiveCell(point); }} onMouseEnter={() => selectCellByMouse(row, column)} onDragStart={event => event.preventDefault()} onFocus={() => { setActiveCell({ row, column }); if (!selectingCellsRef.current) { selectionAnchorRef.current = { row, column }; setCellRange({ row, column }, { row, column }); } }} onBlur={e => updateCell(row, column, { value: e.currentTarget.innerHTML })} onKeyDown={e => { const key = e.key; if ((e.ctrlKey || e.metaKey) && key.toLowerCase() === 'a') { e.preventDefault(); selectAllCells(); return; } if (key === 'Delete' || key === 'Backspace') { const textSelection = window.getSelection(); const hasSelectedText = Boolean(textSelection && !textSelection.isCollapsed && e.currentTarget.contains(textSelection.anchorNode) && e.currentTarget.contains(textSelection.focusNode)); if (!hasSelectedText) { e.preventDefault(); clearSelectedCellContents(); } return; } if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(key)) { e.preventDefault(); const offsets: Record<string, [number, number]> = { ArrowUp: [-1,0], ArrowDown: [1,0], ArrowLeft: [0,-1], ArrowRight: [0,1] }; const [dr, dc] = offsets[key]; const nextRow = row + dr; const nextColumn = column + dc; if (nextRow >= 0 && nextRow < rows.length && nextColumn >= 0 && nextColumn < rows[0].length) selectCellByKeyboard(nextRow, nextColumn, e.shiftKey); return; } if (key === 'Enter') { e.preventDefault(); updateCell(row, column, { value: e.currentTarget.innerHTML }); if (row + 1 < rows.length) selectCellByKeyboard(row + 1, column, false); } }} dangerouslySetInnerHTML={getCellHtmlProps(row, column, cell.value)} className={`min-w-0 px-3 py-2 outline-none focus:bg-red-50/60 ${isCellSelected(row, column) ? 'ring-1 ring-inset ring-blue-500' : ''}`} style={{ color: cell.color, backgroundColor: isCellSelected(row, column) ? '#dbeafe' : cell.background, fontSize: cell.fontSize ?? 12, width: sheet.columnWidths[column], textAlign: cell.align ?? 'left' }} />
               </td>)}
             </tr>)}
           </tbody>
