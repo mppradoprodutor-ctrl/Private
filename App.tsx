@@ -54,7 +54,13 @@ import ThirdPartyFreightList from './components/ThirdPartyFreightList';
 import ThirdPartyFreightFormModal from './components/ThirdPartyFreightFormModal';
 import ReportsView, { ReportsNavigateFilters } from './components/ReportsView';
 import NotesView from './components/NotesView';
-import ExcelView from './components/ExcelView';
+import ExcelView, {
+  EXCEL_STORAGE_KEY,
+  hasExcelWorkbookData,
+  parseExcelWorkbook,
+  readStoredExcelWorkbook,
+  type ExcelWorkbook,
+} from './components/ExcelView';
 import NoteFormModal from './components/NoteFormModal';
 
 import MapView from './components/MapView';
@@ -96,6 +102,9 @@ const App: React.FC = () => {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');
+  const [cloudExcelWorkbook, setCloudExcelWorkbook] = useState<ExcelWorkbook | null>(null);
+  const [excelCloudReady, setExcelCloudReady] = useState(false);
+  const excelCloudInitializedRef = useRef(false);
 
   // Keep a ref of the user so callbacks can access it without triggering recreation
   const userRef = useRef<FirebaseUser | null>(null);
@@ -1135,11 +1144,16 @@ const App: React.FC = () => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       // Clear any existing subscriptions first
       clearSubscriptions();
+      excelCloudInitializedRef.current = false;
+      setExcelCloudReady(false);
+      setCloudExcelWorkbook(null);
 
       if (firebaseUser) {
         setUser(firebaseUser);
         setSyncStatus('syncing');
         showNotification(`Conectado à nuvem como ${firebaseUser.email}!`, "success");
+        const syncExcelToCloud = firebaseUser.email?.toLowerCase() === 'mppradoprodutor@gmail.com';
+        if (!syncExcelToCloud) setExcelCloudReady(true);
 
         try {
           const uid = firebaseUser.uid;
@@ -1224,16 +1238,66 @@ const App: React.FC = () => {
           });
           cleanupSubsRef.current.push(unsubUnits);
 
+          if (syncExcelToCloud) {
+            const unsubExcel = subscribeToUserCollection<ExcelWorkbook>(uid, 'excel', (items) => {
+              const cloudWorkbook = parseExcelWorkbook(items.find(item => item.id === 'workbook'));
+              const localWorkbook = readStoredExcelWorkbook();
+
+              if (!excelCloudInitializedRef.current) {
+                excelCloudInitializedRef.current = true;
+                setExcelCloudReady(true);
+                if (hasExcelWorkbookData(localWorkbook)) {
+                  if (!cloudWorkbook || JSON.stringify(localWorkbook.sheets) !== JSON.stringify(cloudWorkbook.sheets)) {
+                    void saveUserDocument(uid, 'excel', localWorkbook).catch(error => {
+                      console.error('Error syncing local Excel workbook to Firebase:', error);
+                      setSyncStatus('error');
+                    });
+                  }
+                  setCloudExcelWorkbook(localWorkbook);
+                } else if (hasExcelWorkbookData(cloudWorkbook)) {
+                  try {
+                    localStorage.setItem(EXCEL_STORAGE_KEY, JSON.stringify(cloudWorkbook.sheets));
+                    setCloudExcelWorkbook(cloudWorkbook);
+                  } catch (error) {
+                    console.error('Error restoring Excel workbook from Firebase:', error);
+                    setSyncStatus('error');
+                    showNotification('Não foi possível salvar o Excel da nuvem neste dispositivo.', 'info');
+                  }
+                }
+                return;
+              }
+
+              if (hasExcelWorkbookData(cloudWorkbook)) {
+                try {
+                  localStorage.setItem(EXCEL_STORAGE_KEY, JSON.stringify(cloudWorkbook.sheets));
+                  setCloudExcelWorkbook(cloudWorkbook);
+                } catch (error) {
+                  console.error('Error updating Excel workbook from Firebase:', error);
+                  setSyncStatus('error');
+                  showNotification('Não foi possível salvar o Excel da nuvem neste dispositivo.', 'info');
+                }
+              } else if (hasExcelWorkbookData(localWorkbook)) {
+                void saveUserDocument(uid, 'excel', localWorkbook).catch(error => {
+                  console.error('Error syncing local Excel workbook to Firebase:', error);
+                  setSyncStatus('error');
+                });
+              }
+            });
+            cleanupSubsRef.current.push(unsubExcel);
+          }
+
           setSyncStatus('synced');
 
         } catch (err) {
           console.error("Erro na sincronização inicial:", err);
           setSyncStatus('error');
+          setExcelCloudReady(true);
           showNotification("Erro ao sincronizar com a nuvem.", "info");
         }
       } else {
         setUser(null);
         setSyncStatus('idle');
+        setExcelCloudReady(true);
       }
     });
 
@@ -1257,10 +1321,12 @@ const App: React.FC = () => {
   }, [editingThirdParty, thirdPartyFreights, saveThirdPartyFreights, showNotification]);
 
   const handleExportBackup = () => {
+    const excelWorkbook = readStoredExcelWorkbook();
     const fullData = {
       version: "3.5",
       timestamp: new Date().toISOString(),
-      drivers, freights, thirdPartyFreights, trips, reminders, shipments, notes, operationalUnits
+      drivers, freights, thirdPartyFreights, trips, reminders, shipments, notes, operationalUnits,
+      excel: hasExcelWorkbookData(excelWorkbook) ? excelWorkbook : null,
     };
     const blob = new Blob([JSON.stringify(fullData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -1277,7 +1343,7 @@ const App: React.FC = () => {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       try {
         const json = JSON.parse(evt.target?.result as string);
         if (json.drivers) saveDrivers(json.drivers);
@@ -1288,9 +1354,24 @@ const App: React.FC = () => {
         if (json.shipments) saveShipments(json.shipments);
         if (json.notes) saveNotes(json.notes);
         if (json.operationalUnits) saveOperationalUnits(json.operationalUnits);
+        const backupWorkbook = parseExcelWorkbook(json.excel) ?? parseExcelWorkbook(json.planilhas);
+        if (hasExcelWorkbookData(backupWorkbook)) {
+          localStorage.setItem(EXCEL_STORAGE_KEY, JSON.stringify(backupWorkbook.sheets));
+          setCloudExcelWorkbook(backupWorkbook);
+          if (user?.email?.toLowerCase() === 'mppradoprodutor@gmail.com') {
+            try {
+              await saveUserDocument(user.uid, 'excel', backupWorkbook);
+            } catch (error) {
+              console.error('Error restoring Excel workbook to Firebase:', error);
+              showNotification('Excel restaurado neste dispositivo, mas houve erro ao sincronizar com a nuvem.', 'info');
+              return;
+            }
+          }
+        }
         showNotification("Dados restaurados!", "success");
         setCurrentView('dashboard');
       } catch (err) {
+        console.error('Erro ao restaurar backup:', err);
         showNotification("Erro no arquivo.", "info");
       }
     };
@@ -3038,7 +3119,15 @@ const matchesTaker = !dashTakerFilter || normalizeText(effectiveTaker) === norma
               />
             )}
             
-            {currentView === 'excel' && <ExcelView onSaveToCloud={user ? workbook => saveUserDocument(user.uid, 'excel', workbook) : undefined} />}
+            {currentView === 'excel' && (
+              <ExcelView
+                cloudWorkbook={cloudExcelWorkbook}
+                cloudReady={excelCloudReady}
+                onSaveToCloud={user?.email?.toLowerCase() === 'mppradoprodutor@gmail.com'
+                  ? workbook => saveUserDocument(user.uid, 'excel', workbook)
+                  : undefined}
+              />
+            )}
 
               {currentView === 'trips' && (
               <div className="animate-in slide-in-from-bottom-2 fade-in duration-300 space-y-5">
