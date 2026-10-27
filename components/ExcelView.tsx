@@ -73,6 +73,7 @@ export default function ExcelView({ onSaveToCloud, cloudWorkbook, cloudReady = t
   const [draggingRow, setDraggingRow] = useState<number | null>(null);
   const refs = useRef<Record<string, HTMLDivElement | null>>({});
   const tableContainerRef = useRef<HTMLDivElement>(null);
+  const copiedCellsRef = useRef<string[][] | null>(null);
   const htmlPropsCache = useRef<Record<string, { value: string; props: { __html: string } }>>({});
   const sheet = sheets.find(item => item.id === activeId) ?? sheets[0];
   const activeSheetIdRef = useRef(sheet?.id);
@@ -188,30 +189,23 @@ export default function ExcelView({ onSaveToCloud, cloudWorkbook, cloudReady = t
     if (!(event.target instanceof Element)) return;
     const targetCell = event.target.closest<HTMLElement>('[data-excel-row][data-excel-column]');
     if (!targetCell || !tableContainerRef.current?.contains(targetCell)) return;
-    const isSingleCell = cellSelection.startRow === cellSelection.endRow &&
-      cellSelection.startColumn === cellSelection.endColumn;
     const copiedRows = Array.from(
       { length: cellSelection.endRow - cellSelection.startRow + 1 },
       (_, rowOffset) => Array.from(
         { length: cellSelection.endColumn - cellSelection.startColumn + 1 },
-        (_, columnOffset) => isSingleCell
-          ? rows[cellSelection.startRow]?.[cellSelection.startColumn]?.value ?? ''
-          : rows[cellSelection.startRow + rowOffset]?.[cellSelection.startColumn + columnOffset]?.value ?? '',
+        (_, columnOffset) => {
+          const row = cellSelection.startRow + rowOffset;
+          const column = cellSelection.startColumn + columnOffset;
+          const element = refs.current[`${row}-${column}`];
+          return element?.innerText ?? element?.textContent ?? rows[row]?.[column]?.value ?? '';
+        },
       ),
     );
+    copiedCellsRef.current = copiedRows;
     event.preventDefault();
-    if (isSingleCell) {
-      const targetRow = Number(targetCell.dataset.excelRow);
-      const targetColumn = Number(targetCell.dataset.excelColumn);
-      const cell = refs.current[`${targetRow}-${targetColumn}`];
-      event.clipboardData.setData('text/plain', cell?.innerText ?? cell?.textContent ?? copiedRows[0]?.[0] ?? '');
-      return;
-    }
     event.clipboardData.setData('text/plain', toTSV(copiedRows));
   };
-  const pasteText = (pastedText: string, startRow: number, startColumn: number) => {
-    if (!pastedText) return;
-    const pastedRows = parseTSV(pastedText);
+  const pasteRows = (pastedRows: string[][], startRow: number, startColumn: number) => {
     if (!pastedRows.length) return;
     const pastedColumnCount = Math.max(...pastedRows.map(line => line.length));
 
@@ -246,6 +240,10 @@ export default function ExcelView({ onSaveToCloud, cloudWorkbook, cloudReady = t
     setActiveCell({ row: startRow, column: startColumn });
     setCellRange({ row: startRow, column: startColumn }, end);
   };
+  const pasteText = (pastedText: string, startRow: number, startColumn: number) => {
+    if (!pastedText) return;
+    pasteRows(parseTSV(pastedText), startRow, startColumn);
+  };
   const handlePaste = (event: ClipboardEvent) => {
     if (!(event.target instanceof Element) || !tableContainerRef.current?.contains(event.target)) return;
     const targetCell = event.target.closest<HTMLElement>('[data-excel-row][data-excel-column]');
@@ -254,7 +252,11 @@ export default function ExcelView({ onSaveToCloud, cloudWorkbook, cloudReady = t
     if (!Number.isInteger(startRow) || !Number.isInteger(startColumn)) return;
     event.preventDefault();
     const pastedText = event.clipboardData.getData('text/plain');
-    pasteText(pastedText, startRow, startColumn);
+    if (pastedText) {
+      pasteText(pastedText, startRow, startColumn);
+    } else if (copiedCellsRef.current) {
+      pasteRows(copiedCellsRef.current, startRow, startColumn);
+    }
   };
   useEffect(() => {
     window.addEventListener('copy', handleCopy, true);
