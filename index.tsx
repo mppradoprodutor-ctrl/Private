@@ -2,6 +2,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import { ExcelProvider } from './contexts/ExcelContext';
 
 declare const __VERCEL_URL__: string;
 
@@ -29,7 +30,9 @@ if (isProductionAlias && deploymentUrl && deploymentUrl.host !== window.location
   const root = ReactDOM.createRoot(rootElement);
   root.render(
     <React.StrictMode>
-      <App />
+      <ExcelProvider>
+        <App />
+      </ExcelProvider>
     </React.StrictMode>,
   );
 }

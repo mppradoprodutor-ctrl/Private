@@ -2,8 +2,22 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { AlignCenter, AlignLeft, Minus, Palette, Plus, Printer, Trash2, X, Pencil } from 'lucide-react';
+import {
+  createEmptyRow,
+  createCell,
+  createSheet,
+  createRows,
+  escapeCellText,
+  EXCEL_STORAGE_KEY,
+  getColumnName,
+  hasExcelWorkbookData,
+  parseExcelWorkbook,
+  type Cell,
+  type ExcelWorkbook,
+  type Sheet,
+  useExcelWorkbook,
+} from '../contexts/ExcelContext';
 
-type Cell = { value: string; color: string; background: string; fontSize?: number; align?: 'left' | 'center' | 'right'; bold?: boolean; italic?: boolean; border?: boolean };
 type CellSelection = { startRow: number; startColumn: number; endRow: number; endColumn: number };
 type ExcelViewProps = {
   onSaveToCloud?: (workbook: ExcelWorkbook) => Promise<void>;
@@ -12,87 +26,16 @@ type ExcelViewProps = {
 };
 const createCellSelection = (start: { row: number; column: number }, end: { row: number; column: number }): CellSelection => ({ startRow: Math.min(start.row, end.row), startColumn: Math.min(start.column, end.column), endRow: Math.max(start.row, end.row), endColumn: Math.max(start.column, end.column) });
 const basicColors = ['#111827', '#ffffff', '#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6'];
-const getColumnName = (column: number) => {
-  let number = column + 1;
-  let name = '';
-  while (number > 0) {
-    const remainder = (number - 1) % 26;
-    name = String.fromCharCode(65 + remainder) + name;
-    number = Math.floor((number - 1) / 26);
-  }
-  return name;
-};
-const createEmptyRow = (columnCount: number) => Array.from({ length: columnCount }, createCell);
-const escapeCellText = (value: string) => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-export type Sheet = { id: string; name: string; rows: Cell[][]; columnWidths: number[]; columnNames: string[]; rowHeaderWidth: number };
-export type ExcelWorkbook = { id: string; sheets: Sheet[] };
-export const EXCEL_STORAGE_KEY = 'gera-excel-workbook-v1';
-const createCell = (): Cell => ({ value: '', color: '#1e293b', background: '#fff', fontSize: 12, align: 'left', bold: false, italic: false, border: true });
-const createRows = () => Array.from({ length: 12 }, () => Array.from({ length: 8 }, createCell));
-const createSheet = (name: string): Sheet => ({ id: crypto.randomUUID(), name, rows: createRows(), columnWidths: Array(8).fill(128), columnNames: Array.from({ length: 8 }, (_, index) => getColumnName(index)), rowHeaderWidth: 42 });
-
-export function parseExcelWorkbook(value: unknown): ExcelWorkbook | null {
-  if (!value || typeof value !== 'object') return null;
-  const record = value as { id?: unknown; sheets?: unknown };
-  const rawSheets = Array.isArray(value) ? value : record.sheets;
-  if (!Array.isArray(rawSheets) || rawSheets.length === 0) return null;
-  const sheets = rawSheets
-    .filter((item): item is Partial<Sheet> => Boolean(
-      item && typeof item === 'object' &&
-      typeof (item as Partial<Sheet>).id === 'string' &&
-      typeof (item as Partial<Sheet>).name === 'string' &&
-      Array.isArray((item as Partial<Sheet>).rows) &&
-      (item as Partial<Sheet>).rows!.every(Array.isArray)
-    ))
-    .map(item => {
-      const columnCount = item.rows?.[0]?.length ?? 8;
-      return {
-        ...item,
-        columnWidths: item.columnWidths?.length ? item.columnWidths : Array(columnCount).fill(128),
-        columnNames: item.columnNames?.length ? item.columnNames : Array.from({ length: columnCount }, (_, index) => getColumnName(index)),
-        rowHeaderWidth: item.rowHeaderWidth ?? 42,
-      } as Sheet;
-    });
-  return sheets.length ? { id: typeof record.id === 'string' ? record.id : 'workbook', sheets } : null;
-}
-
-export function hasExcelWorkbookData(workbook: ExcelWorkbook | null): workbook is ExcelWorkbook {
-  if (!workbook?.sheets.length) return false;
-  if (workbook.sheets.length !== 1) return true;
-  const sheet = workbook.sheets[0];
-  if (sheet.name !== 'Planilha 1' || sheet.rows.length !== 12 || sheet.rows.some(row => row.length !== 8)) return true;
-  if (sheet.rowHeaderWidth !== 42 ||
-      sheet.columnWidths.some(width => width !== 128) ||
-      sheet.columnWidths.length !== 8 ||
-      sheet.columnNames.some((name, index) => name !== String.fromCharCode(65 + index)) ||
-      sheet.columnNames.length !== 8) return true;
-  return sheet.rows.some(row => row.some(cell =>
-    !cell ||
-    cell.value !== '' ||
-    cell.color !== '#1e293b' ||
-    cell.background !== '#fff' ||
-    (cell.fontSize !== undefined && cell.fontSize !== 12) ||
-    (cell.align !== undefined && cell.align !== 'left') ||
-    (cell.bold !== undefined && cell.bold) ||
-    (cell.italic !== undefined && cell.italic) ||
-    (cell.border !== undefined && !cell.border)
-  ));
-}
-
-export function readStoredExcelWorkbook(): ExcelWorkbook | null {
-  try {
-    const saved = localStorage.getItem(EXCEL_STORAGE_KEY);
-    return saved ? parseExcelWorkbook(JSON.parse(saved)) : null;
-  } catch (error) {
-    console.error('Error loading Excel workbook from localStorage:', error);
-    return null;
-  }
-}
-
 export default function ExcelView({ onSaveToCloud, cloudWorkbook, cloudReady = true }: ExcelViewProps) {
-  const [initialWorkbook] = useState(readStoredExcelWorkbook);
-  const shouldSaveWorkbookRef = useRef(Boolean(initialWorkbook));
-  const [sheets, setSheets] = useState<Sheet[]>(() => initialWorkbook?.sheets ?? [createSheet('Planilha 1')]);
+  const { workbook, setWorkbook } = useExcelWorkbook();
+  const sheets = workbook.sheets;
+  const setSheets: React.Dispatch<React.SetStateAction<Sheet[]>> = update => {
+    setWorkbook(current => ({
+      ...current,
+      sheets: typeof update === 'function' ? update(current.sheets) : update,
+    }));
+  };
+  const shouldSaveWorkbookRef = useRef(hasExcelWorkbookData(workbook));
   const latestSheetsRef = useRef(sheets);
   const onSaveToCloudRef = useRef(onSaveToCloud);
   const cloudReadyRef = useRef(cloudReady);
@@ -111,7 +54,29 @@ export default function ExcelView({ onSaveToCloud, cloudWorkbook, cloudReady = t
   const refs = useRef<Record<string, HTMLDivElement | null>>({});
   const htmlPropsCache = useRef<Record<string, { value: string; props: { __html: string } }>>({});
   const sheet = sheets.find(item => item.id === activeId) ?? sheets[0];
+  const activeSheetIdRef = useRef(sheet?.id);
+  activeSheetIdRef.current = sheet?.id;
   const rows = sheet?.rows ?? createRows();
+  const persistVisibleCells = () => {
+    try {
+      const currentSheets = latestSheetsRef.current.map(item => item.id === activeSheetIdRef.current
+        ? {
+            ...item,
+            rows: item.rows.map((line, row) => line.map((cell, column) => {
+              const node = refs.current[`${row}-${column}`];
+              return node ? { ...cell, value: node.innerHTML } : cell;
+            })),
+          }
+        : item);
+      window.localStorage.setItem(EXCEL_STORAGE_KEY, JSON.stringify(currentSheets));
+    } catch (error) {
+      console.error('Error saving Excel workbook to localStorage:', error);
+    }
+  };
+  useEffect(() => {
+    window.addEventListener('pagehide', persistVisibleCells);
+    return () => window.removeEventListener('pagehide', persistVisibleCells);
+  }, []);
   useEffect(() => { if (!activeId && sheets[0]) setActiveId(sheets[0].id); }, [activeId, sheets]);
   useEffect(() => {
     const initialCell = { row: 0, column: 0 };
@@ -131,11 +96,6 @@ export default function ExcelView({ onSaveToCloud, cloudWorkbook, cloudReady = t
   useEffect(() => {
     if (!shouldSaveWorkbookRef.current) return;
     const timer = window.setTimeout(() => {
-      try {
-        localStorage.setItem(EXCEL_STORAGE_KEY, JSON.stringify(sheets));
-      } catch (error) {
-        console.error('Error saving Excel workbook to localStorage:', error);
-      }
       if (cloudReadyRef.current && onSaveToCloudRef.current) {
         void onSaveToCloudRef.current({ id: 'workbook', sheets }).catch(error => console.error('Error saving Excel workbook:', error));
       }
@@ -144,11 +104,6 @@ export default function ExcelView({ onSaveToCloud, cloudWorkbook, cloudReady = t
   }, [sheets, cloudReady]);
   useEffect(() => () => {
     if (!shouldSaveWorkbookRef.current) return;
-    try {
-      localStorage.setItem(EXCEL_STORAGE_KEY, JSON.stringify(latestSheetsRef.current));
-    } catch (error) {
-      console.error('Error saving Excel workbook to localStorage:', error);
-    }
     if (cloudReadyRef.current && onSaveToCloudRef.current) {
       void onSaveToCloudRef.current({ id: 'workbook', sheets: latestSheetsRef.current })
         .catch(error => console.error('Error saving Excel workbook:', error));
@@ -259,7 +214,9 @@ export default function ExcelView({ onSaveToCloud, cloudWorkbook, cloudReady = t
   const getCellHtmlProps = (row: number, column: number, value: string) => {
     const key = `${sheet?.id}:${row}:${column}`;
     const cached = htmlPropsCache.current[key];
-    if (cached?.value === value) return cached.props;
+    if (cached?.value === value || document.activeElement === refs.current[`${row}-${column}`]) {
+      return cached?.props ?? { __html: value };
+    }
     const props = { __html: value };
     htmlPropsCache.current[key] = { value, props };
     return props;
