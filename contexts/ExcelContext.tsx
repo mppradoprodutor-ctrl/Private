@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 
 export type Cell = {
   value: string;
@@ -156,19 +156,20 @@ type ExcelContextValue = {
 const ExcelContext = createContext<ExcelContextValue | null>(null);
 
 export function ExcelProvider({ children }: { children: React.ReactNode }) {
-  const [workbook, setWorkbook] = useState<ExcelWorkbook>(
+  const [workbook, setWorkbookState] = useState<ExcelWorkbook>(
     () => readStoredExcelWorkbook() ?? { id: 'workbook', sheets: [createSheet('Planilha 1')] },
   );
   const latestWorkbookRef = useRef(workbook);
-  latestWorkbookRef.current = workbook;
-
-  useEffect(() => {
+  const setWorkbook = useCallback<Dispatch<SetStateAction<ExcelWorkbook>>>(update => {
+    const nextWorkbook = typeof update === 'function' ? update(latestWorkbookRef.current) : update;
+    latestWorkbookRef.current = nextWorkbook;
+    setWorkbookState(nextWorkbook);
     try {
-      window.localStorage.setItem(EXCEL_STORAGE_KEY, JSON.stringify({ id: 'excel-root', sheets: workbook.sheets }));
+      window.localStorage.setItem(EXCEL_STORAGE_KEY, JSON.stringify({ id: 'excel-root', sheets: nextWorkbook.sheets }));
     } catch (error) {
       console.error('Error saving Excel workbook to localStorage:', error);
     }
-  }, [workbook]);
+  }, []);
 
   useEffect(() => {
     const persistLatestWorkbook = () => {

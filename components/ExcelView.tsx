@@ -10,7 +10,6 @@ import {
   escapeCellText,
   getColumnName,
   hasExcelWorkbookData,
-  parseExcelWorkbook,
   type Cell,
   type ExcelWorkbook,
   type Sheet,
@@ -40,12 +39,11 @@ function toTSV(data: string[][]): string {
 type CellSelection = { startRow: number; startColumn: number; endRow: number; endColumn: number };
 type ExcelViewProps = {
   onSaveToCloud?: (workbook: ExcelWorkbook) => Promise<void>;
-  cloudWorkbook?: ExcelWorkbook | null;
   cloudReady?: boolean;
 };
 const createCellSelection = (start: { row: number; column: number }, end: { row: number; column: number }): CellSelection => ({ startRow: Math.min(start.row, end.row), startColumn: Math.min(start.column, end.column), endRow: Math.max(start.row, end.row), endColumn: Math.max(start.column, end.column) });
 const basicColors = ['#111827', '#ffffff', '#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6'];
-export default function ExcelView({ onSaveToCloud, cloudWorkbook, cloudReady = true }: ExcelViewProps) {
+export default function ExcelView({ onSaveToCloud, cloudReady = true }: ExcelViewProps) {
   const { workbook, setWorkbook } = useExcelWorkbook();
   const sheets = workbook.sheets;
   const setSheets: React.Dispatch<React.SetStateAction<Sheet[]>> = update => {
@@ -91,13 +89,6 @@ export default function ExcelView({ onSaveToCloud, cloudWorkbook, cloudReady = t
     selectionAnchorRef.current = initialCell;
     selectingCellsRef.current = false;
   }, [sheet?.id]);
-  useEffect(() => {
-    if (!cloudWorkbook || !hasExcelWorkbookData(cloudWorkbook)) return;
-    const parsed = parseExcelWorkbook(cloudWorkbook);
-    if (!parsed) return;
-    shouldSaveWorkbookRef.current = true;
-    setSheets(current => JSON.stringify(current) === JSON.stringify(parsed.sheets) ? current : parsed.sheets);
-  }, [cloudWorkbook]);
   useEffect(() => {
     if (!shouldSaveWorkbookRef.current) return;
     const timer = window.setTimeout(() => {
@@ -154,7 +145,7 @@ export default function ExcelView({ onSaveToCloud, cloudWorkbook, cloudReady = t
       return { ...value, rows: nextRows };
     });
   };
-  const handleCopy = (event: ClipboardEvent) => {
+  const handleCopy = (event: React.ClipboardEvent<HTMLDivElement>) => {
     if (!(event.target instanceof Element)) return;
     if (!tableContainerRef.current?.contains(event.target)) return;
     const selectedCoordinates = selectedCells;
@@ -225,7 +216,7 @@ export default function ExcelView({ onSaveToCloud, cloudWorkbook, cloudReady = t
     if (!pastedText) return;
     pasteRows(parseTSV(pastedText), startRow, startColumn);
   };
-  const handlePaste = (event: ClipboardEvent) => {
+  const handlePaste = (event: React.ClipboardEvent<HTMLDivElement>) => {
     if (!(event.target instanceof Element) || !tableContainerRef.current?.contains(event.target)) return;
     const targetCell = event.target.closest<HTMLElement>('[data-excel-row][data-excel-column]');
     const startRow = targetCell ? Number(targetCell.dataset.excelRow) : activeCell.row;
@@ -241,14 +232,6 @@ export default function ExcelView({ onSaveToCloud, cloudWorkbook, cloudReady = t
       pasteRows(copiedCellsRef.current, startRow, startColumn);
     }
   };
-  useEffect(() => {
-    window.addEventListener('copy', handleCopy, true);
-    window.addEventListener('paste', handlePaste, true);
-    return () => {
-      window.removeEventListener('copy', handleCopy, true);
-      window.removeEventListener('paste', handlePaste, true);
-    };
-  }, [handleCopy, handlePaste]);
   const clearSelectedCellContents = () => {
     const alvos = getSelectedCellTargets();
     alvos.forEach(({ row, column }) => refs.current[`${row}-${column}`]?.replaceChildren());
@@ -378,7 +361,7 @@ export default function ExcelView({ onSaveToCloud, cloudWorkbook, cloudReady = t
       <input type="search" value={columnOneFilter} onChange={event => setColumnOneFilter(event.target.value)} placeholder="Filtrar coluna 1" aria-label="Filtrar pela coluna 1" className="w-36 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[10px] font-bold text-slate-700 outline-none placeholder:text-slate-400 focus:border-red-300" />
     </div></div>
     {editingName && <input autoFocus defaultValue={sheet?.name} onBlur={e => { updateSheet(value => ({ ...value, name: e.target.value.trim() || value.name })); setEditingName(false); }} onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }} className="w-52 rounded-lg border border-red-200 px-2 py-1.5 text-[10px] font-bold outline-none" aria-label="Nome da página" />}
-    <div ref={tableContainerRef} className="excel-wrapper excel-print-area rounded-xl border border-slate-200 bg-white shadow-sm">
+    <div ref={tableContainerRef} onCopy={handleCopy} onPaste={handlePaste} className="excel-wrapper excel-print-area rounded-xl border border-slate-200 bg-white shadow-sm">
       <div style={{ zoom: zoom / 100 }}>
         <table className="min-w-full border-collapse" style={{ fontFamily: 'Arial, sans-serif' }}>
           <thead>
