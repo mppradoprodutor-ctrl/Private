@@ -163,14 +163,11 @@ export function ExcelProvider({ children }: { children: React.ReactNode }) {
   latestWorkbookRef.current = workbook;
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      try {
-        window.localStorage.setItem(EXCEL_STORAGE_KEY, JSON.stringify({ id: 'excel-root', sheets: workbook.sheets }));
-      } catch (error) {
-        console.error('Error saving Excel workbook to localStorage:', error);
-      }
-    }, 800);
-    return () => window.clearTimeout(timer);
+    try {
+      window.localStorage.setItem(EXCEL_STORAGE_KEY, JSON.stringify({ id: 'excel-root', sheets: workbook.sheets }));
+    } catch (error) {
+      console.error('Error saving Excel workbook to localStorage:', error);
+    }
   }, [workbook]);
 
   useEffect(() => {
