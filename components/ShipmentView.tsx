@@ -304,6 +304,7 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
       originalTripId?: string;
       isTrip: boolean;
       date: string;
+      createdAt?: string;
       origin: string;
       destination: string;
       product: string;
@@ -368,6 +369,7 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
         isTrip: true,
         isFinalized,
         date: t.date || '',
+        createdAt: t.createdAt,
         origin: orig,
         destination: dest,
         product: identifiedProduct,
@@ -434,6 +436,7 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
         isTrip: false,
         isFinalized: !!isFinalized,
         date: s.shipmentDate || '',
+        createdAt: s.createdAt,
         origin: s.origin || 'N/I',
         destination: s.destination || 'N/I',
         product: identifiedProduct,
@@ -496,7 +499,15 @@ const ShipmentView: React.FC<ShipmentViewProps> = ({
       if (destinationFilter && !item.destination.toLowerCase().includes(destinationFilter.toLowerCase())) return false;
 
       return true;
-    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }).sort((a, b) => {
+      const dateA = a.date ? new Date(a.date).getTime() : 0;
+      const dateB = b.date ? new Date(b.date).getTime() : 0;
+      if (dateA !== dateB) return dateB - dateA;
+
+      const createdA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const createdB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return createdB - createdA;
+    });
   }, [processedItems, hiddenShipmentIds, startDate, endDate, statusFilter, searchQuery, productFilter, destinationFilter, takerFilter, normalizedNotesFilter]);
 
   // Financial KPIs
