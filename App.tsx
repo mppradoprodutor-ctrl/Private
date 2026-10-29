@@ -552,6 +552,7 @@ const App: React.FC = () => {
   const [dashEndDate, setDashEndDate] = useState('');
   const [dashTakerFilter, setDashTakerFilter] = useState('');
   const [dashAnttFilter, setDashAnttFilter] = useState('');
+  const [dashNotesFilter, setDashNotesFilter] = useState('');
   const [rankingViewMode, setRankingViewMode] = useState<'table' | 'split'>('table');
 
   // FILTROS EMBARQUE (SHIPMENT)
@@ -1744,10 +1745,12 @@ const App: React.FC = () => {
                           (!dashEndDate || (t.date && tDate <= end));
       
       const effectiveTaker = resolveTripServiceTaker(t, freights, shipments) || t.serviceTaker || '';
-const matchesTaker = !dashTakerFilter || normalizeText(effectiveTaker) === normalizeText(dashTakerFilter);
-  const tripDriver = drivers.find(d => d.truckPlate && t.truckPlate && normalizeText(d.truckPlate) === normalizeText(t.truckPlate));
-  const matchesAntt = !dashAnttFilter || normalizeText(tripDriver?.antt || '') === normalizeText(dashAnttFilter);
-  return matchesDate && matchesTaker && matchesAntt;
+      const matchesTaker = !dashTakerFilter || normalizeText(effectiveTaker) === normalizeText(dashTakerFilter);
+      const tripDriver = drivers.find(d => d.truckPlate && t.truckPlate && normalizeText(d.truckPlate) === normalizeText(t.truckPlate));
+      const matchesAntt = !dashAnttFilter || normalizeText(tripDriver?.antt || '') === normalizeText(dashAnttFilter);
+      const normalizedNotesFilter = normalizeText(dashNotesFilter);
+      const matchesNotes = !normalizedNotesFilter || normalizeText(t.notes).includes(normalizedNotesFilter);
+      return matchesDate && matchesTaker && matchesAntt && matchesNotes;
     });
     
     let grossRevenue = 0;
@@ -1885,7 +1888,7 @@ const matchesTaker = !dashTakerFilter || normalizeText(effectiveTaker) === norma
       driversCount: drivers.length,
       freightsCount: freights.length
     };
-  }, [trips, freights, shipments, drivers.length, freights.length, dashStartDate, dashEndDate, dashTakerFilter, dashAnttFilter, drivers, normalizeText]);
+  }, [trips, freights, shipments, drivers.length, freights.length, dashStartDate, dashEndDate, dashTakerFilter, dashAnttFilter, dashNotesFilter, drivers, normalizeText]);
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
   const formatKg = (val: number) => new Intl.NumberFormat('pt-BR').format(val) + ' KG';
@@ -2284,7 +2287,7 @@ const matchesTaker = !dashTakerFilter || normalizeText(effectiveTaker) === norma
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="bg-slate-50 border border-slate-200/80 p-1 rounded-xl flex items-center gap-2">
                       <button 
-                        onClick={() => { setDashStartDate(''); setDashEndDate(''); setDashTakerFilter(''); setDashAnttFilter(''); }}
+                        onClick={() => { setDashStartDate(''); setDashEndDate(''); setDashTakerFilter(''); setDashAnttFilter(''); setDashNotesFilter(''); }}
                         className="p-1.5 text-slate-400 hover:text-red-700 transition-colors"
                         title="Limpar Filtros"
                       >
@@ -2328,6 +2331,30 @@ const matchesTaker = !dashTakerFilter || normalizeText(effectiveTaker) === norma
                         <option value="">ANTT: TODAS</option>
                         {Array.from(new Set(drivers.map(d => d.antt).filter(Boolean))).sort().map(antt => <option key={antt} value={antt}>{antt}</option>)}
                       </select>
+                    </div>
+                    <div className="bg-slate-50 border border-slate-200/80 px-2.5 py-1 rounded-xl flex items-center gap-2 min-w-[170px]">
+                      <FileText size={13} className="text-slate-400 shrink-0" />
+                      <input
+                        type="text"
+                        value={dashNotesFilter}
+                        onChange={e => setDashNotesFilter(e.target.value)}
+                        placeholder="ANOTAÇÕES"
+                        aria-label="Filtrar viagens pelas anotações"
+                        title="Filtrar viagens pelo campo Anotações de Lançar Viagens"
+                        autoComplete="off"
+                        className="w-full min-w-0 bg-transparent text-[9.5px] font-black uppercase tracking-wider outline-none text-slate-700 placeholder:text-slate-400"
+                      />
+                      {dashNotesFilter && (
+                        <button
+                          type="button"
+                          onClick={() => setDashNotesFilter('')}
+                          title="Limpar filtro de anotações"
+                          aria-label="Limpar filtro de anotações"
+                          className="shrink-0 text-slate-400 hover:text-red-600"
+                        >
+                          <X size={12} />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
