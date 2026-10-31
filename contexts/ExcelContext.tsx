@@ -134,18 +134,17 @@ export function hasExcelWorkbookData(workbook: ExcelWorkbook | null): workbook i
 }
 
 export function readStoredExcelWorkbook(): ExcelWorkbook | null {
-  try {
-    for (const key of [EXCEL_STORAGE_KEY, PREVIOUS_EXCEL_STORAGE_KEY, LEGACY_EXCEL_STORAGE_KEY]) {
+  for (const key of [EXCEL_STORAGE_KEY, PREVIOUS_EXCEL_STORAGE_KEY, LEGACY_EXCEL_STORAGE_KEY]) {
+    try {
       const saved = window.localStorage.getItem(key);
       if (!saved) continue;
       const workbook = parseExcelWorkbook(JSON.parse(saved));
       if (workbook) return workbook;
+    } catch (error) {
+      console.error(`Error loading Excel workbook from localStorage key "${key}":`, error);
     }
-    return null;
-  } catch (error) {
-    console.error('Error loading Excel workbook from localStorage:', error);
-    return null;
   }
+  return null;
 }
 
 type ExcelContextValue = {

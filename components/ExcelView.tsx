@@ -56,6 +56,7 @@ export default function ExcelView({ onSaveToCloud, cloudReady = true }: ExcelVie
   const latestSheetsRef = useRef(sheets);
   const onSaveToCloudRef = useRef(onSaveToCloud);
   const cloudReadyRef = useRef(cloudReady);
+  const cloudSaveQueueRef = useRef<Promise<void>>(Promise.resolve());
   latestSheetsRef.current = sheets;
   onSaveToCloudRef.current = onSaveToCloud;
   cloudReadyRef.current = cloudReady;
@@ -89,21 +90,28 @@ export default function ExcelView({ onSaveToCloud, cloudReady = true }: ExcelVie
     selectionAnchorRef.current = initialCell;
     selectingCellsRef.current = false;
   }, [sheet?.id]);
+  const queueCloudSave = (sheetsToSave: Sheet[]) => {
+    const save = async () => {
+      if (cloudReadyRef.current && onSaveToCloudRef.current) {
+        await onSaveToCloudRef.current({ id: 'workbook', sheets: sheetsToSave });
+      }
+    };
+    cloudSaveQueueRef.current = cloudSaveQueueRef.current
+      .then(save, save)
+      .catch(error => {
+        console.error('Error saving Excel workbook:', error);
+      });
+  };
   useEffect(() => {
     if (!shouldSaveWorkbookRef.current) return;
     const timer = window.setTimeout(() => {
-      if (cloudReadyRef.current && onSaveToCloudRef.current) {
-        void onSaveToCloudRef.current({ id: 'workbook', sheets }).catch(error => console.error('Error saving Excel workbook:', error));
-      }
+      queueCloudSave(sheets);
     }, 1000);
     return () => window.clearTimeout(timer);
   }, [sheets, cloudReady]);
   useEffect(() => () => {
     if (!shouldSaveWorkbookRef.current) return;
-    if (cloudReadyRef.current && onSaveToCloudRef.current) {
-      void onSaveToCloudRef.current({ id: 'workbook', sheets: latestSheetsRef.current })
-        .catch(error => console.error('Error saving Excel workbook:', error));
-    }
+    queueCloudSave(latestSheetsRef.current);
   }, []);
   useEffect(() => {
     const stopCellSelection = () => { selectingCellsRef.current = false; };
@@ -341,7 +349,7 @@ export default function ExcelView({ onSaveToCloud, cloudReady = true }: ExcelVie
   };
   const activeCellData = rows[activeCell.row]?.[activeCell.column];
   const buttons = 'rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[9px] font-black uppercase text-slate-700 hover:border-red-300';
-  return <section className="animate-in fade-in duration-300 space-y-4">
+  return <section className="excel-view animate-in fade-in duration-300 space-y-4">
     <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-black uppercase text-slate-900">Excel</h2><p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Planilhas salvas automaticamente</p></div><div className="flex flex-wrap items-center gap-1.5">
       <select value={sheet?.id ?? ''} onChange={e => setActiveId(e.target.value)} className={buttons} aria-label="Selecionar planilha">{sheets.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
       <button className={buttons} onClick={() => { const next = createSheet(`Planilha ${sheets.length + 1}`); shouldSaveWorkbookRef.current = true; setSheets(value => [...value, next]); setActiveId(next.id); }}><Plus data-icon="inline-start" /> Nova página</button>
@@ -501,6 +509,6 @@ export default function ExcelView({ onSaveToCloud, cloudReady = true }: ExcelVie
         </table>
       </div>
     </div>
-    <style>{`.excel-wrapper { overflow: auto; max-height: calc(100vh - 200px); position: relative; } .excel-wrapper thead, .excel-wrapper thead th { position: sticky; top: 0; z-index: 20; background: #ffffff; } .btn-align { height: 38px; min-width: 90px; width: 90px; display: flex; align-items: center; justify-content: center; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 11px; font-weight: 700; } .excel-print-area [contenteditable="true"] * { font-size: inherit !important; } @media print { @page { margin: 0; } body > * { visibility: hidden !important; } .excel-print-area, .excel-print-area * { visibility: visible !important; } .excel-print-area { position: absolute !important; inset: 0 !important; overflow: visible !important; max-height: none !important; border: 0 !important; box-shadow: none !important; } }`}</style>
+    <style>{`.excel-wrapper { overflow: auto; max-height: calc(100vh - 200px); position: relative; } .excel-wrapper thead, .excel-wrapper thead th { position: sticky; top: 0; z-index: 20; background: #ffffff; } .btn-align { height: 38px; min-width: 90px; width: 90px; display: flex; align-items: center; justify-content: center; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 11px; font-weight: 700; } .excel-print-area [contenteditable="true"] * { font-size: inherit !important; } @media print { @page { size: landscape; margin: 5mm; } html, body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } body > * { visibility: hidden !important; } .excel-view, .excel-view * { visibility: visible !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } .excel-view { position: absolute !important; inset: 0 !important; width: 100% !important; padding: 8px !important; background: #fff !important; } .excel-view .excel-wrapper { overflow: visible !important; max-height: none !important; } .excel-view .excel-wrapper thead, .excel-view .excel-wrapper thead th { position: static !important; } }`}</style>
   </section>;
 }
