@@ -49,11 +49,22 @@ const clean = <T>(value: T): T => JSON.parse(JSON.stringify(value));
 export { app, auth, db, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut };
 export type { FirebaseUser };
 
-export function subscribeToUserCollection<T extends { id: string }>(uid: string, name: string, callback: (items: T[]) => void) {
+export function subscribeToUserCollection<T extends { id: string }>(
+  uid: string,
+  name: string,
+  callback: (items: T[], metadata: { fromCache: boolean }) => void,
+  onError?: (error: Error) => void,
+) {
   const ref = collection(db, 'users', uid, firestoreCollection(name));
   return onSnapshot(ref, snapshot => {
-    callback(snapshot.docs.map(item => ({ id: item.id, ...item.data() }) as T));
-  }, error => console.error(`[Firestore] ${name}`, error));
+    callback(
+      snapshot.docs.map(item => ({ id: item.id, ...item.data() }) as T),
+      { fromCache: snapshot.metadata.fromCache },
+    );
+  }, error => {
+    console.error(`[Firestore] ${name}`, error);
+    onError?.(error);
+  });
 }
 
 export async function isUserDatabaseEmpty(uid: string) {

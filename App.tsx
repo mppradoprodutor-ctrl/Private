@@ -81,6 +81,29 @@ import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth
 import { AuthModal } from './components/AuthModal';
 import { resolveTripServiceTaker, isInvalidTakerName } from './services/takerResolver';
 
+const mergeExcelWorkbooksPreservingSheets = (
+  cloudWorkbook: ExcelWorkbook,
+  localWorkbook: ExcelWorkbook,
+): ExcelWorkbook => {
+  const sheets = [...cloudWorkbook.sheets];
+  localWorkbook.sheets.forEach(localSheet => {
+    const cloudSheet = sheets.find(sheet => sheet.id === localSheet.id);
+    if (!cloudSheet) {
+      sheets.push(localSheet);
+    } else if (JSON.stringify(cloudSheet) !== JSON.stringify(localSheet)) {
+      const baseName = `${localSheet.name} (cópia local)`;
+      let copyName = baseName;
+      let suffix = 2;
+      while (sheets.some(sheet => sheet.name === copyName)) {
+        copyName = `${baseName} ${suffix}`;
+        suffix += 1;
+      }
+      sheets.push({ ...localSheet, id: crypto.randomUUID(), name: copyName });
+    }
+  });
+  return { ...cloudWorkbook, sheets };
+};
+
 const DigitalClock: React.FC = () => {
   const [time, setTime] = useState(new Date());
   useEffect(() => {
@@ -1256,9 +1279,12 @@ const App: React.FC = () => {
           });
           cleanupSubsRef.current.push(unsubUnits);
 
-          const unsubExcel = subscribeToUserCollection<ExcelWorkbook>(uid, 'excel', (items) => {
+          const unsubExcel = subscribeToUserCollection<ExcelWorkbook>(uid, 'excel', (items, metadata) => {
+            if (metadata.fromCache) return;
+
             const cloudRecord = items.find(item => item.id === EXCEL_WORKBOOK_DOCUMENT_ID)
-              ?? items.find(item => item.id === 'workbook' && (!item.companyCnpj || item.companyCnpj === EXCEL_COMPANY_CNPJ));
+              ?? items.find(item => item.id === 'workbook' && (!item.companyCnpj || item.companyCnpj === EXCEL_COMPANY_CNPJ))
+              ?? items.find(item => item.companyCnpj === EXCEL_COMPANY_CNPJ && parseExcelWorkbook(item));
             const cloudWorkbook = parseExcelWorkbook(cloudRecord);
             const localWorkbook = excelWorkbookRef.current;
             const hasUnsyncedLocalChanges = excelLocalRevisionRef.current > excelCloudSyncedRevisionRef.current;
@@ -1267,13 +1293,46 @@ const App: React.FC = () => {
               excelCloudInitializedRef.current = true;
               setExcelCloudReady(true);
               if (hasUnsyncedLocalChanges) {
-                void saveExcelWorkbookToCloud(uid, localWorkbook).catch(error => {
-                  console.error('Error syncing local Excel workbook to Firebase:', error);
-                  setSyncStatus('error');
-                });
+                if (cloudWorkbook) {
+                  const mergedWorkbook = mergeExcelWorkbooksPreservingSheets(cloudWorkbook, localWorkbook);
+                  try {
+                    localStorage.setItem(EXCEL_STORAGE_KEY, JSON.stringify({ id: 'excel-root', sheets: mergedWorkbook.sheets }));
+                    setExcelWorkbook(mergedWorkbook);
+                    void saveExcelWorkbookToCloud(uid, mergedWorkbook).catch(error => {
+                      console.error('Error syncing merged Excel workbook to Firebase:', error);
+                      setSyncStatus('error');
+                    });
+                  } catch (error) {
+                    console.error('Error preserving local Excel workbook changes:', error);
+                    setSyncStatus('error');
+                    showNotification('Não foi possível preservar as alterações locais do Excel.', 'info');
+                  }
+                } else {
+                  void saveExcelWorkbookToCloud(uid, localWorkbook).catch(error => {
+                    console.error('Error syncing local Excel workbook to Firebase:', error);
+                    setSyncStatus('error');
+                  });
+                }
               } else if (cloudWorkbook) {
                 excelCloudSyncedRevisionRef.current = excelLocalRevisionRef.current;
                 if (JSON.stringify(localWorkbook.sheets) !== JSON.stringify(cloudWorkbook.sheets)) {
+                  if (hasExcelWorkbookData(localWorkbook)) {
+                    const mergedWorkbook = mergeExcelWorkbooksPreservingSheets(cloudWorkbook, localWorkbook);
+                    try {
+                      localStorage.setItem(EXCEL_STORAGE_KEY, JSON.stringify({ id: 'excel-root', sheets: mergedWorkbook.sheets }));
+                      setExcelWorkbook(mergedWorkbook);
+                      void saveExcelWorkbookToCloud(uid, mergedWorkbook).catch(error => {
+                        console.error('Error syncing preserved Excel workbook to Firebase:', error);
+                        setSyncStatus('error');
+                      });
+                      return;
+                    } catch (error) {
+                      console.error('Error preserving stored Excel workbook:', error);
+                      setSyncStatus('error');
+                      showNotification('Não foi possível preservar os dados locais do Excel.', 'info');
+                      return;
+                    }
+                  }
                   try {
                     localStorage.setItem(EXCEL_STORAGE_KEY, JSON.stringify({ id: 'excel-root', sheets: cloudWorkbook.sheets }));
                     setExcelWorkbook(cloudWorkbook);
@@ -1294,7 +1353,21 @@ const App: React.FC = () => {
 
             if (hasUnsyncedLocalChanges) {
               if (!cloudWorkbook || JSON.stringify(localWorkbook.sheets) !== JSON.stringify(cloudWorkbook.sheets)) {
-                void saveExcelWorkbookToCloud(uid, localWorkbook).catch(error => {
+                const workbookToSave = cloudWorkbook
+                  ? mergeExcelWorkbooksPreservingSheets(cloudWorkbook, localWorkbook)
+                  : localWorkbook;
+                if (JSON.stringify(localWorkbook.sheets) !== JSON.stringify(workbookToSave.sheets)) {
+                  try {
+                    localStorage.setItem(EXCEL_STORAGE_KEY, JSON.stringify({ id: 'excel-root', sheets: workbookToSave.sheets }));
+                    setExcelWorkbook(workbookToSave);
+                  } catch (error) {
+                    console.error('Error preserving local Excel workbook changes:', error);
+                    setSyncStatus('error');
+                    showNotification('Não foi possível preservar as alterações locais do Excel.', 'info');
+                    return;
+                  }
+                }
+                void saveExcelWorkbookToCloud(uid, workbookToSave).catch(error => {
                   console.error('Error syncing local Excel workbook to Firebase:', error);
                   setSyncStatus('error');
                 });
@@ -1314,6 +1387,10 @@ const App: React.FC = () => {
                 setSyncStatus('error');
               });
             }
+          }, error => {
+            console.error('Error listening to Excel workbook in Firebase:', error);
+            setSyncStatus('error');
+            showNotification('Não foi possível confirmar a planilha na nuvem. As alterações continuam salvas neste dispositivo.', 'info');
           });
           cleanupSubsRef.current.push(unsubExcel);
 
