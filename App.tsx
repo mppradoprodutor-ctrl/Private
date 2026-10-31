@@ -61,7 +61,6 @@ import {
   EXCEL_WORKBOOK_DOCUMENT_ID,
   hasExcelWorkbookData,
   parseExcelWorkbook,
-  readStoredExcelWorkbook,
   useExcelWorkbook,
   type ExcelWorkbook,
 } from './contexts/ExcelContext';
@@ -105,12 +104,28 @@ const App: React.FC = () => {
   const { workbook: excelWorkbook, setWorkbook: setExcelWorkbook } = useExcelWorkbook();
   const excelWorkbookRef = useRef(excelWorkbook);
   excelWorkbookRef.current = excelWorkbook;
+  const excelLocalRevisionRef = useRef(0);
+  const excelCloudSyncedRevisionRef = useRef(0);
   const [currentView, setCurrentView] = useState<ViewState>('dashboard');
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');
   const [excelCloudReady, setExcelCloudReady] = useState(false);
   const excelCloudInitializedRef = useRef(false);
+  const markExcelLocalChange = () => {
+    excelLocalRevisionRef.current += 1;
+  };
+  const saveExcelWorkbookToCloud = async (uid: string, workbook: ExcelWorkbook) => {
+    const revision = excelLocalRevisionRef.current;
+    await saveUserDocument(uid, 'excel', {
+      ...workbook,
+      id: EXCEL_WORKBOOK_DOCUMENT_ID,
+      companyCnpj: EXCEL_COMPANY_CNPJ,
+    });
+    if (revision === excelLocalRevisionRef.current) {
+      excelCloudSyncedRevisionRef.current = revision;
+    }
+  };
 
   // Keep a ref of the user so callbacks can access it without triggering recreation
   const userRef = useRef<FirebaseUser | null>(null);
@@ -1245,47 +1260,46 @@ const App: React.FC = () => {
             const cloudRecord = items.find(item => item.id === EXCEL_WORKBOOK_DOCUMENT_ID)
               ?? items.find(item => item.id === 'workbook' && (!item.companyCnpj || item.companyCnpj === EXCEL_COMPANY_CNPJ));
             const cloudWorkbook = parseExcelWorkbook(cloudRecord);
-            const localWorkbook = readStoredExcelWorkbook() ?? excelWorkbookRef.current;
+            const localWorkbook = excelWorkbookRef.current;
+            const hasUnsyncedLocalChanges = excelLocalRevisionRef.current > excelCloudSyncedRevisionRef.current;
 
             if (!excelCloudInitializedRef.current) {
               excelCloudInitializedRef.current = true;
               setExcelCloudReady(true);
-              if (hasExcelWorkbookData(localWorkbook)) {
-                if (!cloudWorkbook || JSON.stringify(localWorkbook.sheets) !== JSON.stringify(cloudWorkbook.sheets)) {
-                  void saveUserDocument(uid, 'excel', {
-                    ...localWorkbook,
-                    id: EXCEL_WORKBOOK_DOCUMENT_ID,
-                    companyCnpj: EXCEL_COMPANY_CNPJ,
-                  }).catch(error => {
-                    console.error('Error syncing local Excel workbook to Firebase:', error);
-                    setSyncStatus('error');
-                  });
-                }
-              } else if (hasExcelWorkbookData(cloudWorkbook)) {
-                try {
-                  localStorage.setItem(EXCEL_STORAGE_KEY, JSON.stringify({ id: 'excel-root', sheets: cloudWorkbook.sheets }));
-                  setExcelWorkbook(cloudWorkbook);
-                } catch (error) {
-                  console.error('Error restoring Excel workbook from Firebase:', error);
+              if (hasUnsyncedLocalChanges) {
+                void saveExcelWorkbookToCloud(uid, localWorkbook).catch(error => {
+                  console.error('Error syncing local Excel workbook to Firebase:', error);
                   setSyncStatus('error');
-                  showNotification('Não foi possível salvar o Excel da nuvem neste dispositivo.', 'info');
+                });
+              } else if (cloudWorkbook) {
+                excelCloudSyncedRevisionRef.current = excelLocalRevisionRef.current;
+                if (JSON.stringify(localWorkbook.sheets) !== JSON.stringify(cloudWorkbook.sheets)) {
+                  try {
+                    localStorage.setItem(EXCEL_STORAGE_KEY, JSON.stringify({ id: 'excel-root', sheets: cloudWorkbook.sheets }));
+                    setExcelWorkbook(cloudWorkbook);
+                  } catch (error) {
+                    console.error('Error restoring Excel workbook from Firebase:', error);
+                    setSyncStatus('error');
+                    showNotification('Não foi possível salvar o Excel da nuvem neste dispositivo.', 'info');
+                  }
                 }
-              }
-              return;
-            }
-
-            if (hasExcelWorkbookData(localWorkbook)) {
-              if (!cloudWorkbook || JSON.stringify(localWorkbook.sheets) !== JSON.stringify(cloudWorkbook.sheets)) {
-                void saveUserDocument(uid, 'excel', {
-                  ...localWorkbook,
-                  id: EXCEL_WORKBOOK_DOCUMENT_ID,
-                  companyCnpj: EXCEL_COMPANY_CNPJ,
-                }).catch(error => {
+              } else if (hasExcelWorkbookData(localWorkbook)) {
+                void saveExcelWorkbookToCloud(uid, localWorkbook).catch(error => {
                   console.error('Error syncing local Excel workbook to Firebase:', error);
                   setSyncStatus('error');
                 });
               }
-            } else if (hasExcelWorkbookData(cloudWorkbook)) {
+              return;
+            }
+
+            if (hasUnsyncedLocalChanges) {
+              if (!cloudWorkbook || JSON.stringify(localWorkbook.sheets) !== JSON.stringify(cloudWorkbook.sheets)) {
+                void saveExcelWorkbookToCloud(uid, localWorkbook).catch(error => {
+                  console.error('Error syncing local Excel workbook to Firebase:', error);
+                  setSyncStatus('error');
+                });
+              }
+            } else if (cloudWorkbook && JSON.stringify(localWorkbook.sheets) !== JSON.stringify(cloudWorkbook.sheets)) {
               try {
                 localStorage.setItem(EXCEL_STORAGE_KEY, JSON.stringify({ id: 'excel-root', sheets: cloudWorkbook.sheets }));
                 setExcelWorkbook(cloudWorkbook);
@@ -1294,6 +1308,11 @@ const App: React.FC = () => {
                 setSyncStatus('error');
                 showNotification('Não foi possível salvar o Excel da nuvem neste dispositivo.', 'info');
               }
+            } else if (!cloudWorkbook && hasExcelWorkbookData(localWorkbook)) {
+              void saveExcelWorkbookToCloud(uid, localWorkbook).catch(error => {
+                console.error('Error syncing local Excel workbook to Firebase:', error);
+                setSyncStatus('error');
+              });
             }
           });
           cleanupSubsRef.current.push(unsubExcel);
@@ -3163,12 +3182,9 @@ const App: React.FC = () => {
             {currentView === 'excel' && (
               <ExcelView
                 cloudReady={excelCloudReady}
+                onLocalChange={markExcelLocalChange}
                 onSaveToCloud={user
-                  ? workbook => saveUserDocument(user.uid, 'excel', {
-                      ...workbook,
-                      id: EXCEL_WORKBOOK_DOCUMENT_ID,
-                      companyCnpj: EXCEL_COMPANY_CNPJ,
-                    })
+                  ? workbook => saveExcelWorkbookToCloud(user.uid, workbook)
                   : undefined}
               />
             )}

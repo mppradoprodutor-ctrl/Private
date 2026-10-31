@@ -39,14 +39,18 @@ function toTSV(data: string[][]): string {
 type CellSelection = { startRow: number; startColumn: number; endRow: number; endColumn: number };
 type ExcelViewProps = {
   onSaveToCloud?: (workbook: ExcelWorkbook) => Promise<void>;
+  onLocalChange?: () => void;
   cloudReady?: boolean;
 };
 const createCellSelection = (start: { row: number; column: number }, end: { row: number; column: number }): CellSelection => ({ startRow: Math.min(start.row, end.row), startColumn: Math.min(start.column, end.column), endRow: Math.max(start.row, end.row), endColumn: Math.max(start.column, end.column) });
 const basicColors = ['#111827', '#ffffff', '#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6'];
-export default function ExcelView({ onSaveToCloud, cloudReady = true }: ExcelViewProps) {
+export default function ExcelView({ onSaveToCloud, onLocalChange, cloudReady = true }: ExcelViewProps) {
   const { workbook, setWorkbook } = useExcelWorkbook();
   const sheets = workbook.sheets;
+  const onLocalChangeRef = useRef(onLocalChange);
+  onLocalChangeRef.current = onLocalChange;
   const setSheets: React.Dispatch<React.SetStateAction<Sheet[]>> = update => {
+    onLocalChangeRef.current?.();
     setWorkbook(current => ({
       ...current,
       sheets: typeof update === 'function' ? update(current.sheets) : update,
