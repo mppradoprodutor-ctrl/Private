@@ -52,7 +52,10 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
   const [manualNetWeight, setManualNetWeight] = useState('');
 
   const [isDownloading, setIsDownloading] = useState(false);
-  const [hasGeneratedOrder, setHasGeneratedOrder] = useState(false);
+  const [generatedOrderTarget, setGeneratedOrderTarget] = useState<{
+    orderNumber: number;
+    existingTripIds: string[];
+  } | null>(null);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [emailStatus, setEmailStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const isDownloadingRef = useRef(false);
@@ -138,6 +141,12 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
       return 1;
     }
   });
+  const savedGeneratedTrip = generatedOrderTarget
+    ? trips.find(trip =>
+        trip.orderNumber === generatedOrderTarget.orderNumber &&
+        !generatedOrderTarget.existingTripIds.includes(trip.id)
+      )
+    : undefined;
 
   // Garante que o número nunca fique 0 ou nulo
   useEffect(() => {
@@ -486,9 +495,11 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
       operationalUnitState: selectedUnit?.state
     };
 
+    setGeneratedOrderTarget({
+      orderNumber: currentOrderNum,
+      existingTripIds: trips.map(trip => trip.id),
+    });
     onGenerateTrip(tripData);
-    setHasGeneratedOrder(true);
-    setNotes('');
 
     const nextNum = currentOrderNum + 1;
     setOrderNumber(nextNum);
@@ -1101,7 +1112,7 @@ fileName: `${displayDriverName} - ${displayTruckPlate}.pdf`,
             <button
               type="button"
               onClick={handleSendByEmail}
-              disabled={!hasGeneratedOrder || isSendingEmail}
+              disabled={!savedGeneratedTrip || isSendingEmail}
               className="w-full bg-white border border-slate-900 text-slate-900 font-black text-[8px] uppercase tracking-wider py-1.5 rounded-md shadow-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
             >
               {isSendingEmail ? <Loader2 size={13} className="animate-spin" /> : <Mail size={13} />}
@@ -1117,7 +1128,8 @@ fileName: `${displayDriverName} - ${displayTruckPlate}.pdf`,
         <div style={{ position: 'fixed', left: '-9999px', top: 0, zIndex: -1000, pointerEvents: 'none' }}>
           <LoadingOrderTemplate
             ref={orderRef}
-            orderNumber={orderNumber || 1}
+            orderNumber={savedGeneratedTrip?.orderNumber || orderNumber || 1}
+            notes={savedGeneratedTrip ? savedGeneratedTrip.notes : notes}
             collectionDate={loadingDate}
             loadingDate={loadingDate}
   loadingLocation={displayLocation}
@@ -1163,7 +1175,8 @@ fileName: `${displayDriverName} - ${displayTruckPlate}.pdf`,
         <div className="bg-slate-100 p-4 rounded-xl shadow-inner flex justify-center overflow-x-auto">
           <div className="origin-top scale-[0.8] sm:scale-[0.9] md:scale-[1.0]">
             <LoadingOrderTemplate
-              orderNumber={orderNumber || 1}
+              orderNumber={savedGeneratedTrip?.orderNumber || orderNumber || 1}
+              notes={savedGeneratedTrip ? savedGeneratedTrip.notes : notes}
               collectionDate={loadingDate}
               loadingDate={loadingDate}
               loadingLocation={displayLocation}

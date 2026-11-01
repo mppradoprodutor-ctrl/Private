@@ -10,6 +10,7 @@ export interface LoadingOrderTemplateProps {
   freights?: Freight[];
   // Propriedades opcionais para personalização direta ou manual
   orderNumber?: number;
+  notes?: string;
   loadingLocation?: string;
   loadingOriginCompany?: string;
   loadingOriginCnpj?: string;
@@ -180,7 +181,7 @@ const LoadingOrderTemplate = React.forwardRef<HTMLDivElement, LoadingOrderTempla
   const displayDriverName = props.driverName || driver?.name || trip?.driverName || '';
   const displayCpf = props.cpf || driver?.cpf || '';
   const displayPhone = props.phone || driver?.phone || trip?.driverPhone || '';
-  const displayNotes = text(trip?.notes).trim();
+  const displayNotes = text(props.notes !== undefined ? props.notes : trip?.notes).trim();
 
   const formatPhone = (val?: string) => {
     const trimmed = text(val).trim();
