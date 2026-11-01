@@ -180,6 +180,7 @@ const LoadingOrderTemplate = React.forwardRef<HTMLDivElement, LoadingOrderTempla
   const displayDriverName = props.driverName || driver?.name || trip?.driverName || '';
   const displayCpf = props.cpf || driver?.cpf || '';
   const displayPhone = props.phone || driver?.phone || trip?.driverPhone || '';
+  const displayNotes = text(trip?.notes).trim();
 
   const formatPhone = (val?: string) => {
     const trimmed = text(val).trim();
@@ -370,6 +371,12 @@ const LoadingOrderTemplate = React.forwardRef<HTMLDivElement, LoadingOrderTempla
           <div className="border-t-2 border-slate-800 pt-2 text-center">
             <p className="text-[10px] font-black uppercase text-slate-500">Assinatura Motorista</p>
             <p className="text-[9px] font-bold text-slate-700 mt-1">{displayDriverName || 'Motorista'}</p>
+            <div className="mt-2 px-1 text-left">
+              <p className="text-[7px] font-bold uppercase tracking-wider text-slate-400">Anotações</p>
+              <p className="min-h-[16px] border-b border-slate-200 pb-0.5 text-[8px] leading-3 text-slate-600 break-words">
+                {displayNotes || '\u00a0'}
+              </p>
+            </div>
           </div>
           <div className="border-t-2 border-slate-800 pt-2 text-center">
             <p className="text-[10px] font-black uppercase text-slate-500">Emissor Autorizado</p>
