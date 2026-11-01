@@ -45,7 +45,7 @@ type ExcelViewProps = {
 const createCellSelection = (start: { row: number; column: number }, end: { row: number; column: number }): CellSelection => ({ startRow: Math.min(start.row, end.row), startColumn: Math.min(start.column, end.column), endRow: Math.max(start.row, end.row), endColumn: Math.max(start.column, end.column) });
 const basicColors = ['#111827', '#ffffff', '#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6'];
 export default function ExcelView({ onSaveToCloud, onLocalChange, cloudReady = true }: ExcelViewProps) {
-  const { workbook, setWorkbook } = useExcelWorkbook();
+  const { workbook, setWorkbook, zoom, setZoom } = useExcelWorkbook();
   const sheets = workbook.sheets;
   const onLocalChangeRef = useRef(onLocalChange);
   onLocalChangeRef.current = onLocalChange;
@@ -65,7 +65,6 @@ export default function ExcelView({ onSaveToCloud, onLocalChange, cloudReady = t
   onSaveToCloudRef.current = onSaveToCloud;
   cloudReadyRef.current = cloudReady;
   const [activeId, setActiveId] = useState('');
-  const [zoom, setZoom] = useState(100);
   const [columnOneFilter, setColumnOneFilter] = useState('');
   const [activeCell, setActiveCell] = useState({ row: 0, column: 0 });
   const [cellSelection, setCellSelection] = useState<CellSelection>(createCellSelection({ row: 0, column: 0 }, { row: 0, column: 0 }));

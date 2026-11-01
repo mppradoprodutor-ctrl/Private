@@ -27,6 +27,7 @@ export type ExcelWorkbook = {
 };
 
 export const EXCEL_STORAGE_KEY = 'MY_SYSTEM_EXCEL_v3';
+export const EXCEL_ZOOM_STORAGE_KEY = 'MY_SYSTEM_EXCEL_ZOOM_v1';
 export const PREVIOUS_EXCEL_STORAGE_KEY = 'my_system_excel_planilha1_v2';
 export const LEGACY_EXCEL_STORAGE_KEY = 'gera-excel-workbook-v1';
 export const EXCEL_COMPANY_CNPJ = '33.777.479/0001-26';
@@ -150,14 +151,29 @@ export function readStoredExcelWorkbook(): ExcelWorkbook | null {
 type ExcelContextValue = {
   workbook: ExcelWorkbook;
   setWorkbook: Dispatch<SetStateAction<ExcelWorkbook>>;
+  zoom: number;
+  setZoom: Dispatch<SetStateAction<number>>;
 };
 
 const ExcelContext = createContext<ExcelContextValue | null>(null);
+
+function readStoredExcelZoom(): number {
+  try {
+    const savedZoom = Number(window.localStorage.getItem(EXCEL_ZOOM_STORAGE_KEY));
+    return Number.isInteger(savedZoom) && savedZoom >= 60 && savedZoom <= 150 && savedZoom % 10 === 0
+      ? savedZoom
+      : 100;
+  } catch (error) {
+    console.error('Error loading Excel zoom from localStorage:', error);
+    return 100;
+  }
+}
 
 export function ExcelProvider({ children }: { children: React.ReactNode }) {
   const [workbook, setWorkbookState] = useState<ExcelWorkbook>(
     () => readStoredExcelWorkbook() ?? { id: 'workbook', sheets: [createSheet('Planilha 1')] },
   );
+  const [zoom, setZoom] = useState(readStoredExcelZoom);
   const latestWorkbookRef = useRef(workbook);
   const setWorkbook = useCallback<Dispatch<SetStateAction<ExcelWorkbook>>>(update => {
     const nextWorkbook = typeof update === 'function' ? update(latestWorkbookRef.current) : update;
@@ -186,7 +202,15 @@ export function ExcelProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  return <ExcelContext.Provider value={{ workbook, setWorkbook }}>{children}</ExcelContext.Provider>;
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(EXCEL_ZOOM_STORAGE_KEY, String(zoom));
+    } catch (error) {
+      console.error('Error saving Excel zoom to localStorage:', error);
+    }
+  }, [zoom]);
+
+  return <ExcelContext.Provider value={{ workbook, setWorkbook, zoom, setZoom }}>{children}</ExcelContext.Provider>;
 }
 
 export function useExcelWorkbook() {
