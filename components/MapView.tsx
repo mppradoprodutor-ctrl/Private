@@ -5,6 +5,7 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { Search, MapPin, Navigation, Info, AlertCircle, Package, Loader2, X } from 'lucide-react';
 import { Shipment, Freight } from '../types';
+import { usePersistedUiState } from '../lib/persistedUiState';
 import { 
   geocode, 
   calculateDistance, 
@@ -164,10 +165,10 @@ const ZoomControls: React.FC<{
 };
 
 const MapView: React.FC<MapViewProps> = ({ isVisible = true, shipments = [], freights = [] }) => {
-  const [mapLayer, setMapLayer] = useState<'google' | 'positron' | 'osm'>('google');
-  const [origins, setOrigins] = useState<string[]>(['']);
+  const [mapLayer, setMapLayer] = usePersistedUiState<'google' | 'positron' | 'osm'>('tp_system_ui_map_layer', 'google');
+  const [origins, setOrigins] = usePersistedUiState<string[]>('tp_system_ui_map_origins', ['']);
   const [debouncedOrigin, setDebouncedOrigin] = useState('');
-  const [destinations, setDestinations] = useState<string[]>(['']);
+  const [destinations, setDestinations] = usePersistedUiState<string[]>('tp_system_ui_map_destinations', ['']);
   const [originCoordsList, setOriginCoordsList] = useState<[number, number][]>([]);
   const [destCoordsList, setDestCoordsList] = useState<[number, number][]>([]);
   const [routePolyline, setRoutePolyline] = useState<[number, number][]>([]);

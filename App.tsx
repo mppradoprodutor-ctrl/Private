@@ -80,6 +80,7 @@ import {
 import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
 import { AuthModal } from './components/AuthModal';
 import { resolveTripServiceTaker, isInvalidTakerName } from './services/takerResolver';
+import { readPersistedUiState, usePersistedUiState } from './lib/persistedUiState';
 
 const mergeExcelWorkbooksPreservingSheets = (
   cloudWorkbook: ExcelWorkbook,
@@ -103,6 +104,15 @@ const mergeExcelWorkbooksPreservingSheets = (
   });
   return { ...cloudWorkbook, sheets };
 };
+
+const availableViews: ViewState[] = [
+  'dashboard', 'drivers', 'freights', 'trips', 'loadingOrder', 'shipments',
+  'reminders', 'database', 'market', 'map', 'reports', 'notes', 'excel',
+];
+const isAvailableView = (value: unknown): value is ViewState =>
+  typeof value === 'string' && availableViews.includes(value as ViewState);
+const isViewList = (value: unknown): value is ViewState[] =>
+  Array.isArray(value) && value.every(isAvailableView);
 
 const DigitalClock: React.FC = () => {
   const [time, setTime] = useState(new Date());
@@ -129,7 +139,64 @@ const App: React.FC = () => {
   excelWorkbookRef.current = excelWorkbook;
   const excelLocalRevisionRef = useRef(0);
   const excelCloudSyncedRevisionRef = useRef(0);
-  const [currentView, setCurrentView] = useState<ViewState>('dashboard');
+  const [currentView, setCurrentView] = usePersistedUiState<ViewState>(
+    'tp_system_ui_current_view',
+    'dashboard',
+    isAvailableView,
+  );
+  const [visitedViews, setVisitedViews] = usePersistedUiState<ViewState[]>(
+    'tp_system_ui_visited_views',
+    () => [currentView],
+    isViewList,
+  );
+  const scrollPositionsRef = useRef(readPersistedUiState<Record<string, { main: number; content: number }>>('tp_system_ui_scroll_positions', {}));
+  const mainScrollRef = useRef<HTMLElement>(null);
+  const contentScrollRef = useRef<HTMLDivElement>(null);
+  const scrollSaveTimerRef = useRef<number | null>(null);
+  const saveViewScroll = useCallback((view: ViewState) => {
+    const position = {
+      main: mainScrollRef.current?.scrollTop ?? 0,
+      content: contentScrollRef.current?.scrollTop ?? 0,
+    };
+    const positions = { ...scrollPositionsRef.current, [view]: position };
+    scrollPositionsRef.current = positions;
+    try {
+      window.localStorage.setItem('tp_system_ui_scroll_positions', JSON.stringify(positions));
+    } catch (error) {
+      console.error('Error saving menu scroll position:', error);
+    }
+  }, []);
+  const scheduleScrollSave = useCallback(() => {
+    if (scrollSaveTimerRef.current !== null) window.clearTimeout(scrollSaveTimerRef.current);
+    scrollSaveTimerRef.current = window.setTimeout(() => saveViewScroll(currentView), 200);
+  }, [currentView, saveViewScroll]);
+  const navigateToView = useCallback((view: ViewState) => {
+    saveViewScroll(currentView);
+    if (scrollSaveTimerRef.current !== null) {
+      window.clearTimeout(scrollSaveTimerRef.current);
+      scrollSaveTimerRef.current = null;
+    }
+    setCurrentView(view);
+    setVisitedViews(previous => previous.includes(view) ? previous : [...previous, view]);
+  }, [currentView, saveViewScroll, setCurrentView, setVisitedViews]);
+  useEffect(() => {
+    if (!visitedViews.includes(currentView)) {
+      setVisitedViews(previous => [...previous, currentView]);
+    }
+  }, [currentView, visitedViews, setVisitedViews]);
+  useEffect(() => {
+    const position = scrollPositionsRef.current[currentView];
+    if (!position) return;
+    requestAnimationFrame(() => {
+      if (mainScrollRef.current) mainScrollRef.current.scrollTop = position.main;
+      if (contentScrollRef.current) contentScrollRef.current.scrollTop = position.content;
+    });
+  }, [currentView]);
+  useEffect(() => {
+    const handlePageHide = () => saveViewScroll(currentView);
+    window.addEventListener('pagehide', handlePageHide);
+    return () => window.removeEventListener('pagehide', handlePageHide);
+  }, [currentView, saveViewScroll]);
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');
@@ -485,13 +552,13 @@ const App: React.FC = () => {
   }, []);
 
   // FILTROS MOTORISTAS
-  const [driverSearch, setDriverSearch] = useState('');
-  const [driverPlateFilter, setDriverPlateFilter] = useState('');
-  const [driverCpfFilter, setDriverCpfFilter] = useState('');
-  const [driverAnttFilter, setDriverAnttFilter] = useState('');
-  const [driverTrailerTypeFilter, setDriverTrailerTypeFilter] = useState('');
-  const [driverAxlesFilter, setDriverAxlesFilter] = useState('');
-  const [driverDddFilter, setDriverDddFilter] = useState('');
+  const [driverSearch, setDriverSearch] = usePersistedUiState('tp_system_ui_driver_search', '');
+  const [driverPlateFilter, setDriverPlateFilter] = usePersistedUiState('tp_system_ui_driver_plate_filter', '');
+  const [driverCpfFilter, setDriverCpfFilter] = usePersistedUiState('tp_system_ui_driver_cpf_filter', '');
+  const [driverAnttFilter, setDriverAnttFilter] = usePersistedUiState('tp_system_ui_driver_antt_filter', '');
+  const [driverTrailerTypeFilter, setDriverTrailerTypeFilter] = usePersistedUiState('tp_system_ui_driver_trailer_filter', '');
+  const [driverAxlesFilter, setDriverAxlesFilter] = usePersistedUiState('tp_system_ui_driver_axles_filter', '');
+  const [driverDddFilter, setDriverDddFilter] = usePersistedUiState('tp_system_ui_driver_ddd_filter', '');
   
   const [debouncedDriverSearch, setDebouncedDriverSearch] = useState('');
   const [debouncedDriverPlate, setDebouncedDriverPlate] = useState('');
@@ -507,33 +574,33 @@ const App: React.FC = () => {
   }, [driverPlateFilter]);
 
   // FILTROS BASE DE FRETE
-  const [freightOriginFilter, setFreightOriginFilter] = useState('');
-  const [freightDestFilter, setFreightDestFilter] = useState('');
-  const [freightTakerFilter, setFreightTakerFilter] = useState('');
-  const [freightProductFilter, setFreightProductFilter] = useState('');
-  const [freightStatusFilter, setFreightStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
-  const [freightNotesFilter, setFreightNotesFilter] = useState('');
+  const [freightOriginFilter, setFreightOriginFilter] = usePersistedUiState('tp_system_ui_freight_origin_filter', '');
+  const [freightDestFilter, setFreightDestFilter] = usePersistedUiState('tp_system_ui_freight_destination_filter', '');
+  const [freightTakerFilter, setFreightTakerFilter] = usePersistedUiState('tp_system_ui_freight_taker_filter', '');
+  const [freightProductFilter, setFreightProductFilter] = usePersistedUiState('tp_system_ui_freight_product_filter', '');
+  const [freightStatusFilter, setFreightStatusFilter] = usePersistedUiState<'all' | 'active' | 'inactive'>('tp_system_ui_freight_status_filter', 'all');
+  const [freightNotesFilter, setFreightNotesFilter] = usePersistedUiState('tp_system_ui_freight_notes_filter', '');
 
   // FILTROS LANÇAR VIAGENS
-  const [tripOriginFilter, setTripOriginFilter] = useState('');
-  const [tripDestinationFilter, setTripDestinationFilter] = useState('');
-  const [tripTakerFilter, setTripTakerFilter] = useState('');
-  const [tripCteFilter, setTripCteFilter] = useState('');
-  const [tripPlateFilter, setTripPlateFilter] = useState('');
-  const [tripSelectedPlates, setTripSelectedPlates] = useState<string[]>([]);
-  const [tripAnttFilter, setTripAnttFilter] = useState('');
-  const [tripDriverFilter, setTripDriverFilter] = useState('');
-  const [tripNotesFilter, setTripNotesFilter] = useState('');
-  const [tripNfFilter, setTripNfFilter] = useState('');
-  const [tripStatusListFilter, setTripStatusListFilter] = useState<'all' | 'Carregado' | 'Pendente'>('all');
-  const [tripDocFilter, setTripDocFilter] = useState<'all' | 'Pendente' | 'OK'>('all');
-  const [tripMdfeFilter, setTripMdfeFilter] = useState<'all' | 'Baixado' | 'Pendente'>('all');
-  const [tripAdFilter, setTripAdFilter] = useState<'all' | 'Pendente'>('all');
-  const [tripSdFilter, setTripSdFilter] = useState<'all' | 'Pendente'>('all');
-  const [tripWeightFilter, setTripWeightFilter] = useState<'all' | 'withoutWeight'>('all');
-  const [tripStartDate, setTripStartDate] = useState('');
-  const [tripEndDate, setTripEndDate] = useState('');
-  const [tripPaymentTypeFilter, setTripPaymentTypeFilter] = useState<string>('');
+  const [tripOriginFilter, setTripOriginFilter] = usePersistedUiState('tp_system_ui_trip_origin_filter', '');
+  const [tripDestinationFilter, setTripDestinationFilter] = usePersistedUiState('tp_system_ui_trip_destination_filter', '');
+  const [tripTakerFilter, setTripTakerFilter] = usePersistedUiState('tp_system_ui_trip_taker_filter', '');
+  const [tripCteFilter, setTripCteFilter] = usePersistedUiState('tp_system_ui_trip_cte_filter', '');
+  const [tripPlateFilter, setTripPlateFilter] = usePersistedUiState('tp_system_ui_trip_plate_filter', '');
+  const [tripSelectedPlates, setTripSelectedPlates] = usePersistedUiState<string[]>('tp_system_ui_trip_selected_plates', []);
+  const [tripAnttFilter, setTripAnttFilter] = usePersistedUiState('tp_system_ui_trip_antt_filter', '');
+  const [tripDriverFilter, setTripDriverFilter] = usePersistedUiState('tp_system_ui_trip_driver_filter', '');
+  const [tripNotesFilter, setTripNotesFilter] = usePersistedUiState('tp_system_ui_trip_notes_filter', '');
+  const [tripNfFilter, setTripNfFilter] = usePersistedUiState('tp_system_ui_trip_nf_filter', '');
+  const [tripStatusListFilter, setTripStatusListFilter] = usePersistedUiState<'all' | 'Carregado' | 'Pendente'>('tp_system_ui_trip_status_filter', 'all');
+  const [tripDocFilter, setTripDocFilter] = usePersistedUiState<'all' | 'Pendente' | 'OK'>('tp_system_ui_trip_doc_filter', 'all');
+  const [tripMdfeFilter, setTripMdfeFilter] = usePersistedUiState<'all' | 'Baixado' | 'Pendente'>('tp_system_ui_trip_mdfe_filter', 'all');
+  const [tripAdFilter, setTripAdFilter] = usePersistedUiState<'all' | 'Pendente'>('tp_system_ui_trip_ad_filter', 'all');
+  const [tripSdFilter, setTripSdFilter] = usePersistedUiState<'all' | 'Pendente'>('tp_system_ui_trip_sd_filter', 'all');
+  const [tripWeightFilter, setTripWeightFilter] = usePersistedUiState<'all' | 'withoutWeight'>('tp_system_ui_trip_weight_filter', 'all');
+  const [tripStartDate, setTripStartDate] = usePersistedUiState('tp_system_ui_trip_start_date', '');
+  const [tripEndDate, setTripEndDate] = usePersistedUiState('tp_system_ui_trip_end_date', '');
+  const [tripPaymentTypeFilter, setTripPaymentTypeFilter] = usePersistedUiState('tp_system_ui_trip_payment_filter', '');
 
   // VALORES ÚNICOS PARA FILTROS DE VIAGENS (SELECTS)
   const uniqueTripOrigins = useMemo(() => {
@@ -579,29 +646,29 @@ const App: React.FC = () => {
   const uniqueTripPlates = useMemo(() => Array.from(new Set(trips.map(t => t.truckPlate))).sort(), [trips]);
 
   // FILTROS FRETE TERCEIRO
-  const [tpOriginFilter, setTpOriginFilter] = useState('');
-  const [tpDestFilter, setTpDestFilter] = useState('');
-  const [tpProdFilter, setTpProdFilter] = useState('');
-  const [tpCarrierFilter, setTpCarrierFilter] = useState('');
-  const [tpDistFilter, setTpDistFilter] = useState('');
+  const [tpOriginFilter, setTpOriginFilter] = usePersistedUiState('tp_system_ui_third_party_origin_filter', '');
+  const [tpDestFilter, setTpDestFilter] = usePersistedUiState('tp_system_ui_third_party_destination_filter', '');
+  const [tpProdFilter, setTpProdFilter] = usePersistedUiState('tp_system_ui_third_party_product_filter', '');
+  const [tpCarrierFilter, setTpCarrierFilter] = usePersistedUiState('tp_system_ui_third_party_carrier_filter', '');
+  const [tpDistFilter, setTpDistFilter] = usePersistedUiState('tp_system_ui_third_party_distance_filter', '');
 
   // FILTROS DASHBOARD
-  const [dashStartDate, setDashStartDate] = useState('');
-  const [dashEndDate, setDashEndDate] = useState('');
-  const [dashTakerFilter, setDashTakerFilter] = useState('');
-  const [dashAnttFilter, setDashAnttFilter] = useState('');
-  const [dashNotesFilter, setDashNotesFilter] = useState('');
-  const [rankingViewMode, setRankingViewMode] = useState<'table' | 'split'>('table');
+  const [dashStartDate, setDashStartDate] = usePersistedUiState('tp_system_ui_dashboard_start_date', '');
+  const [dashEndDate, setDashEndDate] = usePersistedUiState('tp_system_ui_dashboard_end_date', '');
+  const [dashTakerFilter, setDashTakerFilter] = usePersistedUiState('tp_system_ui_dashboard_taker_filter', '');
+  const [dashAnttFilter, setDashAnttFilter] = usePersistedUiState('tp_system_ui_dashboard_antt_filter', '');
+  const [dashNotesFilter, setDashNotesFilter] = usePersistedUiState('tp_system_ui_dashboard_notes_filter', '');
+  const [rankingViewMode, setRankingViewMode] = usePersistedUiState<'table' | 'split'>('tp_system_ui_dashboard_ranking_mode', 'table');
 
   // FILTROS EMBARQUE (SHIPMENT)
-  const [shipmentStartDate, setShipmentStartDate] = useState('');
-  const [shipmentEndDate, setShipmentEndDate] = useState('');
-  const [shipmentDestinationFilter, setShipmentDestinationFilter] = useState('');
-  const [shipmentPlateFilter, setShipmentPlateFilter] = useState('');
-  const [shipmentProductFilter, setShipmentProductFilter] = useState('');
-  const [shipmentShowDuplicates, setShipmentShowDuplicates] = useState(false);
-  const [shipmentStatusFilter, setShipmentStatusFilter] = useState<'all' | 'loaded' | 'pending'>('all');
-  const [shipmentOriginFilter, setShipmentOriginFilter] = useState('');
+  const [shipmentStartDate, setShipmentStartDate] = usePersistedUiState('tp_system_ui_shipment_start_date', '');
+  const [shipmentEndDate, setShipmentEndDate] = usePersistedUiState('tp_system_ui_shipment_end_date', '');
+  const [shipmentDestinationFilter, setShipmentDestinationFilter] = usePersistedUiState('tp_system_ui_shipment_destination_filter', '');
+  const [shipmentPlateFilter, setShipmentPlateFilter] = usePersistedUiState('tp_system_ui_shipment_plate_filter', '');
+  const [shipmentProductFilter, setShipmentProductFilter] = usePersistedUiState('tp_system_ui_shipment_product_filter', '');
+  const [shipmentShowDuplicates, setShipmentShowDuplicates] = usePersistedUiState('tp_system_ui_shipment_show_duplicates', false);
+  const [shipmentStatusFilter, setShipmentStatusFilter] = usePersistedUiState<'all' | 'loaded' | 'pending'>('tp_system_ui_shipment_status_filter', 'all');
+  const [shipmentOriginFilter, setShipmentOriginFilter] = usePersistedUiState('tp_system_ui_shipment_origin_filter', '');
 
   // MODAIS E ESTADOS DE EDIÇÃO
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -1480,7 +1547,7 @@ const App: React.FC = () => {
           }
         }
         showNotification("Dados restaurados!", "success");
-        setCurrentView('dashboard');
+        navigateToView('dashboard');
       } catch (err) {
         console.error('Erro ao restaurar backup:', err);
         showNotification("Erro no arquivo.", "info");
@@ -2013,7 +2080,7 @@ const App: React.FC = () => {
   };
 
   const handleNavigateFromReports = useCallback((filters: ReportsNavigateFilters) => {
-    setCurrentView('trips');
+    navigateToView('trips');
 
     // Origem
     if (filters.origin) {
@@ -2075,10 +2142,10 @@ const App: React.FC = () => {
           ? `motorista "${filters.driverName}"` 
           : 'filtro de relatório';
     showNotification(`Navegado para Lançar Viagens filtrando por ${targetDesc}!`, 'info');
-  }, [uniqueTripOrigins, uniqueTripDestinations, normalizeText, showNotification]);
+  }, [uniqueTripOrigins, uniqueTripDestinations, normalizeText, showNotification, navigateToView]);
 
   const handleTakerClick = (takerName: string) => {
-    setCurrentView('trips');
+    navigateToView('trips');
     setTripTakerFilter(isInvalidTakerName(takerName) ? '' : takerName);
     setTripStartDate(dashStartDate);
     setTripEndDate(dashEndDate);
@@ -2098,7 +2165,7 @@ const App: React.FC = () => {
   };
 
   const handlePaymentTypeClick = (pType: string) => {
-    setCurrentView('trips');
+    navigateToView('trips');
     setTripPaymentTypeFilter(pType);
     setTripStartDate(dashStartDate);
     setTripEndDate(dashEndDate);
@@ -2201,7 +2268,7 @@ const App: React.FC = () => {
           {menuItems.map(item => (
             <button 
               key={item.id} 
-              onClick={() => setCurrentView(item.id as any)} 
+              onClick={() => navigateToView(item.id as ViewState)}
               className={`flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-xs font-bold transition-all ${
                 currentView === item.id 
                   ? 'bg-red-700 text-white shadow-md' 
@@ -2221,7 +2288,7 @@ const App: React.FC = () => {
         </div>
       </aside>
 
-      <main className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto no-scrollbar">
+      <main ref={mainScrollRef} onScroll={scheduleScrollSave} className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto no-scrollbar">
         <header className="h-16 bg-red-950 border-b border-red-900 flex items-center justify-between px-8 shrink-0 z-30 shadow-lg">
           <div className="flex flex-col">
             <div className="text-[9px] font-black text-red-400 uppercase tracking-widest leading-none mb-1 flex items-center gap-1.5">
@@ -2335,10 +2402,11 @@ const App: React.FC = () => {
           </div>
         )}
 
-        <div className={`flex-1 overflow-y-auto ${currentView === 'dashboard' ? 'p-3 sm:p-4' : 'p-6'} custom-scrollbar`}>
+        <div ref={contentScrollRef} onScroll={scheduleScrollSave} className={`flex-1 overflow-y-auto ${currentView === 'dashboard' ? 'p-3 sm:p-4' : 'p-6'} custom-scrollbar`}>
           <div className={`max-w-[1700px] mx-auto w-full ${currentView === 'dashboard' ? 'space-y-3' : 'space-y-5'}`}>
             
-  {currentView === 'dashboard' && (
+  {visitedViews.includes('dashboard') && (
+  <div className={currentView === 'dashboard' ? 'contents' : 'hidden'}>
   <>
   <style>{`@media print { @page { margin: 8mm; } body { background: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } body > * { visibility: hidden; } .dashboard-print-area, .dashboard-print-area * { visibility: visible !important; } .dashboard-print-area { position: absolute !important; inset: 0 !important; width: 100% !important; padding: 0 !important; margin: 0 !important; } .dashboard-print-area button, .dashboard-print-area select { visibility: hidden !important; } .dashboard-print-area select { display: none !important; } }`}</style>
   <div className="dashboard-print-area space-y-3 animate-in fade-in duration-300">
@@ -2361,7 +2429,7 @@ const App: React.FC = () => {
 
                     <div 
                       onClick={() => {
-                        setCurrentView('trips');
+                        navigateToView('trips');
                         setTripWeightFilter('withoutWeight');
                         setTripStartDate(dashStartDate);
                         setTripEndDate(dashEndDate);
@@ -2488,7 +2556,7 @@ const App: React.FC = () => {
                   </div>
 
                   <div 
-                    onClick={() => setCurrentView('trips')}
+                    onClick={() => navigateToView('trips')}
                     className="bg-white p-2.5 rounded-xl border border-slate-200/80 shadow-2xs flex flex-col justify-between group hover:shadow-md transition-all border-t-3 border-t-blue-600 cursor-pointer"
                   >
                     <div className="flex items-center justify-between gap-1.5 mb-1">
@@ -2511,7 +2579,7 @@ const App: React.FC = () => {
                   </div>
 
                   <div 
-                    onClick={() => setCurrentView('drivers')}
+                    onClick={() => navigateToView('drivers')}
                     className="bg-white p-2.5 rounded-xl border border-slate-200/80 shadow-2xs flex flex-col justify-between group hover:shadow-md transition-all border-t-3 border-t-indigo-600 cursor-pointer"
                   >
                     <div className="flex items-center justify-between gap-1.5 mb-1">
@@ -2527,7 +2595,7 @@ const App: React.FC = () => {
                   </div>
 
                   <div 
-                    onClick={() => setCurrentView('freights')}
+                    onClick={() => navigateToView('freights')}
                     className="bg-white p-2.5 rounded-xl border border-slate-200/80 shadow-2xs flex flex-col justify-between group hover:shadow-md transition-all border-t-3 border-t-amber-600 cursor-pointer"
                   >
                     <div className="flex items-center justify-between gap-1.5 mb-1">
@@ -2848,9 +2916,11 @@ const App: React.FC = () => {
                 </div>
               </div>
             </>
+            </div>
             )}
 
-            {currentView === 'drivers' && (
+            {visitedViews.includes('drivers') && (
+              <div className={currentView === 'drivers' ? 'contents' : 'hidden'}>
               <div className="animate-in slide-in-from-bottom-1 fade-in duration-100 space-y-4">
                 <div className="flex justify-between items-center">
                   <div className="flex flex-col">
@@ -3055,9 +3125,11 @@ const App: React.FC = () => {
                   onEdit={handleEditDriver} 
                 />
               </div>
+              </div>
             )}
 
-            {currentView === 'freights' && (
+            {visitedViews.includes('freights') && (
+              <div className={currentView === 'freights' ? 'contents' : 'hidden'}>
               <div className="animate-in slide-in-from-bottom-2 fade-in duration-300 space-y-2">
                  <div className="flex justify-between items-center">
                   <div className="flex items-center gap-2">
@@ -3163,9 +3235,11 @@ const App: React.FC = () => {
                   }}
                   />
                 </div>
+              </div>
             )}
 
-            {currentView === 'shipments' && (
+            {visitedViews.includes('shipments') && (
+              <div className={currentView === 'shipments' ? 'contents' : 'hidden'}>
               <ShipmentView 
                 shipments={shipments} 
                 trips={trips}
@@ -3236,12 +3310,14 @@ const App: React.FC = () => {
                   setOriginFilter: setShipmentOriginFilter
                 }}
               />
+              </div>
             )}
-            {currentView === 'market' && <MarketView />}
+            {visitedViews.includes('market') && <div className={currentView === 'market' ? 'contents' : 'hidden'}><MarketView /></div>}
             <div className={currentView === 'map' ? 'block' : 'hidden'}>
               <MapView isVisible={currentView === 'map'} shipments={shipments} freights={freights} />
             </div>
-            {currentView === 'loadingOrder' && (
+            {visitedViews.includes('loadingOrder') && (
+              <div className={currentView === 'loadingOrder' ? 'contents' : 'hidden'}>
               <LoadingOrderView 
                 freights={freights} 
                 drivers={drivers} 
@@ -3254,9 +3330,11 @@ const App: React.FC = () => {
                   setIsTripFormOpen(true);
                 }} 
               />
+              </div>
             )}
             
-            {currentView === 'excel' && (
+            {visitedViews.includes('excel') && (
+              <div className={currentView === 'excel' ? 'contents' : 'hidden'}>
               <ExcelView
                 cloudReady={excelCloudReady}
                 onLocalChange={markExcelLocalChange}
@@ -3264,9 +3342,11 @@ const App: React.FC = () => {
                   ? workbook => saveExcelWorkbookToCloud(user.uid, workbook)
                   : undefined}
               />
+              </div>
             )}
 
-              {currentView === 'trips' && (
+              {visitedViews.includes('trips') && (
+              <div className={currentView === 'trips' ? 'contents' : 'hidden'}>
               <div className="animate-in slide-in-from-bottom-2 fade-in duration-300 space-y-5">
                 <div className="flex justify-between items-center">
                   <h2 className="text-xl font-black text-slate-900 tracking-tight uppercase">Lançar Viagens</h2>
@@ -3723,17 +3803,21 @@ const App: React.FC = () => {
                   }}
                 />
               </div>
+              </div>
             )}
 
-            {currentView === 'reports' && (
+            {visitedViews.includes('reports') && (
+              <div className={currentView === 'reports' ? 'contents' : 'hidden'}>
               <ReportsView 
                 trips={trips}
                 drivers={drivers}
                 onNavigateToTrips={handleNavigateFromReports}
               />
+              </div>
             )}
 
-            {currentView === 'reminders' && (
+            {visitedViews.includes('reminders') && (
+              <div className={currentView === 'reminders' ? 'contents' : 'hidden'}>
               <ReminderView 
                 reminders={reminders} 
                 onRemove={(id) => saveReminders(reminders.filter(r => r.id !== id))} 
@@ -3741,8 +3825,10 @@ const App: React.FC = () => {
                 onEdit={(r) => { setEditingReminder(r); setIsReminderFormOpen(true); }} 
                 onToggleComplete={handleToggleReminderComplete}
               />
+              </div>
             )}
-            {currentView === 'notes' && (
+            {visitedViews.includes('notes') && (
+              <div className={currentView === 'notes' ? 'contents' : 'hidden'}>
               <NotesView 
                 notes={notes}
                 onAdd={() => { setEditingNote(null); setIsNoteFormOpen(true); }}
@@ -3752,8 +3838,10 @@ const App: React.FC = () => {
                   showNotification("Nota excluída permanentemente!", "info");
                 }}
               />
+              </div>
             )}
-            {currentView === 'database' && (
+            {visitedViews.includes('database') && (
+              <div className={currentView === 'database' ? 'contents' : 'hidden'}>
               <div className="animate-in slide-in-from-bottom-2 fade-in duration-300 space-y-6">
                 <div className="flex flex-col">
                   <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Banco de Dados</h2>
@@ -3812,6 +3900,7 @@ const App: React.FC = () => {
                     )}
                   </div>
                 </div>
+              </div>
               </div>
             )}
           </div>

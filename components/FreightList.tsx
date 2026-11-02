@@ -4,6 +4,7 @@ import { Trash2, MapPin, Building2, ArrowRightLeft, TrendingUp, Package, Info, D
 import { toBlob } from 'html-to-image';
 import { saveAs } from 'file-saver';
 import { Freight } from '../types';
+import { usePersistedUiState } from '../lib/persistedUiState';
 
 interface FreightListProps {
   freights: Freight[];
@@ -13,10 +14,10 @@ interface FreightListProps {
 }
 
 const FreightList: React.FC<FreightListProps> = ({ freights, onRemove, onEdit, onDuplicate }) => {
-  const [showCompanyFreight, setShowCompanyFreight] = useState(true);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [showCompanyFreight, setShowCompanyFreight] = usePersistedUiState('tp_system_ui_freight_show_company', true);
+  const [isExpanded, setIsExpanded] = usePersistedUiState('tp_system_ui_freight_expanded', false);
   const [isExporting, setIsExporting] = useState(false);
-  const [viewMode, setViewMode] = useState<'columns' | 'ultra' | 'table'>('table');
+  const [viewMode, setViewMode] = usePersistedUiState<'columns' | 'ultra' | 'table'>('tp_system_ui_freight_view_mode', 'table');
   const expandedRef = useRef<HTMLDivElement>(null);
 
   const handleDownloadHDImage = async () => {

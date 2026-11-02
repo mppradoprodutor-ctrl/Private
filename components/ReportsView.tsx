@@ -10,6 +10,7 @@ import {
   Plus, Check, X, DollarSign, Scale, Percent, CheckSquare, Square, Layers, Route, ArrowRight, Printer
 } from 'lucide-react';
 import { MapContainer, TileLayer, Circle, useMap, Tooltip as LeafletTooltip, Marker, Popup, Polyline } from 'react-leaflet';
+import { usePersistedUiState } from '../lib/persistedUiState';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Driver, Trip } from '../types';
@@ -173,17 +174,17 @@ const ZoomControls: React.FC<{
 };
 
 const ReportsView: React.FC<ReportsViewProps> = ({ trips, drivers, onNavigateToTrips }) => {
-  const [mapLayer, setMapLayer] = useState<'google' | 'positron' | 'osm'>('google');
-  const [mapFilter, setMapFilter] = useState<'all' | 'origins' | 'destinations'>('all');
-  const [showRoutes, setShowRoutes] = useState<boolean>(true);
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [anttFilter, setAnttFilter] = useState('');
-  const [plateFilter, setPlateFilter] = useState('');
-  const [nameFilter, setNameFilter] = useState('');
+  const [mapLayer, setMapLayer] = usePersistedUiState<'google' | 'positron' | 'osm'>('tp_system_ui_reports_map_layer', 'google');
+  const [mapFilter, setMapFilter] = usePersistedUiState<'all' | 'origins' | 'destinations'>('tp_system_ui_reports_map_filter', 'all');
+  const [showRoutes, setShowRoutes] = usePersistedUiState<boolean>('tp_system_ui_reports_show_routes', true);
+  const [startDate, setStartDate] = usePersistedUiState('tp_system_ui_reports_start_date', '');
+  const [endDate, setEndDate] = usePersistedUiState('tp_system_ui_reports_end_date', '');
+  const [anttFilter, setAnttFilter] = usePersistedUiState('tp_system_ui_reports_antt_filter', '');
+  const [plateFilter, setPlateFilter] = usePersistedUiState('tp_system_ui_reports_plate_filter', '');
+  const [nameFilter, setNameFilter] = usePersistedUiState('tp_system_ui_reports_name_filter', '');
   
   // Multiple Plates Selection Modal State (strictly for plates in the filter list)
-  const [selectedPlates, setSelectedPlates] = useState<string[]>([]);
+  const [selectedPlates, setSelectedPlates] = usePersistedUiState<string[]>('tp_system_ui_reports_selected_plates', []);
   const [isPlateModalOpen, setIsPlateModalOpen] = useState(false);
   const [plateSearchText, setPlateSearchText] = useState('');
 

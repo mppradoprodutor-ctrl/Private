@@ -1,22 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { Search, TrendingUp, Info, MapPin, Truck, Loader2, AlertCircle, RefreshCcw, ArrowUpRight, Building2 } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
+import { usePersistedUiState } from '../lib/persistedUiState';
 
 const MarketView: React.FC = () => {
-  const [origin, setOrigin] = useState('Osvaldo Cruz, SP');
-  const [destination, setDestination] = useState('SP');
-  const [vehicleType, setVehicleType] = useState('Bitrem');
+  const [origin, setOrigin] = usePersistedUiState('tp_system_ui_market_origin', 'Osvaldo Cruz, SP');
+  const [destination, setDestination] = usePersistedUiState('tp_system_ui_market_destination', 'SP');
+  const [vehicleType, setVehicleType] = usePersistedUiState('tp_system_ui_market_vehicle', 'Bitrem');
   
-  const [exactOrigin, setExactOrigin] = useState('Osvaldo Cruz, SP');
-  const [exactDestination, setExactDestination] = useState('Cuiabá, MT');
-  const [exactVehicle, setExactVehicle] = useState('Bitrem');
+  const [exactOrigin, setExactOrigin] = usePersistedUiState('tp_system_ui_market_exact_origin', 'Osvaldo Cruz, SP');
+  const [exactDestination, setExactDestination] = usePersistedUiState('tp_system_ui_market_exact_destination', 'Cuiabá, MT');
+  const [exactVehicle, setExactVehicle] = usePersistedUiState('tp_system_ui_market_exact_vehicle', 'Bitrem');
   
   const [error, setError] = useState<string | null>(null);
   
   const [overviewLoading, setOverviewLoading] = useState(false);
   const [exactLoading, setExactLoading] = useState(false);
-  const [marketOverview, setMarketOverview] = useState<any[]>([]);
-  const [exactResults, setExactResults] = useState<any[]>([]);
+  const [marketOverview, setMarketOverview] = usePersistedUiState<any[]>('tp_system_ui_market_overview', []);
+  const [exactResults, setExactResults] = usePersistedUiState<any[]>('tp_system_ui_market_exact_results', []);
 
   const brazilianStates = [
     { uf: 'AC', name: 'Acre' }, { uf: 'AL', name: 'Alagoas' }, { uf: 'AP', name: 'Amapá' },

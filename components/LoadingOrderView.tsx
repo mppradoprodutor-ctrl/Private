@@ -7,6 +7,7 @@ import jsPDF from 'jspdf';
 import React, { useRef, useState, useMemo, useEffect, useCallback } from 'react';
 import { Driver, Freight, Trip, OperationalUnit } from '../types';
 import LoadingOrderTemplate from './LoadingOrderTemplate';
+import { usePersistedUiState } from '../lib/persistedUiState';
 
 interface LoadingOrderViewProps {
   freights: Freight[];
@@ -27,29 +28,29 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
   onOpenManageUnits,
   onGenerateTrip 
 }) => {
-  const [selectedFreight, setSelectedFreight] = useState<Freight | null>(null);
-  const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
-  const [selectedUnitId, setSelectedUnitId] = useState<string>(() => {
+  const [selectedFreight, setSelectedFreight] = usePersistedUiState<Freight | null>('tp_system_ui_loading_order_freight', null);
+  const [selectedDriver, setSelectedDriver] = usePersistedUiState<Driver | null>('tp_system_ui_loading_order_driver', null);
+  const [selectedUnitId, setSelectedUnitId] = usePersistedUiState<string>('tp_system_ui_loading_order_unit', () => {
     return activeOperationalUnitId || operationalUnits[0]?.id || '';
   });
-  const [selectedDeliveryUnitId, setSelectedDeliveryUnitId] = useState<string>(() => {
+  const [selectedDeliveryUnitId, setSelectedDeliveryUnitId] = usePersistedUiState<string>('tp_system_ui_loading_order_delivery_unit', () => {
     return activeOperationalUnitId || operationalUnits[0]?.id || '';
   });
 
   // Campos manuais/opcionais para permitir preenchimento flexível
-  const [manualLocation, setManualLocation] = useState('');
-  const [manualOrigin, setManualOrigin] = useState('');
-  const [manualState, setManualState] = useState('');
-  const [manualProduct, setManualProduct] = useState('');
-  const [manualDriverName, setManualDriverName] = useState('');
-  const [manualCpf, setManualCpf] = useState('');
-  const [manualPhone, setManualPhone] = useState('');
-  const [manualTruckPlate, setManualTruckPlate] = useState('');
-  const [manualTrailer1, setManualTrailer1] = useState('');
-  const [manualTrailer2, setManualTrailer2] = useState('');
-  const [manualDolly, setManualDolly] = useState('');
-  const [manualAxles, setManualAxles] = useState('');
-  const [manualNetWeight, setManualNetWeight] = useState('');
+  const [manualLocation, setManualLocation] = usePersistedUiState('tp_system_ui_loading_order_location', '');
+  const [manualOrigin, setManualOrigin] = usePersistedUiState('tp_system_ui_loading_order_origin', '');
+  const [manualState, setManualState] = usePersistedUiState('tp_system_ui_loading_order_state', '');
+  const [manualProduct, setManualProduct] = usePersistedUiState('tp_system_ui_loading_order_product', '');
+  const [manualDriverName, setManualDriverName] = usePersistedUiState('tp_system_ui_loading_order_driver_name', '');
+  const [manualCpf, setManualCpf] = usePersistedUiState('tp_system_ui_loading_order_cpf', '');
+  const [manualPhone, setManualPhone] = usePersistedUiState('tp_system_ui_loading_order_phone', '');
+  const [manualTruckPlate, setManualTruckPlate] = usePersistedUiState('tp_system_ui_loading_order_truck_plate', '');
+  const [manualTrailer1, setManualTrailer1] = usePersistedUiState('tp_system_ui_loading_order_trailer_1', '');
+  const [manualTrailer2, setManualTrailer2] = usePersistedUiState('tp_system_ui_loading_order_trailer_2', '');
+  const [manualDolly, setManualDolly] = usePersistedUiState('tp_system_ui_loading_order_dolly', '');
+  const [manualAxles, setManualAxles] = usePersistedUiState('tp_system_ui_loading_order_axles', '');
+  const [manualNetWeight, setManualNetWeight] = usePersistedUiState('tp_system_ui_loading_order_net_weight', '');
 
   const [isDownloading, setIsDownloading] = useState(false);
   const [generatedOrderTarget, setGeneratedOrderTarget] = useState<{
@@ -121,9 +122,9 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
   ].filter(Boolean).join(' - ');
   const effectiveCityState = selectedUnit?.city ? `${selectedUnit.city}${selectedUnit.state ? ` - ${selectedUnit.state}` : ''}` : (selectedUnit?.state || '');
 
-  const [loadingDate, setLoadingDate] = useState(new Date().toISOString().split('T')[0]);
-  const [paymentType, setPaymentType] = useState('Pix');
-  const [notes, setNotes] = useState('');
+  const [loadingDate, setLoadingDate] = usePersistedUiState('tp_system_ui_loading_order_date', new Date().toISOString().split('T')[0]);
+  const [paymentType, setPaymentType] = usePersistedUiState('tp_system_ui_loading_order_payment_type', 'Pix');
+  const [notes, setNotes] = usePersistedUiState('tp_system_ui_loading_order_notes', '');
   const [orderNumber, setOrderNumber] = useState<number>(() => {
     try {
       const saved = localStorage.getItem('tp_system_loading_order_seq');

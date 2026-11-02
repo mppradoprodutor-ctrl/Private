@@ -15,6 +15,7 @@ import {
   type Sheet,
   useExcelWorkbook,
 } from '../contexts/ExcelContext';
+import { readPersistedUiState, usePersistedUiState } from '../lib/persistedUiState';
 
 function parseTSV(text: string): string[][] {
   const rows: string[][] = []; let row: string[] = []; let cell = ""; let inQuotes = false;
@@ -64,12 +65,12 @@ export default function ExcelView({ onSaveToCloud, onLocalChange, cloudReady = t
   latestSheetsRef.current = sheets;
   onSaveToCloudRef.current = onSaveToCloud;
   cloudReadyRef.current = cloudReady;
-  const [activeId, setActiveId] = useState('');
-  const [columnOneFilter, setColumnOneFilter] = useState('');
-  const [activeCell, setActiveCell] = useState({ row: 0, column: 0 });
-  const [cellSelection, setCellSelection] = useState<CellSelection>(createCellSelection({ row: 0, column: 0 }, { row: 0, column: 0 }));
-  const [selectedCells, setSelectedCells] = useState<Array<{ id: string; row: number; column: number }>>([{ id: '0-0', row: 0, column: 0 }]);
-  const selectionAnchorRef = useRef({ row: 0, column: 0 });
+  const [activeId, setActiveId] = usePersistedUiState('tp_system_ui_excel_active_sheet', () => workbook.sheets[0]?.id ?? '');
+  const [columnOneFilter, setColumnOneFilter] = usePersistedUiState('tp_system_ui_excel_column_filter', '');
+  const [activeCell, setActiveCell] = usePersistedUiState('tp_system_ui_excel_active_cell', { row: 0, column: 0 });
+  const [cellSelection, setCellSelection] = usePersistedUiState<CellSelection>('tp_system_ui_excel_cell_selection', createCellSelection({ row: 0, column: 0 }, { row: 0, column: 0 }));
+  const [selectedCells, setSelectedCells] = usePersistedUiState<Array<{ id: string; row: number; column: number }>>('tp_system_ui_excel_selected_cells', [{ id: '0-0', row: 0, column: 0 }]);
+  const selectionAnchorRef = useRef(activeCell);
   const selectingCellsRef = useRef(false);
   const preserveSelectionOnFocusRef = useRef<{ row: number; column: number } | null>(null);
   const [editingName, setEditingName] = useState(false);
@@ -84,8 +85,17 @@ export default function ExcelView({ onSaveToCloud, onLocalChange, cloudReady = t
   const filteredRows = rows
     .map((line, row) => ({ line, row }))
     .filter(({ line }) => line[0]?.value.replace(/<[^>]*>/g, '').toLocaleLowerCase().includes(columnOneFilter.trim().toLocaleLowerCase()));
-  useEffect(() => { if (!activeId && sheets[0]) setActiveId(sheets[0].id); }, [activeId, sheets]);
   useEffect(() => {
+    if (sheets.length && !sheets.some(item => item.id === activeId)) setActiveId(sheets[0].id);
+  }, [activeId, sheets, setActiveId]);
+  const previousSheetIdRef = useRef(sheet?.id);
+  useEffect(() => {
+    if (!previousSheetIdRef.current) {
+      previousSheetIdRef.current = sheet?.id;
+      return;
+    }
+    if (previousSheetIdRef.current === sheet?.id) return;
+    previousSheetIdRef.current = sheet?.id;
     const initialCell = { row: 0, column: 0 };
     setActiveCell(initialCell);
     setCellSelection(createCellSelection(initialCell, initialCell));
@@ -93,6 +103,28 @@ export default function ExcelView({ onSaveToCloud, onLocalChange, cloudReady = t
     selectionAnchorRef.current = initialCell;
     selectingCellsRef.current = false;
   }, [sheet?.id]);
+  useEffect(() => {
+    const container = tableContainerRef.current;
+    if (!container) return;
+    const savedPosition = readPersistedUiState<{ top: number; left: number }>(
+      'tp_system_ui_excel_scroll',
+      { top: 0, left: 0 },
+    );
+    container.scrollTop = savedPosition.top;
+    container.scrollLeft = savedPosition.left;
+    const savePosition = () => {
+      try {
+        window.localStorage.setItem('tp_system_ui_excel_scroll', JSON.stringify({
+          top: container.scrollTop,
+          left: container.scrollLeft,
+        }));
+      } catch (error) {
+        console.error('Error saving Excel scroll position:', error);
+      }
+    };
+    container.addEventListener('scroll', savePosition, { passive: true });
+    return () => container.removeEventListener('scroll', savePosition);
+  }, []);
   const queueCloudSave = (sheetsToSave: Sheet[]) => {
     const save = async () => {
       if (cloudReadyRef.current && onSaveToCloudRef.current) {
