@@ -37,6 +37,15 @@ function toTSV(data: string[][]): string {
   }).join('\t')).join('\n');
 }
 
+function getSearchableCellText(value: string): string {
+  return value
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;|&#160;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>');
+}
+
 type CellSelection = { startRow: number; startColumn: number; endRow: number; endColumn: number };
 type ExcelViewProps = {
   onSaveToCloud?: (workbook: ExcelWorkbook) => Promise<void>;
@@ -67,6 +76,7 @@ export default function ExcelView({ onSaveToCloud, onLocalChange, cloudReady = t
   cloudReadyRef.current = cloudReady;
   const [activeId, setActiveId] = usePersistedUiState('tp_system_ui_excel_active_sheet', () => workbook.sheets[0]?.id ?? '');
   const [columnOneFilter, setColumnOneFilter] = usePersistedUiState('tp_system_ui_excel_column_filter', '');
+  const [searchFilter, setSearchFilter] = usePersistedUiState('tp_system_ui_excel_search_filter', '');
   const [activeCell, setActiveCell] = usePersistedUiState('tp_system_ui_excel_active_cell', { row: 0, column: 0 });
   const [cellSelection, setCellSelection] = usePersistedUiState<CellSelection>('tp_system_ui_excel_cell_selection', createCellSelection({ row: 0, column: 0 }, { row: 0, column: 0 }));
   const [selectedCells, setSelectedCells] = usePersistedUiState<Array<{ id: string; row: number; column: number }>>('tp_system_ui_excel_selected_cells', [{ id: '0-0', row: 0, column: 0 }]);
@@ -82,9 +92,20 @@ export default function ExcelView({ onSaveToCloud, onLocalChange, cloudReady = t
   const htmlPropsCache = useRef<Record<string, { value: string; props: { __html: string } }>>({});
   const sheet = sheets.find(item => item.id === activeId) ?? sheets[0];
   const rows = sheet?.rows ?? createRows();
+  const searchQuery = searchFilter.trim().toLocaleLowerCase();
   const filteredRows = rows
     .map((line, row) => ({ line, row }))
-    .filter(({ line }) => line[0]?.value.replace(/<[^>]*>/g, '').toLocaleLowerCase().includes(columnOneFilter.trim().toLocaleLowerCase()));
+    .filter(({ line }) =>
+      line[0]?.value.replace(/<[^>]*>/g, '').toLocaleLowerCase().includes(columnOneFilter.trim().toLocaleLowerCase()) &&
+      (!searchQuery || line.some(cell => getSearchableCellText(cell.value).toLocaleLowerCase().includes(searchQuery))),
+    )
+    .sort((first, second) => {
+      if (!searchQuery) return 0;
+      const getMatchPosition = ({ line }: typeof first) => Math.min(...line
+        .map(cell => getSearchableCellText(cell.value).toLocaleLowerCase().indexOf(searchQuery))
+        .filter(position => position >= 0));
+      return getMatchPosition(first) - getMatchPosition(second) || first.row - second.row;
+    });
   useEffect(() => {
     if (sheets.length && !sheets.some(item => item.id === activeId)) setActiveId(sheets[0].id);
   }, [activeId, sheets, setActiveId]);
@@ -402,6 +423,7 @@ export default function ExcelView({ onSaveToCloud, onLocalChange, cloudReady = t
       <button className={buttons} onMouseDown={event => event.preventDefault()} onClick={() => updateSelectedCells({ border: activeCellData?.border === false })} aria-pressed={activeCellData?.border !== false} title="Alternar borda nas células selecionadas">Borda</button><button className={`${buttons} border-red-100 text-red-700`} onMouseDown={event => event.preventDefault()} onClick={clearSelectedCellContents} title="Limpar conteúdo das células selecionadas"><Trash2 data-icon="inline-start" /> Limpar</button>
       <button className={buttons} onClick={() => window.print()}><Printer data-icon="inline-start" /> PDF</button>
       <input type="search" value={columnOneFilter} onChange={event => setColumnOneFilter(event.target.value)} placeholder="Filtrar coluna 1" aria-label="Filtrar pela coluna 1" className="w-36 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[10px] font-bold text-slate-700 outline-none placeholder:text-slate-400 focus:border-red-300" />
+      <input type="search" value={searchFilter} onChange={event => setSearchFilter(event.target.value)} placeholder="Pesquisar" aria-label="Pesquisar em toda a tabela" className="w-36 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[10px] font-bold text-slate-700 outline-none placeholder:text-slate-400 focus:border-red-300" />
     </div></div>
     {editingName && <input autoFocus defaultValue={sheet?.name} onBlur={e => { updateSheet(value => ({ ...value, name: e.target.value.trim() || value.name })); setEditingName(false); }} onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }} className="w-52 rounded-lg border border-red-200 px-2 py-1.5 text-[10px] font-bold outline-none" aria-label="Nome da página" />}
     <div ref={tableContainerRef} onCopy={handleCopy} onPaste={handlePaste} className="excel-wrapper excel-print-area rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -500,7 +522,9 @@ export default function ExcelView({ onSaveToCloud, onLocalChange, cloudReady = t
                       const hasSelectedText = Boolean(textSelection && !textSelection.isCollapsed &&
                         event.currentTarget.contains(textSelection.anchorNode) &&
                         event.currentTarget.contains(textSelection.focusNode));
-                      if (!hasSelectedText) {
+                      const hasTextCaret = Boolean(textSelection?.isCollapsed &&
+                        event.currentTarget.contains(textSelection.anchorNode));
+                      if (!hasSelectedText && !hasTextCaret) {
                         event.preventDefault();
                         clearSelectedCellContents();
                       }
