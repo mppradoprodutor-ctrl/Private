@@ -206,8 +206,8 @@ const ZoomControls: React.FC<{
 
 const ReportsView: React.FC<ReportsViewProps> = ({ trips, drivers, onNavigateToTrips }) => {
   const [mapLayer, setMapLayer] = usePersistedUiState<'google' | 'positron' | 'osm'>(
-    'tp_system_ui_reports_map_layer',
-    'positron',
+    'tp_system_ui_map_layer',
+    'google',
     (value): value is 'google' | 'positron' | 'osm' => value === 'google' || value === 'positron' || value === 'osm',
   );
   const [mapFilter, setMapFilter] = usePersistedUiState<'all' | 'origins' | 'destinations'>('tp_system_ui_reports_map_filter', 'all');
