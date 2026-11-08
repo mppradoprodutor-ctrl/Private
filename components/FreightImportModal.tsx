@@ -2,7 +2,6 @@
 import React, { useState, useRef } from 'react';
 import { X, FileSpreadsheet, AlertCircle, UploadCloud, Loader2 } from 'lucide-react';
 import { Freight } from '../types';
-import * as XLSX from 'xlsx';
 
 interface FreightImportModalProps {
   isOpen: boolean;
@@ -33,8 +32,9 @@ const FreightImportModal: React.FC<FreightImportModalProps> = ({ isOpen, onClose
     setError(null);
 
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       try {
+        const XLSX = await import('xlsx');
         const data = evt.target?.result;
         const wb = XLSX.read(data, { type: 'array' });
         const wsname = wb.SheetNames[0];

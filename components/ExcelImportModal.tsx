@@ -2,7 +2,6 @@
 import React, { useState, useRef } from 'react';
 import { X, FileSpreadsheet, AlertCircle, UploadCloud, CheckCircle2, Loader2, Download } from 'lucide-react';
 import { Driver } from '../types';
-import * as XLSX from 'xlsx';
 import { sanitizeDriverText } from './DriverFormModal';
 
 interface ExcelImportModalProps {
@@ -58,8 +57,9 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, on
     setError(null);
 
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       try {
+        const XLSX = await import('xlsx');
         const data = evt.target?.result;
         const wb = XLSX.read(data, { type: 'array' });
         const wsname = wb.SheetNames[0];
@@ -225,4 +225,3 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, on
 };
 
 export default ExcelImportModal;
-

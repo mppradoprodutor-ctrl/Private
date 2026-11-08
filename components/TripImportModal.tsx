@@ -2,7 +2,6 @@
 import React, { useState, useRef } from 'react';
 import { X, FileSpreadsheet, AlertCircle, UploadCloud, Loader2 } from 'lucide-react';
 import { Trip, Driver, Freight } from '../types';
-import * as XLSX from 'xlsx';
 import { parseCityState } from '../services/geocodingService';
 import { resolveTripServiceTaker, isInvalidTakerName } from '../services/takerResolver';
 
@@ -37,8 +36,9 @@ const TripImportModal: React.FC<TripImportModalProps> = ({ isOpen, onClose, onIm
     setError(null);
 
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       try {
+        const XLSX = await import('xlsx');
         const data = evt.target?.result;
         const wb = XLSX.read(data, { type: 'array', cellDates: true });
         const wsname = wb.SheetNames[0];

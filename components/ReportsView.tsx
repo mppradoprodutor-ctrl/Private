@@ -65,26 +65,57 @@ const MAP_LAYERS = {
 };
 
 // Helper to auto-fit map to points or center on Brazil
+const updateMapView = (map: L.Map, center: [number, number], points: any[]) => {
+  if (points.length > 1) {
+    const bounds = L.latLngBounds(points.map(p => p.pos));
+    map.fitBounds(bounds, { padding: [40, 40], maxZoom: 10 });
+  } else if (points.length === 1) {
+    map.setView(points[0].pos, 8);
+  } else if (center && center[0] !== 0) {
+    map.setView(center, 4);
+  }
+};
+
 const MapUpdater: React.FC<{ center: [number, number]; points: any[] }> = ({ center, points }) => {
   const map = useMap();
-  
+
   useEffect(() => {
-    if (points.length > 1) {
-      const bounds = L.latLngBounds(points.map(p => p.pos));
-      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 10 });
-    } else if (points.length === 1) {
-      map.setView(points[0].pos, 8);
-    } else if (center && center[0] !== 0) {
-      map.setView(center, 4);
-    }
+    const container = map.getContainer();
+    if (container.clientWidth === 0 || container.clientHeight === 0) return;
+    updateMapView(map, center, points);
   }, [center, points, map]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      map.invalidateSize();
-    }, 150);
-    return () => clearTimeout(timer);
-  }, [map]);
+    const container = map.getContainer();
+    let hasVisibleSize = container.clientWidth > 0 && container.clientHeight > 0;
+    let frame = 0;
+
+    const refreshSize = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const isVisible = container.clientWidth > 0 && container.clientHeight > 0;
+        if (!isVisible) {
+          hasVisibleSize = false;
+          return;
+        }
+
+        map.invalidateSize({ pan: false, debounceMoveend: true });
+        if (!hasVisibleSize) updateMapView(map, center, points);
+        hasVisibleSize = true;
+      });
+    };
+
+    const observer = new ResizeObserver(refreshSize);
+    observer.observe(container);
+    window.addEventListener('resize', refreshSize);
+    refreshSize();
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', refreshSize);
+      cancelAnimationFrame(frame);
+    };
+  }, [center, points, map]);
 
   return null;
 };
@@ -104,8 +135,8 @@ const ZoomControls: React.FC<{
       map.fitBounds(bounds, { padding: [40, 40], maxZoom: 10 });
     } else if (points.length === 1) {
       map.setView(points[0].pos, 8);
-    } else {
-      map.setView(center[0] !== 0 ? center : [-15.7801, -47.9292], 4);
+    } else if (center && center[0] !== 0) {
+      map.setView(center, 4);
     }
   };
 
@@ -174,7 +205,11 @@ const ZoomControls: React.FC<{
 };
 
 const ReportsView: React.FC<ReportsViewProps> = ({ trips, drivers, onNavigateToTrips }) => {
-  const [mapLayer, setMapLayer] = usePersistedUiState<'google' | 'positron' | 'osm'>('tp_system_ui_reports_map_layer', 'google');
+  const [mapLayer, setMapLayer] = usePersistedUiState<'google' | 'positron' | 'osm'>(
+    'tp_system_ui_reports_map_layer',
+    'positron',
+    (value): value is 'google' | 'positron' | 'osm' => value === 'google' || value === 'positron' || value === 'osm',
+  );
   const [mapFilter, setMapFilter] = usePersistedUiState<'all' | 'origins' | 'destinations'>('tp_system_ui_reports_map_filter', 'all');
   const [showRoutes, setShowRoutes] = usePersistedUiState<boolean>('tp_system_ui_reports_show_routes', true);
   const [startDate, setStartDate] = usePersistedUiState('tp_system_ui_reports_start_date', '');

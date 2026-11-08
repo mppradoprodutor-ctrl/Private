@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { X, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
-import * as XLSX from 'xlsx';
 import { Shipment } from '../types';
 
 interface ShipmentImportModalProps {
@@ -22,8 +21,9 @@ const ShipmentImportModal: React.FC<ShipmentImportModalProps> = ({ isOpen, onClo
 
     try {
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         try {
+          const XLSX = await import('xlsx');
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
           const workbook = XLSX.read(data, { type: 'array', cellDates: true });
           const firstSheetName = workbook.SheetNames[0];

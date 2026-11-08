@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { lazy, Suspense, useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { 
   Users, Truck, PlusCircle, FileSpreadsheet, Search, LayoutDashboard,
   LogOut, Bell, ArrowRight, TrendingUp, MapPin, Filter, RefreshCw,
@@ -33,28 +33,20 @@ import {
   Loader2
 } from 'lucide-react';
 import { Driver, Freight, Trip, ViewState, Reminder, ThirdPartyFreight, Shipment, Note, OperationalUnit } from './types';
-import * as XLSX from 'xlsx';
 import { parseCityState, geocode } from './services/geocodingService';
 import DriverList from './components/DriverList';
 import DriverFormModal from './components/DriverFormModal';
-import ExcelImportModal from './components/ExcelImportModal';
 import FreightList from './components/FreightList';
-import FreightImportModal from './components/FreightImportModal';
 import FreightFormModal from './components/FreightFormModal';
 import TripList from './components/TripList';
-import TripImportModal from './components/TripImportModal';
 import TripFormModal from './components/TripFormModal';
-import LoadingOrderView from './components/LoadingOrderView';
 import OperationalUnitModal from './components/OperationalUnitModal';
 import ReminderView from './components/ReminderView';
 import ReminderFormModal from './components/ReminderFormModal';
-import ShipmentView from './components/ShipmentView';
-import MarketView from './components/MarketView';
 import ThirdPartyFreightList from './components/ThirdPartyFreightList';
 import ThirdPartyFreightFormModal from './components/ThirdPartyFreightFormModal';
-import ReportsView, { ReportsNavigateFilters } from './components/ReportsView';
+import type { ReportsNavigateFilters } from './components/ReportsView';
 import NotesView from './components/NotesView';
-import ExcelView from './components/ExcelView';
 import {
   EXCEL_COMPANY_CNPJ,
   EXCEL_STORAGE_KEY,
@@ -65,8 +57,6 @@ import {
   type ExcelWorkbook,
 } from './contexts/ExcelContext';
 import NoteFormModal from './components/NoteFormModal';
-
-import MapView from './components/MapView';
 
 import { 
   auth, 
@@ -81,6 +71,20 @@ import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth
 import { AuthModal } from './components/AuthModal';
 import { resolveTripServiceTaker, isInvalidTakerName } from './services/takerResolver';
 import { readPersistedUiState, usePersistedUiState } from './lib/persistedUiState';
+
+const LoadingOrderView = lazy(() => import('./components/LoadingOrderView'));
+const ShipmentView = lazy(() => import('./components/ShipmentView'));
+const MarketView = lazy(() => import('./components/MarketView'));
+const ReportsView = lazy(() => import('./components/ReportsView'));
+const ExcelView = lazy(() => import('./components/ExcelView'));
+const MapView = lazy(() => import('./components/MapView'));
+const TripList = lazy(() => import('./components/TripList'));
+
+const ViewLoading: React.FC = () => (
+  <div className="flex min-h-32 items-center justify-center text-xs font-bold text-slate-400">
+    Carregando recurso...
+  </div>
+);
 
 const mergeExcelWorkbooksPreservingSheets = (
   cloudWorkbook: ExcelWorkbook,
@@ -871,12 +875,13 @@ const App: React.FC = () => {
     }
   }, [drivers, safeSetItem, showNotification]);
 
-  const handleExportDriversExcel = useCallback((driversToExport: Driver[]) => {
+  const handleExportDriversExcel = useCallback(async (driversToExport: Driver[]) => {
     if (driversToExport.length === 0) {
       showNotification("Nenhum motorista corresponde aos filtros ativos para exportar.", "info");
       return;
     }
     try {
+      const XLSX = await import('xlsx');
       const exportData = driversToExport.map(d => ({
         'Placa Cavalo': d.truckPlate ? d.truckPlate.trim().toUpperCase() : '',
         'Carreta 1': d.trailer1 ? d.trailer1.trim().toUpperCase() : '',
@@ -932,8 +937,9 @@ const App: React.FC = () => {
     }
   }, [showNotification]);
 
-  const handleDownloadDriversTemplate = useCallback(() => {
+  const handleDownloadDriversTemplate = useCallback(async () => {
     try {
+      const XLSX = await import('xlsx');
       const templateData = [
         {
           'Placa Cavalo': 'ABC1D23',
@@ -3240,6 +3246,7 @@ const App: React.FC = () => {
 
             {visitedViews.includes('shipments') && (
               <div className={currentView === 'shipments' ? 'contents' : 'hidden'}>
+              <Suspense fallback={<ViewLoading />}>
               <ShipmentView 
                 shipments={shipments} 
                 trips={trips}
@@ -3310,14 +3317,24 @@ const App: React.FC = () => {
                   setOriginFilter: setShipmentOriginFilter
                 }}
               />
+              </Suspense>
               </div>
             )}
-            {visitedViews.includes('market') && <div className={currentView === 'market' ? 'contents' : 'hidden'}><MarketView /></div>}
-            <div className={currentView === 'map' ? 'block' : 'hidden'}>
-              <MapView isVisible={currentView === 'map'} shipments={shipments} freights={freights} />
-            </div>
+            {visitedViews.includes('market') && (
+              <div className={currentView === 'market' ? 'contents' : 'hidden'}>
+                <Suspense fallback={<ViewLoading />}><MarketView /></Suspense>
+              </div>
+            )}
+            {visitedViews.includes('map') && (
+              <div className={currentView === 'map' ? 'block' : 'hidden'}>
+                <Suspense fallback={<ViewLoading />}>
+                  <MapView isVisible={currentView === 'map'} shipments={shipments} freights={freights} />
+                </Suspense>
+              </div>
+            )}
             {visitedViews.includes('loadingOrder') && (
               <div className={currentView === 'loadingOrder' ? 'contents' : 'hidden'}>
+              <Suspense fallback={<ViewLoading />}>
               <LoadingOrderView 
                 freights={freights} 
                 drivers={drivers} 
@@ -3330,11 +3347,13 @@ const App: React.FC = () => {
                   setIsTripFormOpen(true);
                 }} 
               />
+              </Suspense>
               </div>
             )}
             
             {visitedViews.includes('excel') && (
               <div className={currentView === 'excel' ? 'contents' : 'hidden'}>
+              <Suspense fallback={<ViewLoading />}>
               <ExcelView
                 cloudReady={excelCloudReady}
                 onLocalChange={markExcelLocalChange}
@@ -3342,6 +3361,7 @@ const App: React.FC = () => {
                   ? workbook => saveExcelWorkbookToCloud(user.uid, workbook)
                   : undefined}
               />
+              </Suspense>
               </div>
             )}
 
@@ -3726,6 +3746,7 @@ const App: React.FC = () => {
                   </div>
                 </div>
 
+                <Suspense fallback={<ViewLoading />}>
                 <TripList 
                   trips={filteredTripsList} 
                   drivers={drivers}
@@ -3802,17 +3823,20 @@ const App: React.FC = () => {
                     showNotification(`${ids.length} viagem(ns) revertida(s) para saldo pendente!`, 'info');
                   }}
                 />
+                </Suspense>
               </div>
               </div>
             )}
 
             {visitedViews.includes('reports') && (
               <div className={currentView === 'reports' ? 'contents' : 'hidden'}>
+              <Suspense fallback={<ViewLoading />}>
               <ReportsView 
                 trips={trips}
                 drivers={drivers}
                 onNavigateToTrips={handleNavigateFromReports}
               />
+              </Suspense>
               </div>
             )}
 
