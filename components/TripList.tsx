@@ -1,10 +1,7 @@
 
 import React, { useRef, useState, useMemo, useEffect, useCallback } from 'react';
 import { Trash2, Edit2, ArrowRight, Scale, TrendingUp, Download, ClipboardCheck, ClipboardList, X, Save, FileText, CheckSquare, Square, CheckCheck, Printer, Loader2 } from 'lucide-react';
-import { toBlob, toPng } from 'html-to-image';
 import { saveAs } from 'file-saver';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
 import { Trip, Driver, Freight } from '../types';
 import LoadingOrderTemplate from './LoadingOrderTemplate';
 import TripListPdfTemplate from './TripListPdfTemplate';
@@ -178,6 +175,11 @@ const TripList: React.FC<TripListProps> = ({
     setTimeout(async () => {
       if (templateRef.current) {
         try {
+          const [{ toPng }, { default: html2canvas }, { default: jsPDF }] = await Promise.all([
+            import('html-to-image'),
+            import('html2canvas'),
+            import('jspdf'),
+          ]);
           let imgDataUrl: string = '';
           try {
             imgDataUrl = await toPng(templateRef.current, {
@@ -255,6 +257,11 @@ const TripList: React.FC<TripListProps> = ({
         throw new Error('Nenhuma página de PDF encontrada no template');
       }
 
+      const [{ toPng }, { default: html2canvas }, { default: jsPDF }] = await Promise.all([
+        import('html-to-image'),
+        import('html2canvas'),
+        import('jspdf'),
+      ]);
       const pdf = new jsPDF({
         orientation: 'landscape',
         unit: 'mm',

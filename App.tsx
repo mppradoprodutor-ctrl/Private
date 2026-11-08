@@ -36,9 +36,11 @@ import { Driver, Freight, Trip, ViewState, Reminder, ThirdPartyFreight, Shipment
 import { parseCityState, geocode } from './services/geocodingService';
 import DriverList from './components/DriverList';
 import DriverFormModal from './components/DriverFormModal';
+import ExcelImportModal from './components/ExcelImportModal';
 import FreightList from './components/FreightList';
+import FreightImportModal from './components/FreightImportModal';
 import FreightFormModal from './components/FreightFormModal';
-import TripList from './components/TripList';
+import TripImportModal from './components/TripImportModal';
 import TripFormModal from './components/TripFormModal';
 import OperationalUnitModal from './components/OperationalUnitModal';
 import ReminderView from './components/ReminderView';

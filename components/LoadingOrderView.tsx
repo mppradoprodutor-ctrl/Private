@@ -1,9 +1,6 @@
 
 import { Download, PlusCircle, Save, Plus, Building2, Loader2, FileText, Phone, Scale, MapPin, Mail } from 'lucide-react';
-import { toBlob, toPng } from 'html-to-image';
 import { saveAs } from 'file-saver';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
 import React, { useRef, useState, useMemo, useEffect, useCallback } from 'react';
 import { Driver, Freight, Trip, OperationalUnit } from '../types';
 import LoadingOrderTemplate from './LoadingOrderTemplate';
@@ -392,6 +389,11 @@ const LoadingOrderView: React.FC<LoadingOrderViewProps> = ({
 
   const generateLoadingOrderPdf = async (customOrderNum?: number): Promise<boolean> => {
     if (!orderRef.current) return false;
+    const [{ toPng }, { default: html2canvas }, { default: jsPDF }] = await Promise.all([
+      import('html-to-image'),
+      import('html2canvas'),
+      import('jspdf'),
+    ]);
     let imgDataUrl: string = '';
     try {
       imgDataUrl = await toPng(orderRef.current, {
@@ -539,6 +541,11 @@ const handleSendByEmail = async () => {
   setEmailStatus(null);
 
   try {
+    const [{ toPng }, { default: html2canvas }, { default: jsPDF }] = await Promise.all([
+      import('html-to-image'),
+      import('html2canvas'),
+      import('jspdf'),
+    ]);
     // Captura o modelo original da ordem já preenchido.
     let pdfDataUrl: string;
 
@@ -707,6 +714,10 @@ fileName: `${displayDriverName} - ${displayTruckPlate}.pdf`,
 
     try {
       let blob: Blob | null = null;
+      const [{ toBlob }, { default: html2canvas }] = await Promise.all([
+        import('html-to-image'),
+        import('html2canvas'),
+      ]);
       try {
         blob = await toBlob(orderRef.current, {
           pixelRatio: 2,
