@@ -402,37 +402,61 @@ const ReportsView: React.FC<ReportsViewProps> = ({ trips, drivers, onNavigateToT
       }
     });
 
-    if (locMap.size > 0) {
-      setIsGeocoding(true);
-      const resolveCoords = async () => {
-        const newCoords: Record<string, [number, number]> = {};
-        let changed = false;
+    let cancelled = false;
+    const controller = new AbortController();
+    const pendingLocations: [string, { city: string; state?: string }][] = [];
+    const cachedCoords: Record<string, [number, number]> = {};
+
+    locMap.forEach((details, key) => {
+      const cached = geocodeCache[key] || (!details.state ? geocodeCache[details.city.toLowerCase()] : undefined);
+      if (cached) {
+        cachedCoords[key] = cached;
+      } else {
+        pendingLocations.push([key, details]);
+      }
+    });
+
+    if (Object.keys(cachedCoords).length > 0) {
+      setGeocodedLocations(prev => ({ ...prev, ...cachedCoords }));
+    }
+
+    if (pendingLocations.length === 0) {
+      setIsGeocoding(false);
+      return () => {
+        cancelled = true;
+        controller.abort();
+      };
+    }
+
+    setIsGeocoding(true);
+    const resolveCoords = async () => {
+      for (const [key, details] of pendingLocations) {
+        if (cancelled) break;
 
         try {
-          for (const [key, details] of locMap.entries()) {
-            const normalized = key;
-            const result = await geocode(details.city, true, undefined, details.state);
-            
-            if (result) {
-              if (!geocodedLocations[normalized] || 
-                  geocodedLocations[normalized][0] !== result[0] || 
-                  geocodedLocations[normalized][1] !== result[1]) {
-                newCoords[normalized] = result;
-                changed = true;
-              }
-            }
+          const result = await geocode(details.city, true, controller.signal, details.state);
+          if (!cancelled && result) {
+            setGeocodedLocations(prev => {
+              const current = prev[key];
+              if (current?.[0] === result[0] && current?.[1] === result[1]) return prev;
+              return { ...prev, [key]: result };
+            });
           }
-
-          if (changed) {
-            setGeocodedLocations(prev => ({ ...prev, ...newCoords }));
+        } catch (error) {
+          if (!cancelled) {
+            console.warn(`Failed to geocode report location "${details.city}"`, error);
           }
-        } finally {
-          setIsGeocoding(false);
         }
-      };
+      }
 
-      resolveCoords();
-    }
+      if (!cancelled) setIsGeocoding(false);
+    };
+
+    void resolveCoords();
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
   }, [filteredTrips]);
 
   // Comprehensive Mapping and Active Route Network Calculation
