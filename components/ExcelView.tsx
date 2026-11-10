@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { AlignCenter, AlignLeft, Minus, Palette, Plus, Printer, Trash2, X, Pencil } from 'lucide-react';
+import { AlignCenter, AlignLeft, AlignRight, Minus, Palette, Plus, Printer, Trash2, Undo2, X, Pencil } from 'lucide-react';
 import {
   createEmptyRow,
   createCell,
@@ -57,14 +57,20 @@ const basicColors = ['#111827', '#ffffff', '#ef4444', '#f97316', '#eab308', '#22
 export default function ExcelView({ onSaveToCloud, onLocalChange, cloudReady = true }: ExcelViewProps) {
   const { workbook, setWorkbook, zoom, setZoom } = useExcelWorkbook();
   const sheets = workbook.sheets;
+  const undoHistoryRef = useRef<Sheet[][]>([]);
+  const isUndoingRef = useRef(false);
   const onLocalChangeRef = useRef(onLocalChange);
   onLocalChangeRef.current = onLocalChange;
   const setSheets: React.Dispatch<React.SetStateAction<Sheet[]>> = update => {
     onLocalChangeRef.current?.();
-    setWorkbook(current => ({
-      ...current,
-      sheets: typeof update === 'function' ? update(current.sheets) : update,
-    }));
+    setWorkbook(current => {
+      const nextSheets = typeof update === 'function' ? update(current.sheets) : update;
+      if (!isUndoingRef.current && JSON.stringify(nextSheets) !== JSON.stringify(current.sheets)) {
+        undoHistoryRef.current.push(current.sheets);
+        if (undoHistoryRef.current.length > 100) undoHistoryRef.current.shift();
+      }
+      return { ...current, sheets: nextSheets };
+    });
   };
   const shouldSaveWorkbookRef = useRef(hasExcelWorkbookData(workbook));
   const latestSheetsRef = useRef(sheets);
@@ -301,6 +307,13 @@ export default function ExcelView({ onSaveToCloud, onLocalChange, cloudReady = t
     alvos.forEach(({ row, column }) => refs.current[`${row}-${column}`]?.replaceChildren());
     updateSelectedCells({ value: '' });
   };
+  const undoLastAction = () => {
+    const previousSheets = undoHistoryRef.current.pop();
+    if (!previousSheets) return;
+    isUndoingRef.current = true;
+    setSheets(previousSheets);
+    isUndoingRef.current = false;
+  };
   const reorderRows = (from: number, to: number) => updateSheet(value => {
     const nextRows = [...value.rows];
     const [movedRow] = nextRows.splice(from, 1);
@@ -417,13 +430,14 @@ export default function ExcelView({ onSaveToCloud, onLocalChange, cloudReady = t
         {[9, 10, 11, 12, 13, 14].map(size => <option key={size} value={size}>{size}</option>)}
       </select>
       <button className={buttons} onMouseDown={event => event.preventDefault()} onClick={() => updateSelectedCells({ bold: !Boolean(activeCellData?.bold) })} aria-pressed={Boolean(activeCellData?.bold)} title="Alternar negrito"><strong aria-hidden="true">B</strong> Negrito</button><button className={buttons} onMouseDown={event => event.preventDefault()} onClick={() => updateSelectedCells({ italic: !Boolean(activeCellData?.italic) })} aria-pressed={Boolean(activeCellData?.italic)} title="Alternar itálico"><em aria-hidden="true">I</em> Itálico</button>
-      <button className={`${buttons} btn-align`} onMouseDown={event => event.preventDefault()} onClick={() => updateSelectedCells({ align: 'left' })} aria-pressed={!activeCellData?.align || activeCellData.align === 'left'}><AlignLeft data-icon="inline-start" /> Esquerda</button><button className={`${buttons} btn-align`} onMouseDown={event => event.preventDefault()} onClick={() => updateSelectedCells({ align: 'center' })} aria-pressed={activeCellData?.align === 'center'}><AlignCenter data-icon="inline-start" /> Centro</button><button className={`${buttons} btn-align`} onMouseDown={event => event.preventDefault()} onClick={() => updateSelectedCells({ align: 'right' })} aria-pressed={activeCellData?.align === 'right'}>Direita</button>
+      <div className="flex items-center gap-1" role="group" aria-label="Alinhamento do texto"><button className={`${buttons} btn-align`} onMouseDown={event => event.preventDefault()} onClick={() => updateSelectedCells({ align: 'left' })} aria-pressed={!activeCellData?.align || activeCellData.align === 'left'} title="Alinhar à esquerda"><AlignLeft size={12} /></button><button className={`${buttons} btn-align`} onMouseDown={event => event.preventDefault()} onClick={() => updateSelectedCells({ align: 'center' })} aria-pressed={activeCellData?.align === 'center'} title="Alinhar ao centro"><AlignCenter size={12} /></button><button className={`${buttons} btn-align`} onMouseDown={event => event.preventDefault()} onClick={() => updateSelectedCells({ align: 'right' })} aria-pressed={activeCellData?.align === 'right'} title="Alinhar à direita"><AlignRight size={12} /></button></div>
       <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1" aria-label="Cores do texto"><Palette size={12} className="text-slate-500" />{basicColors.map(color => <button key={`text-${color}`} onMouseDown={event => event.preventDefault()} onClick={() => applyTextColor(color)} title={`Cor do texto ${color}`} aria-label={`Cor do texto ${color}`} className="size-3 rounded-full border border-slate-300" style={{ backgroundColor: color }} />)}</div>
       <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1" aria-label="Cores do fundo"><span className="text-[9px] font-black text-slate-500">Fundo</span>{basicColors.map(color => <button key={`fill-${color}`} onMouseDown={event => event.preventDefault()} onClick={() => updateSelectedCells({ background: color })} title={`Cor do fundo ${color}`} aria-label={`Cor do fundo ${color}`} className="size-3 rounded-full border border-slate-300" style={{ backgroundColor: color }} />)}</div>
       <button className={buttons} onMouseDown={event => event.preventDefault()} onClick={() => updateSelectedCells({ border: activeCellData?.border === false })} aria-pressed={activeCellData?.border !== false} title="Alternar borda nas células selecionadas">Borda</button><button className={`${buttons} border-red-100 text-red-700`} onMouseDown={event => event.preventDefault()} onClick={clearSelectedCellContents} title="Limpar conteúdo das células selecionadas"><Trash2 data-icon="inline-start" /> Limpar</button>
       <button className={buttons} onClick={() => window.print()}><Printer data-icon="inline-start" /> PDF</button>
       <input type="search" value={columnOneFilter} onChange={event => setColumnOneFilter(event.target.value)} placeholder="Filtrar coluna 1" aria-label="Filtrar pela coluna 1" className="w-36 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[10px] font-bold text-slate-700 outline-none placeholder:text-slate-400 focus:border-red-300" />
       <input type="search" value={searchFilter} onChange={event => setSearchFilter(event.target.value)} placeholder="Pesquisar" aria-label="Pesquisar em toda a tabela" className="w-36 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[10px] font-bold text-slate-700 outline-none placeholder:text-slate-400 focus:border-red-300" />
+      <button className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[9px] font-bold text-slate-600 hover:border-red-300 disabled:cursor-not-allowed disabled:opacity-40" onClick={undoLastAction} disabled={undoHistoryRef.current.length === 0} title="Desfazer a última ação (Ctrl+Z)" aria-label="Desfazer"><Undo2 size={12} /> Desfazer</button>
     </div></div>
     {editingName && <input autoFocus defaultValue={sheet?.name} onBlur={e => { updateSheet(value => ({ ...value, name: e.target.value.trim() || value.name })); setEditingName(false); }} onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }} className="w-52 rounded-lg border border-red-200 px-2 py-1.5 text-[10px] font-bold outline-none" aria-label="Nome da página" />}
     <div ref={tableContainerRef} onCopy={handleCopy} onPaste={handlePaste} className="excel-wrapper excel-print-area rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -512,6 +526,11 @@ export default function ExcelView({ onSaveToCloud, onLocalChange, cloudReady = t
                   onBlur={event => updateCell(row, column, { value: event.currentTarget.innerHTML })}
                   onKeyDown={event => {
                     const key = event.key;
+                    if ((event.ctrlKey || event.metaKey) && key.toLowerCase() === 'z') {
+                      event.preventDefault();
+                      undoLastAction();
+                      return;
+                    }
                     if ((event.ctrlKey || event.metaKey) && key.toLowerCase() === 'a') {
                       event.preventDefault();
                       selectAllCells();
@@ -531,6 +550,18 @@ export default function ExcelView({ onSaveToCloud, onLocalChange, cloudReady = t
                       return;
                     }
                     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(key)) {
+                      const textSelection = window.getSelection();
+                      const caretIsInsideCell = Boolean(textSelection?.isCollapsed &&
+                        textSelection.anchorNode && event.currentTarget.contains(textSelection.anchorNode));
+                      if ((key === 'ArrowLeft' || key === 'ArrowRight') && !event.shiftKey && caretIsInsideCell && textSelection) {
+                        const caretRange = textSelection.getRangeAt(0);
+                        const textBeforeCaret = caretRange.cloneRange();
+                        textBeforeCaret.selectNodeContents(event.currentTarget);
+                        textBeforeCaret.setEnd(caretRange.startContainer, caretRange.startOffset);
+                        const isAtStart = textBeforeCaret.toString().length === 0;
+                        const isAtEnd = textBeforeCaret.toString().length === (event.currentTarget.textContent ?? '').length;
+                        if ((key === 'ArrowLeft' && !isAtStart) || (key === 'ArrowRight' && !isAtEnd)) return;
+                      }
                       event.preventDefault();
                       const offsets: Record<string, [number, number]> = {
                         ArrowUp: [-1, 0],
@@ -568,6 +599,6 @@ export default function ExcelView({ onSaveToCloud, onLocalChange, cloudReady = t
         </table>
       </div>
     </div>
-    <style>{`.excel-wrapper { overflow: auto; max-height: calc(100vh - 200px); position: relative; } .excel-wrapper thead, .excel-wrapper thead th { position: sticky; top: 0; z-index: 20; background: #ffffff; } .btn-align { height: 38px; min-width: 90px; width: 90px; display: flex; align-items: center; justify-content: center; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 11px; font-weight: 700; } .excel-print-area [contenteditable="true"] * { font-size: inherit !important; } @media print { @page { size: landscape; margin: 5mm; } html, body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } body > * { visibility: hidden !important; } .excel-view, .excel-view * { visibility: visible !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } .excel-view { position: absolute !important; inset: 0 !important; width: 100% !important; padding: 8px !important; background: #fff !important; } .excel-view .excel-wrapper { overflow: visible !important; max-height: none !important; } .excel-view .excel-wrapper thead, .excel-view .excel-wrapper thead th { position: static !important; } }`}</style>
+    <style>{`.excel-wrapper { overflow: auto; max-height: calc(100vh - 200px); position: relative; } .excel-wrapper thead, .excel-wrapper thead th { position: sticky; top: 0; z-index: 20; background: #ffffff; } .btn-align { height: 26px; min-width: 28px; width: 28px; display: flex; align-items: center; justify-content: center; padding: 0; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 9px; font-weight: 700; } .excel-print-area [contenteditable="true"] * { font-size: inherit !important; } @media print { @page { size: landscape; margin: 5mm; } html, body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } body > * { visibility: hidden !important; } .excel-view, .excel-view * { visibility: visible !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } .excel-view { position: absolute !important; inset: 0 !important; width: 100% !important; padding: 8px !important; background: #fff !important; } .excel-view .excel-wrapper { overflow: visible !important; max-height: none !important; } .excel-view .excel-wrapper thead, .excel-view .excel-wrapper thead th { position: static !important; } }`}</style>
   </section>;
 }
