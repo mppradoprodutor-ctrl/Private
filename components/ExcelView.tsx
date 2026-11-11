@@ -88,6 +88,7 @@ export default function ExcelView({ onSaveToCloud, onLocalChange, cloudReady = t
   const [selectedCells, setSelectedCells] = usePersistedUiState<Array<{ id: string; row: number; column: number }>>('tp_system_ui_excel_selected_cells', [{ id: '0-0', row: 0, column: 0 }]);
   const selectionAnchorRef = useRef(activeCell);
   const selectingCellsRef = useRef(false);
+  const [isDraggingCellRange, setIsDraggingCellRange] = useState(false);
   const preserveSelectionOnFocusRef = useRef<{ row: number; column: number } | null>(null);
   const [editingName, setEditingName] = useState(false);
   const [draggingRow, setDraggingRow] = useState<number | null>(null);
@@ -129,6 +130,7 @@ export default function ExcelView({ onSaveToCloud, onLocalChange, cloudReady = t
     setSelectedCells([{ id: '0-0', ...initialCell }]);
     selectionAnchorRef.current = initialCell;
     selectingCellsRef.current = false;
+    setIsDraggingCellRange(false);
   }, [sheet?.id]);
   useEffect(() => {
     const container = tableContainerRef.current;
@@ -176,7 +178,10 @@ export default function ExcelView({ onSaveToCloud, onLocalChange, cloudReady = t
     queueCloudSave(latestSheetsRef.current);
   }, []);
   useEffect(() => {
-    const stopCellSelection = () => { selectingCellsRef.current = false; };
+    const stopCellSelection = () => {
+      selectingCellsRef.current = false;
+      setIsDraggingCellRange(false);
+    };
     window.addEventListener('mouseup', stopCellSelection);
     return () => window.removeEventListener('mouseup', stopCellSelection);
   }, []);
@@ -330,6 +335,7 @@ export default function ExcelView({ onSaveToCloud, onLocalChange, cloudReady = t
     const lastCell = { row: Math.max(0, rows.length - 1), column: Math.max(0, (rows[0]?.length ?? 1) - 1) };
     selectionAnchorRef.current = firstCell;
     selectingCellsRef.current = false;
+    setIsDraggingCellRange(false);
     window.getSelection()?.removeAllRanges();
     setCellRange(firstCell, lastCell);
     focusCell(firstCell.row, firstCell.column, true);
@@ -339,6 +345,7 @@ export default function ExcelView({ onSaveToCloud, onLocalChange, cloudReady = t
     const last = { row, column: Math.max(0, (rows[row]?.length ?? 1) - 1) };
     selectionAnchorRef.current = first;
     selectingCellsRef.current = false;
+    setIsDraggingCellRange(false);
     setCellRange(first, last);
     focusCell(first.row, first.column, true);
   };
@@ -347,6 +354,7 @@ export default function ExcelView({ onSaveToCloud, onLocalChange, cloudReady = t
     const last = { row: Math.max(0, rows.length - 1), column };
     selectionAnchorRef.current = first;
     selectingCellsRef.current = false;
+    setIsDraggingCellRange(false);
     setCellRange(first, last);
     focusCell(first.row, first.column, true);
   };
@@ -367,6 +375,7 @@ export default function ExcelView({ onSaveToCloud, onLocalChange, cloudReady = t
   const selectCellByMouse = (row: number, column: number) => {
     if (!selectingCellsRef.current) return;
     const anchor = selectionAnchorRef.current;
+    if (anchor.row !== row || anchor.column !== column) setIsDraggingCellRange(true);
     setCellRange(anchor, { row, column });
     if (anchor.row !== row || anchor.column !== column) window.getSelection()?.removeAllRanges();
   };
@@ -379,6 +388,7 @@ export default function ExcelView({ onSaveToCloud, onLocalChange, cloudReady = t
       selectionAnchorRef.current = target;
       setCellRange(target, target);
     }
+    setIsDraggingCellRange(false);
     setActiveCell(target);
     focusCell(row, column, true);
   };
@@ -440,7 +450,7 @@ export default function ExcelView({ onSaveToCloud, onLocalChange, cloudReady = t
       <button className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[9px] font-bold text-slate-600 hover:border-red-300 disabled:cursor-not-allowed disabled:opacity-40" onClick={undoLastAction} disabled={undoHistoryRef.current.length === 0} title="Desfazer a última ação (Ctrl+Z)" aria-label="Desfazer"><Undo2 size={12} /> Desfazer</button>
     </div></div>
     {editingName && <input autoFocus defaultValue={sheet?.name} onBlur={e => { updateSheet(value => ({ ...value, name: e.target.value.trim() || value.name })); setEditingName(false); }} onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }} className="w-52 rounded-lg border border-red-200 px-2 py-1.5 text-[10px] font-bold outline-none" aria-label="Nome da página" />}
-    <div ref={tableContainerRef} onCopy={handleCopy} onPaste={handlePaste} className="excel-wrapper excel-print-area rounded-xl border border-slate-200 bg-white shadow-sm">
+    <div ref={tableContainerRef} onCopy={handleCopy} onPaste={handlePaste} className={`excel-wrapper excel-print-area rounded-xl border border-slate-200 bg-white shadow-sm ${isDraggingCellRange ? 'select-none' : ''}`}>
       <div style={{ zoom: zoom / 100 }}>
         <table className="min-w-full border-collapse" style={{ fontFamily: 'Arial, sans-serif' }}>
           <thead>
@@ -475,6 +485,8 @@ export default function ExcelView({ onSaveToCloud, onLocalChange, cloudReady = t
                     const point = { row, column };
                     if (event.shiftKey) {
                       event.preventDefault();
+                      selectingCellsRef.current = false;
+                      setIsDraggingCellRange(false);
                       setCellRange(selectionAnchorRef.current, point);
                       setActiveCell(point);
                       window.getSelection()?.removeAllRanges();
@@ -484,6 +496,7 @@ export default function ExcelView({ onSaveToCloud, onLocalChange, cloudReady = t
                     if (event.ctrlKey || event.metaKey) {
                       event.preventDefault();
                       selectingCellsRef.current = false;
+                      setIsDraggingCellRange(false);
                       selectionAnchorRef.current = point;
                       const next = selectedCells.some(cell => cell.row === row && cell.column === column)
                         ? selectedCells.filter(cell => cell.row !== row || cell.column !== column)
@@ -504,6 +517,7 @@ export default function ExcelView({ onSaveToCloud, onLocalChange, cloudReady = t
                     }
                     selectionAnchorRef.current = point;
                     selectingCellsRef.current = true;
+                    setIsDraggingCellRange(false);
                     setCellRange(point, point);
                     setActiveCell(point);
                   }}
