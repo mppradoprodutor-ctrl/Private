@@ -206,8 +206,17 @@ export default function ExcelView({ onSaveToCloud, onLocalChange, cloudReady = t
     setSelectedCells(cells);
   };
   const getSelectedCellTargets = () => {
-    const alvos = selectedCells && selectedCells.length > 1 ? selectedCells : [activeCell];
-    return alvos;
+    if (selectedCells.length > 1) return selectedCells;
+    if (cellSelection.startRow !== cellSelection.endRow || cellSelection.startColumn !== cellSelection.endColumn) {
+      const targets: Array<{ id: string; row: number; column: number }> = [];
+      for (let row = cellSelection.startRow; row <= cellSelection.endRow; row += 1) {
+        for (let column = cellSelection.startColumn; column <= cellSelection.endColumn; column += 1) {
+          targets.push({ id: `${row}-${column}`, row, column });
+        }
+      }
+      return targets;
+    }
+    return selectedCells.length === 1 ? selectedCells : [activeCell];
   };
   const updateSelectedCells = (patch: Partial<Cell>) => {
     const alvos = getSelectedCellTargets();
@@ -336,8 +345,6 @@ export default function ExcelView({ onSaveToCloud, onLocalChange, cloudReady = t
     }
   };
   const clearSelectedCellContents = () => {
-    const alvos = getSelectedCellTargets();
-    alvos.forEach(({ row, column }) => refs.current[`${row}-${column}`]?.replaceChildren());
     updateSelectedCells({ value: '' });
   };
   const undoLastAction = () => {
