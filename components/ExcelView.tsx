@@ -220,9 +220,7 @@ export default function ExcelView({ onSaveToCloud, onLocalChange, cloudReady = t
       return { ...value, rows: nextRows };
     });
   };
-  const handleCopy = (event: React.ClipboardEvent<HTMLDivElement>) => {
-    if (!(event.target instanceof Element)) return;
-    if (!tableContainerRef.current?.contains(event.target)) return;
+  const getSelectedCellRows = () => {
     const selectedCoordinates = selectedCells;
     const range = selectedCoordinates.length > 1
       ? {
@@ -246,10 +244,40 @@ export default function ExcelView({ onSaveToCloud, onLocalChange, cloudReady = t
         },
       ),
     );
+    return copiedRows;
+  };
+  const copySelectedCellsToClipboard = () => {
+    const copiedRows = getSelectedCellRows();
     copiedCellsRef.current = copiedRows;
-    event.preventDefault();
     const copiedText = toTSV(copiedRows);
     copiedTextRef.current = copiedText;
+    if (navigator.clipboard?.writeText) {
+      void navigator.clipboard.writeText(copiedText).catch(error => {
+        console.error('Error copying selected Excel cells:', error);
+        if (!document.execCommand('copy')) {
+          console.error('The browser could not copy the selected Excel cells.');
+        }
+      });
+      return;
+    }
+    if (!document.execCommand('copy')) {
+      console.error('The browser could not copy the selected Excel cells.');
+    }
+  };
+  const handleTableKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 'c' || selectedCells.length < 2) return;
+    if (!(event.target instanceof HTMLElement) || !event.target.closest('[data-excel-row][data-excel-column]')) return;
+    event.preventDefault();
+    copySelectedCellsToClipboard();
+  };
+  const handleCopy = (event: React.ClipboardEvent<HTMLDivElement>) => {
+    if (!(event.target instanceof Element)) return;
+    if (!tableContainerRef.current?.contains(event.target)) return;
+    const copiedRows = getSelectedCellRows();
+    copiedCellsRef.current = copiedRows;
+    const copiedText = toTSV(copiedRows);
+    copiedTextRef.current = copiedText;
+    event.preventDefault();
     event.clipboardData.setData('text/plain', copiedText);
   };
   const pasteRows = (pastedRows: string[][], startRow: number, startColumn: number) => {
@@ -450,7 +478,7 @@ export default function ExcelView({ onSaveToCloud, onLocalChange, cloudReady = t
       <button className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[9px] font-bold text-slate-600 hover:border-red-300 disabled:cursor-not-allowed disabled:opacity-40" onClick={undoLastAction} disabled={undoHistoryRef.current.length === 0} title="Desfazer a última ação (Ctrl+Z)" aria-label="Desfazer"><Undo2 size={12} /> Desfazer</button>
     </div></div>
     {editingName && <input autoFocus defaultValue={sheet?.name} onBlur={e => { updateSheet(value => ({ ...value, name: e.target.value.trim() || value.name })); setEditingName(false); }} onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }} className="w-52 rounded-lg border border-red-200 px-2 py-1.5 text-[10px] font-bold outline-none" aria-label="Nome da página" />}
-    <div ref={tableContainerRef} onCopy={handleCopy} onPaste={handlePaste} className={`excel-wrapper excel-print-area rounded-xl border border-slate-200 bg-white shadow-sm ${isDraggingCellRange ? 'select-none' : ''}`}>
+    <div ref={tableContainerRef} onKeyDown={handleTableKeyDown} onCopy={handleCopy} onPaste={handlePaste} className={`excel-wrapper excel-print-area rounded-xl border border-slate-200 bg-white shadow-sm ${isDraggingCellRange ? 'select-none' : ''}`}>
       <div style={{ zoom: zoom / 100 }}>
         <table className="min-w-full border-collapse" style={{ fontFamily: 'Arial, sans-serif' }}>
           <thead>
