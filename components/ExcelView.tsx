@@ -605,7 +605,9 @@ export default function ExcelView({ onSaveToCloud, onLocalChange, cloudReady = t
                         event.currentTarget.contains(textSelection.focusNode));
                       const hasTextCaret = Boolean(textSelection?.isCollapsed &&
                         event.currentTarget.contains(textSelection.anchorNode));
-                      if (!hasSelectedText && !hasTextCaret) {
+                      const hasMultipleCellsSelected = getSelectedCellTargets().length > 1;
+                      if (hasSelectedText) return;
+                      if (hasMultipleCellsSelected || !hasTextCaret) {
                         event.preventDefault();
                         clearSelectedCellContents();
                       }

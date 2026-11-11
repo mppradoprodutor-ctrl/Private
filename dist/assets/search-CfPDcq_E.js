@@ -1,4 +1,4 @@
-import{e}from"./index-OlMa-Fgi.js";/**
+import{e}from"./index-CJrlEb1e.js";/**
  * @license lucide-react v0.460.0 - ISC
  *
  * This source code is licensed under the ISC license.
