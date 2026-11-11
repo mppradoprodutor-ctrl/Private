@@ -508,6 +508,9 @@ export default function ExcelView({ onSaveToCloud, onLocalChange, cloudReady = t
                     setActiveCell(point);
                   }}
                   onMouseEnter={() => selectCellByMouse(row, column)}
+                  onMouseMove={event => {
+                    if (event.buttons & 1) selectCellByMouse(row, column);
+                  }}
                   onDragStart={event => event.preventDefault()}
                   onFocus={() => {
                     setActiveCell({ row, column });
@@ -536,7 +539,17 @@ export default function ExcelView({ onSaveToCloud, onLocalChange, cloudReady = t
                       selectAllCells();
                       return;
                     }
-                    if (key === 'Delete' || key === 'Backspace') {
+                    if (key === 'Delete') {
+                      const textSelection = window.getSelection();
+                      const hasSelectedText = Boolean(textSelection && !textSelection.isCollapsed &&
+                        event.currentTarget.contains(textSelection.anchorNode) &&
+                        event.currentTarget.contains(textSelection.focusNode));
+                      if (hasSelectedText) return;
+                      event.preventDefault();
+                      clearSelectedCellContents();
+                      return;
+                    }
+                    if (key === 'Backspace') {
                       const textSelection = window.getSelection();
                       const hasSelectedText = Boolean(textSelection && !textSelection.isCollapsed &&
                         event.currentTarget.contains(textSelection.anchorNode) &&
